@@ -1,0 +1,35 @@
+@startuml
+class ExampleExperimentalAgentTemplate {
+  + __init__() : "Constructor for ExampleExperimentalAgentTemplate.
+
+:param id: Agent's ID as set in config
+:param name: Agent's human-readable name as set in config
+:param type: Agent's human-readable type as set in config, useful for grouping agents semantically
+:param symbol: Name of asset being traded
+:param starting_cash: Dollar amount of cash agent starts with.
+:param levels: Number of levels of orderbook to subscribe to
+:param subscription_freq: Frequency of orderbook updates subscribed to (in nanoseconds)
+:param log_orders: bool to decide if agent's individual actions logged to file.
+:param random_state: numpy RandomState object from which agent derives randomness"
+  + wakeup() : "Action to be taken by agent at each wakeup.
+
+:param currentTime: pd.Timestamp for current simulation time"
+  + receiveMessage() : "Action taken when agent receives a message from the exchange
+
+:param currentTime: pd.Timestamp for current simulation time
+:param msg: message from exchange
+:return:"
+  + getWakeFrequency() : "Set next wakeup time for agent."
+  + placeLimitOrder() : "Place a limit order at the exchange.
+:param quantity (int):      order quantity
+:param is_buy_order (bool): True if Buy else False
+:param limit_price: price level at which to place a limit order
+:return:"
+  + placeMarketOrder() : "Place a market order at the exchange.
+:param quantity (int):      order quantity
+:param is_buy_order (bool): True if Buy else False
+:return:"
+  + cancelAllOrders() : "Cancels all resting limit orders placed by the experimental agent."
+}
+SubscriptionAgent <|-- ExampleExperimentalAgentTemplate
+@enduml

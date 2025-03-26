@@ -1,0 +1,20 @@
+@startuml
+class Agent {
+  + __init__()
+  + kernelInitializing()
+  + kernelStarting()
+  + kernelStopping()
+  + kernelTerminating()
+  + logEvent()
+  + receiveMessage()
+  + wakeup()
+  + sendMessage()
+  + setWakeup()
+  + getComputationDelay()
+  + setComputationDelay()
+  + delay()
+  + writeLog()
+  + updateAgentState()
+  + __lt__()
+}
+@enduml

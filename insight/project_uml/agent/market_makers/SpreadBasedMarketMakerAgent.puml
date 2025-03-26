@@ -1,0 +1,19 @@
+@startuml
+class SpreadBasedMarketMakerAgent {
+  - _Order
+  + __init__()
+  + validateAnchor()
+  + kernelStarting()
+  + wakeup()
+  + receiveMessage()
+  + computeOrdersToCancel()
+  + cancelOrders()
+  + computeOrdersToPlace()
+  + placeOrders()
+  + initialiseBidsAsksDeques()
+  + generateNewOrderId()
+  + getWakeFrequency()
+  + cancelAllOrders()
+}
+TradingAgent <|-- SpreadBasedMarketMakerAgent
+@enduml

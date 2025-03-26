@@ -1,0 +1,23 @@
+@startuml
+class Agent {
+  + __init__()
+  + kernelInitializing()
+  + kernelStarting()
+  + kernelStopping()
+  + kernelTerminating()
+  + logEvent()
+  + receiveMessage()
+  + wakeup()
+  + sendMessage()
+  + setWakeup()
+  + getComputationDelay()
+  + setComputationDelay()
+  + delay()
+  + writeLog()
+  + updateAgentState() : "Agents should use this method to replace their custom state in the dictionary
+the Kernel will return to the experimental config file at the end of the
+simulation.  This is intended to be write-only, and agents should not use
+it to store information for their own later use."
+  + __lt__()
+}
+@enduml

@@ -1,0 +1,8 @@
+@startuml
+class MessageType {
+  - MESSAGE
+  - WAKEUP
+  + __lt__()
+}
+Enum <|-- MessageType
+@enduml

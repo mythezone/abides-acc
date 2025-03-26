@@ -1,0 +1,10 @@
+@startuml
+class SumServiceAgent {
+  + __init__()
+  + kernelStarting()
+  + kernelStopping()
+  + receiveMessage()
+  + processSum()
+}
+Agent <|-- SumServiceAgent
+@enduml

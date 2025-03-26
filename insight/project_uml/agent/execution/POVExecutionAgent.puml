@@ -1,0 +1,13 @@
+@startuml
+class POVExecutionAgent {
+  + __init__()
+  + processEndTime()
+  + wakeup()
+  + getWakeFrequency()
+  + receiveMessage()
+  + handleOrderAcceptance()
+  + handleOrderExecution()
+  + cancelOrders()
+}
+TradingAgent <|-- POVExecutionAgent
+@enduml

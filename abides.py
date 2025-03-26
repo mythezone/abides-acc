@@ -1,6 +1,46 @@
 import argparse
 import importlib
 import sys
+import time 
+
+#debug---1
+from rich import print 
+from rich.pretty import pprint
+#debug---2
+# import pudb 
+
+# pudb.set_trace()
+
+# line_exec_count = {}
+# line_exec_time = {}
+
+# def trace_lines(frame, event, arg):
+#     if event != "line":
+#         return trace_lines
+    
+#     lineno = frame.f_lineno
+#     filename = frame.f_code.co_filename
+    
+#     if filename not in line_exec_count:
+#         line_exec_count[filename] = {}
+#         line_exec_time[filename] = {}
+
+#     if lineno not in line_exec_count[filename]:
+#         line_exec_count[filename][lineno] = 0
+#         line_exec_time[filename][lineno] = 0.0
+
+#     line_exec_count[filename][lineno] += 1
+
+#     start_time = time.time()
+#     result = trace_lines
+#     end_time = time.time()
+
+#     line_exec_time[filename][lineno] += (end_time - start_time)
+    
+#     return result
+
+# sys.settrace(trace_lines)
+
 
 if __name__ == '__main__':
 
@@ -29,3 +69,11 @@ if __name__ == '__main__':
   config = importlib.import_module('config.{}'.format(config_file),
                                    package=None)
 
+
+#   sys.settrace(None)
+
+#   # 输出执行次数和时间
+#   for filename, line_counts in line_exec_count.items():
+#       print(f"File: {filename}")
+#       for lineno, count in sorted(line_counts.items()):
+#           print(f"Line {lineno}: executed {count} times, time {line_exec_time[filename][lineno]:.8f} sec")

@@ -1,0 +1,14 @@
+@startuml
+class ExecutionAgent {
+  + __init__()
+  + kernelStopping()
+  + wakeup()
+  + receiveMessage()
+  + handleOrderExecution()
+  + handleOrderAcceptance()
+  + placeOrders()
+  + cancelOrders()
+  + getWakeFrequency()
+}
+TradingAgent <|-- ExecutionAgent
+@enduml

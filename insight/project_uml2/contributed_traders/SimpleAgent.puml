@@ -1,0 +1,11 @@
+@startuml
+class SimpleAgent {
+  + __init__()
+  + kernelStarting()
+  + wakeup() : "Agent wakeup is determined by self.wake_up_freq"
+  + dump_shares()
+  + receiveMessage() : "Momentum agent actions are determined after obtaining the best bid and ask in the LOB"
+  + getWakeFrequency()
+}
+TradingAgent <|-- SimpleAgent
+@enduml

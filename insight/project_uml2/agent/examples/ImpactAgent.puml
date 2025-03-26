@@ -1,0 +1,13 @@
+@startuml
+class ImpactAgent {
+  + __init__()
+  + wakeup()
+  + receiveMessage()
+  + placeLimitOrder()
+  + computeRequiredPrice()
+  + getLastTrade()
+  + getCurrentSpread()
+  + getWakeFrequency()
+}
+TradingAgent <|-- ImpactAgent
+@enduml

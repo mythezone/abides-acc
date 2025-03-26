@@ -1,0 +1,14 @@
+@startuml
+class EtfMarketMakerAgent {
+  + __init__()
+  + kernelStarting()
+  + wakeup()
+  + placeOrder()
+  + decideBasket()
+  + receiveMessage()
+  + getEtfNav()
+  + placeBasketOrder()
+  + queryEtfNav()
+}
+EtfArbAgent <|-- EtfMarketMakerAgent
+@enduml

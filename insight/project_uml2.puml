@@ -1,0 +1,1032 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+'' ===== From: Kernel =====
+class Kernel {
+  + __init__()
+  + runner()
+  + sendMessage()
+  + setWakeup()
+  + getAgentComputeDelay()
+  + setAgentComputeDelay()
+  + delayAgent()
+  + findAgentByType()
+  + writeLog()
+  + appendSummaryLog()
+  + writeSummaryLog()
+  + updateAgentState() : "Called by an agent that wishes to replace its custom state in the dictionary
+the Kernel will return at the end of simulation.  Shared state must be set directly,
+and agents should coordinate that non-destructively.
+
+Note that it is never necessary to use this kernel state dictionary for an agent
+to remember information about itself, only to report it back to the config file."
+  + fmtTime()
+}
+
+'' ===== From: agent/Agent =====
+package agent {
+class Agent {
+  + __init__()
+  + kernelInitializing()
+  + kernelStarting()
+  + kernelStopping()
+  + kernelTerminating()
+  + logEvent()
+  + receiveMessage()
+  + wakeup()
+  + sendMessage()
+  + setWakeup()
+  + getComputationDelay()
+  + setComputationDelay()
+  + delay()
+  + writeLog()
+  + updateAgentState() : "Agents should use this method to replace their custom state in the dictionary
+the Kernel will return to the experimental config file at the end of the
+simulation.  This is intended to be write-only, and agents should not use
+it to store information for their own later use."
+  + __lt__()
+}
+}
+
+'' ===== From: agent/ExchangeAgent =====
+package agent {
+class ExchangeAgent {
+  + __init__()
+  + kernelInitializing()
+  + kernelTerminating()
+  + receiveMessage()
+  + updateSubscriptionDict()
+  + publishOrderBookData() : "The exchange agents sends an order book update to the agents using the subscription API if one of the following
+conditions are met:
+1) agent requests ALL order book updates (freq == 0)
+2) order book update timestamp > last time agent was updated AND the orderbook update time stamp is greater than
+the last agent update time stamp by a period more than that specified in the freq parameter."
+  + logOrderBookSnapshots() : "Log full depth quotes (price, volume) from this order book at some pre-determined frequency. Here we are looking at
+the actual log for this order book (i.e. are there snapshots to export, independent of the requested frequency)."
+  + sendMessage()
+  + getMarketOpen()
+  + getMarketClose()
+}
+FinancialAgent <|-- ExchangeAgent
+}
+
+'' ===== From: agent/FinancialAgent =====
+package agent {
+class FinancialAgent {
+  + __init__()
+  + dollarize()
+}
+Agent <|-- FinancialAgent
+}
+
+'' ===== From: agent/FundamentalTrackingAgent =====
+package agent {
+class FundamentalTrackingAgent {
+  + __init__() : "Constructor for FundamentalTrackingAgent
+
+:param log_frequency: Frequency to update log (in nanoseconds)
+:param symbol: symbol for which fundamental is being logged"
+  + kernelStarting()
+  + kernelStopping() : "Stops kernel and saves fundamental series to disk."
+  + measureFundamental() : "Saves the fundamental value at self.currentTime to self.fundamental_series."
+  + wakeup() : "Advances agent in time and takes measurement of fundamental."
+  + writeFundamental() : "Logs fundamental series to file."
+  + getWakeFrequency()
+}
+TradingAgent <|-- FundamentalTrackingAgent
+}
+
+'' ===== From: agent/HeuristicBeliefLearningAgent =====
+package agent {
+class HeuristicBeliefLearningAgent {
+  + __init__()
+  + wakeup()
+  + placeOrder()
+  + receiveMessage()
+}
+ZeroIntelligenceAgent <|-- HeuristicBeliefLearningAgent
+}
+
+'' ===== From: agent/NoiseAgent =====
+package agent {
+class NoiseAgent {
+  + __init__()
+  + kernelStarting()
+  + kernelStopping()
+  + wakeup()
+  + placeOrder()
+  + receiveMessage()
+  + cancelOrders()
+  + getWakeFrequency()
+}
+TradingAgent <|-- NoiseAgent
+}
+
+'' ===== From: agent/OrderBookImbalanceAgent =====
+package agent {
+class OrderBookImbalanceAgent {
+  + __init__()
+  + kernelStarting()
+  + wakeup()
+  + receiveMessage()
+  + getWakeFrequency()
+  + computeRequiredPrice()
+  + cancelOrders()
+  + kernelTerminating()
+}
+TradingAgent <|-- OrderBookImbalanceAgent
+}
+
+'' ===== From: agent/TradingAgent =====
+package agent {
+class TradingAgent {
+  + __init__()
+  + kernelStarting()
+  + kernelStopping()
+  + wakeup()
+  + requestDataSubscription()
+  + cancelDataSubscription()
+  + receiveMessage()
+  + getLastTrade()
+  + getCurrentSpread()
+  + getOrderStream()
+  + get_transacted_volume() : "Used by any trading agent subclass to query the total transacted volume in a given lookback period"
+  + placeLimitOrder()
+  + placeMarketOrder() : "Used by any Trading Agent subclass to place a market order. The market order is created as multiple limit orders
+crossing the spread walking the book until all the quantities are matched.
+:param symbol (str):        name of the stock traded
+:param quantity (int):      order quantity
+:param is_buy_order (bool): True if Buy else False
+:param order_id:            Order ID for market replay
+:param ignore_risk (bool):  Determines whether cash or risk limits should be enforced or ignored for the order
+:return:"
+  + cancelOrder() : "Used by any Trading Agent subclass to cancel any order.  The order must currently
+appear in the agent's open orders list."
+  + modifyOrder() : "Used by any Trading Agent subclass to modify any existing limit order.  The order must currently
+appear in the agent's open orders list.  Some additional tests might be useful here
+to ensure the old and new orders are the same in some way."
+  + orderExecuted()
+  + orderAccepted()
+  + orderCancelled()
+  + marketClosed()
+  + queryLastTrade()
+  + querySpread()
+  + handleMarketData() : "Handles Market Data messages for agents using subscription mechanism"
+  + queryOrderStream()
+  + query_transacted_volume() : "Handles the QUERY_TRANSACTED_VOLUME messages from the exchange agent"
+  + getKnownBidAsk()
+  + getKnownLiquidity()
+  + getBookLiquidity()
+  + markToMarket()
+  + getHoldings()
+  + getKnownBidAskMidpoint()
+  + get_average_transaction_price() : "Calculates the average price paid (weighted by the order size)"
+  + fmtHoldings()
+}
+FinancialAgent <|-- TradingAgent
+}
+
+'' ===== From: agent/ValueAgent =====
+package agent {
+class ValueAgent {
+  + __init__()
+  + kernelStarting()
+  + kernelStopping()
+  + wakeup()
+  + updateEstimates()
+  + placeOrder()
+  + receiveMessage()
+  + cancelOrders()
+  + getWakeFrequency()
+}
+TradingAgent <|-- ValueAgent
+}
+
+'' ===== From: agent/ZeroIntelligenceAgent =====
+package agent {
+class ZeroIntelligenceAgent {
+  + __init__()
+  + kernelStarting()
+  + kernelStopping()
+  + wakeup()
+  + updateEstimates()
+  + placeOrder()
+  + receiveMessage()
+  + cancelOrders()
+  + getWakeFrequency()
+}
+TradingAgent <|-- ZeroIntelligenceAgent
+}
+
+'' ===== From: agent/etf/EtfArbAgent =====
+package agent.etf {
+class EtfArbAgent {
+  + __init__()
+  + kernelStarting()
+  + kernelStopping()
+  + wakeup()
+  + getPriceEstimates()
+  + placeOrder()
+  + receiveMessage()
+  + cancelOrders()
+  + getWakeFrequency()
+}
+TradingAgent <|-- EtfArbAgent
+}
+
+'' ===== From: agent/etf/EtfMarketMakerAgent =====
+package agent.etf {
+class EtfMarketMakerAgent {
+  + __init__()
+  + kernelStarting()
+  + wakeup()
+  + placeOrder()
+  + decideBasket()
+  + receiveMessage()
+  + getEtfNav()
+  + placeBasketOrder()
+  + queryEtfNav()
+}
+EtfArbAgent <|-- EtfMarketMakerAgent
+}
+
+'' ===== From: agent/etf/EtfPrimaryAgent =====
+package agent.etf {
+class EtfPrimaryAgent {
+  + __init__()
+  + kernelStarting()
+  + kernelStopping()
+  + wakeup()
+  + receiveMessage()
+  + queryLastTrade()
+  + getLastTrade()
+  + getPrimeOpen()
+  + getPrimeClose()
+}
+FinancialAgent <|-- EtfPrimaryAgent
+}
+
+'' ===== From: agent/examples/ExampleExperimentalAgent =====
+package agent.examples {
+class ExampleExperimentalAgent {
+  + __init__() : ":param args: superclass args
+:param wake_freq: Frequency of wakeup -- str to be parsed by pd.Timedelta
+:param order_size: size of orders to place
+:param short_window: length of mid price short moving average window -- str to be parsed by pd.Timedelta
+:param long_window: length of mid price long moving average window -- str to be parsed by pd.Timedelta
+:param kwargs: superclass kwargs"
+  + getCurrentMidPrice() : "Retrieve mid price from most recent subscription data.
+
+:return:"
+  + receiveMessage() : "Action taken when agent receives a message from the exchange -- action here is for agent to update internal
+    log of most recently observed mid-price.
+
+:param currentTime: pd.Timestamp for current simulation time
+:param msg: message from exchange
+:return:"
+  + computeMidPriceMovingAverages() : "Returns the short-window and long-window moving averages of mid price.
+:return:"
+  + wakeup() : "Action to be taken by agent at each wakeup.
+
+:param currentTime: pd.Timestamp for current simulation time"
+  + getWakeFrequency() : "Set next wakeup time for agent."
+}
+ExampleExperimentalAgentTemplate <|-- ExampleExperimentalAgent
+}
+
+'' ===== From: agent/examples/ExampleExperimentalAgentTemplate =====
+package agent.examples {
+class ExampleExperimentalAgentTemplate {
+  + __init__() : "Constructor for ExampleExperimentalAgentTemplate.
+
+:param id: Agent's ID as set in config
+:param name: Agent's human-readable name as set in config
+:param type: Agent's human-readable type as set in config, useful for grouping agents semantically
+:param symbol: Name of asset being traded
+:param starting_cash: Dollar amount of cash agent starts with.
+:param levels: Number of levels of orderbook to subscribe to
+:param subscription_freq: Frequency of orderbook updates subscribed to (in nanoseconds)
+:param log_orders: bool to decide if agent's individual actions logged to file.
+:param random_state: numpy RandomState object from which agent derives randomness"
+  + wakeup() : "Action to be taken by agent at each wakeup.
+
+:param currentTime: pd.Timestamp for current simulation time"
+  + receiveMessage() : "Action taken when agent receives a message from the exchange
+
+:param currentTime: pd.Timestamp for current simulation time
+:param msg: message from exchange
+:return:"
+  + getWakeFrequency() : "Set next wakeup time for agent."
+  + placeLimitOrder() : "Place a limit order at the exchange.
+:param quantity (int):      order quantity
+:param is_buy_order (bool): True if Buy else False
+:param limit_price: price level at which to place a limit order
+:return:"
+  + placeMarketOrder() : "Place a market order at the exchange.
+:param quantity (int):      order quantity
+:param is_buy_order (bool): True if Buy else False
+:return:"
+  + cancelAllOrders() : "Cancels all resting limit orders placed by the experimental agent."
+}
+SubscriptionAgent <|-- ExampleExperimentalAgentTemplate
+}
+
+'' ===== From: agent/examples/ImpactAgent =====
+package agent.examples {
+class ImpactAgent {
+  + __init__()
+  + wakeup()
+  + receiveMessage()
+  + placeLimitOrder()
+  + computeRequiredPrice()
+  + getLastTrade()
+  + getCurrentSpread()
+  + getWakeFrequency()
+}
+TradingAgent <|-- ImpactAgent
+}
+
+'' ===== From: agent/examples/L3OrdersProcessor =====
+package agent.examples {
+class L3OrdersProcessor {
+  - COLUMNS
+  - DIRECTION
+  + __init__()
+  + processOrders()
+}
+}
+
+'' ===== From: agent/examples/MarketReplayAgent =====
+package agent.examples {
+class MarketReplayAgent {
+  + __init__()
+  + wakeup()
+  + receiveMessage()
+  + placeOrder()
+  + getWakeFrequency()
+}
+TradingAgent <|-- MarketReplayAgent
+}
+
+'' ===== From: agent/examples/MomentumAgent =====
+package agent.examples {
+class MomentumAgent {
+  + __init__()
+  + kernelStarting()
+  + wakeup() : "Agent wakeup is determined by self.wake_up_freq"
+  + receiveMessage() : "Momentum agent actions are determined after obtaining the best bid and ask in the LOB"
+  + placeOrders() : "Momentum Agent actions logic"
+  + getWakeFrequency()
+  + ma()
+}
+TradingAgent <|-- MomentumAgent
+}
+
+'' ===== From: agent/examples/QLearningAgent =====
+package agent.examples {
+class QLearningAgent {
+  + __init__()
+  + kernelStopping()
+  + wakeup()
+  + placeOrder()
+  + receiveMessage()
+  + cancelOrders()
+  + getWakeFrequency()
+}
+TradingAgent <|-- QLearningAgent
+}
+
+'' ===== From: agent/examples/SubscriptionAgent =====
+package agent.examples {
+class SubscriptionAgent {
+  + __init__()
+  + kernelStarting()
+  + wakeup()
+  + receiveMessage()
+  + getWakeFrequency()
+}
+TradingAgent <|-- SubscriptionAgent
+}
+
+'' ===== From: agent/examples/SumClientAgent =====
+package agent.examples {
+class SumClientAgent {
+  + __init__()
+  + kernelStarting()
+  + wakeup()
+  + receiveMessage()
+}
+Agent <|-- SumClientAgent
+}
+
+'' ===== From: agent/examples/SumServiceAgent =====
+package agent.examples {
+class SumServiceAgent {
+  + __init__()
+  + kernelStarting()
+  + kernelStopping()
+  + receiveMessage()
+  + processSum()
+}
+Agent <|-- SumServiceAgent
+}
+
+'' ===== From: agent/examples/crypto/PPFL_ClientAgent =====
+package agent.examples.crypto {
+class PPFL_ClientAgent {
+  + __init__()
+  + kernelStarting()
+  + kernelStopping()
+  + wakeup()
+  + receiveMessage()
+}
+Agent <|-- PPFL_ClientAgent
+}
+
+'' ===== From: agent/examples/crypto/PPFL_ServiceAgent =====
+package agent.examples.crypto {
+class PPFL_ServiceAgent {
+  + __init__()
+  + kernelStarting()
+  + kernelStopping()
+  + receiveMessage()
+  + combineWeights()
+}
+Agent <|-- PPFL_ServiceAgent
+}
+
+'' ===== From: agent/examples/crypto/PPFL_TemplateClientAgent =====
+package agent.examples.crypto {
+class PPFL_TemplateClientAgent {
+  + __init__()
+  + kernelStarting()
+  + kernelStopping()
+  + wakeup()
+  + receiveMessage()
+}
+Agent <|-- PPFL_TemplateClientAgent
+}
+
+'' ===== From: agent/execution/ExecutionAgent =====
+package agent.execution {
+class ExecutionAgent {
+  + __init__()
+  + kernelStopping()
+  + wakeup()
+  + receiveMessage()
+  + handleOrderExecution()
+  + handleOrderAcceptance()
+  + placeOrders()
+  + cancelOrders()
+  + getWakeFrequency()
+}
+TradingAgent <|-- ExecutionAgent
+}
+
+'' ===== From: agent/execution/POVExecutionAgent =====
+package agent.execution {
+class POVExecutionAgent {
+  + __init__()
+  + processEndTime() : "Make end time of POV order sensible, i.e. if a time is given leave it alone; else, add 24 hours to start."
+  + wakeup()
+  + getWakeFrequency()
+  + receiveMessage()
+  + handleOrderAcceptance()
+  + handleOrderExecution()
+  + cancelOrders()
+}
+TradingAgent <|-- POVExecutionAgent
+}
+
+'' ===== From: agent/execution/TWAPExecutionAgent =====
+package agent.execution {
+class TWAPExecutionAgent {
+  + __init__()
+  + generate_schedule()
+}
+ExecutionAgent <|-- TWAPExecutionAgent
+}
+
+'' ===== From: agent/execution/VWAPExecutionAgent =====
+package agent.execution {
+class VWAPExecutionAgent {
+  + __init__()
+  + generate_schedule()
+  + synthetic_volume_profile()
+}
+ExecutionAgent <|-- VWAPExecutionAgent
+}
+
+'' ===== From: agent/market_makers/AdaptiveMarketMakerAgent =====
+package agent.market_makers {
+class AdaptiveMarketMakerAgent {
+  + __init__()
+  + initialiseState() : "Returns variables that keep track of whether spread and transacted volume have been observed."
+  + validateAnchor() : "Checks that input parameter anchor takes allowed value, raises ValueError if not.
+
+:param anchor: str
+:return:"
+  + validateWindowSize() : "Checks that input parameter window_size takes allowed value, raises ValueError if not
+
+:param window_size:
+:return:"
+  + kernelStarting()
+  + wakeup() : "Agent wakeup is determined by self.wake_up_freq"
+  + receiveMessage() : "Processes message from exchange. Main function is to update orders in orderbook relative to mid-price.
+
+:param simulation current time
+:param message received by self from ExchangeAgent
+
+:type currentTime: pd.Timestamp
+:type msg: str
+
+:return:"
+  + _adaptive_update_spread() : "Update internal spread estimate with exponentially weighted moving average
+:param spread:
+:return:"
+  + _adaptive_update_window_and_tick_size() : "Update window size and tick size relative to internal spread estimate.
+
+:return:"
+  + updateOrderSize() : "Updates size of order to be placed."
+  + computeOrdersToPlace() : "Given a mid price, computes the orders that need to be removed from orderbook, and adds these orders to
+    bid and ask deques.
+
+:param mid: mid-price
+:type mid: int
+
+:return:"
+  + placeOrders() : "Given a mid-price, compute new orders that need to be placed, then send the orders to the Exchange.
+
+:param mid: mid-price
+:type mid: int"
+  + getWakeFrequency() : "Get time increment corresponding to wakeup period."
+  + cancelAllOrders() : "Cancels all resting limit orders placed by the market maker"
+}
+TradingAgent <|-- AdaptiveMarketMakerAgent
+}
+
+'' ===== From: agent/market_makers/MarketMakerAgent =====
+package agent.market_makers {
+class MarketMakerAgent {
+  + __init__()
+  + kernelStarting()
+  + wakeup() : "Agent wakeup is determined by self.wake_up_freq"
+  + receiveMessage() : "Market Maker actions are determined after obtaining the bids and asks in the LOB"
+  + placeOrders()
+  + cancelOrders() : "cancels all resting limit orders placed by the market maker"
+  + getWakeFrequency()
+}
+TradingAgent <|-- MarketMakerAgent
+}
+
+'' ===== From: agent/market_makers/POVMarketMakerAgent =====
+package agent.market_makers {
+class POVMarketMakerAgent {
+  + __init__()
+  + initialiseState() : "Returns variables that keep track of whether spread and transacted volume have been observed."
+  + validateAnchor() : "Checks that input parameter anchor takes allowed value, raises ValueError if not.
+
+:param anchor: str
+:return:"
+  + kernelStarting()
+  + wakeup() : "Agent wakeup is determined by self.wake_up_freq"
+  + receiveMessage() : "Processes message from exchange. Main function is to update orders in orderbook relative to mid-price.
+
+:param simulation current time
+:param message received by self from ExchangeAgent
+
+:type currentTime: pd.Timestamp
+:type msg: str
+
+:return:"
+  + updateOrderSize() : "Updates size of order to be placed."
+  + computeOrdersToPlace() : "Given a mid price, computes the orders that need to be removed from orderbook, and adds these orders to
+    bid and ask deques.
+
+:param mid: mid-price
+:type mid: int
+
+:return:"
+  + placeOrders() : "Given a mid-price, compute new orders that need to be placed, then send the orders to the Exchange.
+
+:param mid: mid-price
+:type mid: int"
+  + getWakeFrequency() : "Get time increment corresponding to wakeup period."
+  + cancelAllOrders() : "Cancels all resting limit orders placed by the market maker"
+}
+TradingAgent <|-- POVMarketMakerAgent
+}
+
+'' ===== From: agent/market_makers/SpreadBasedMarketMakerAgent =====
+package agent.market_makers {
+class SpreadBasedMarketMakerAgent {
+  - _Order
+  + __init__()
+  + validateAnchor() : "Checks that input parameter anchor takes allowed value, raises ValueError if not.
+
+:param anchor: str
+:return:"
+  + kernelStarting()
+  + wakeup() : "Agent wakeup is determined by self.wake_up_freq"
+  + receiveMessage() : "Processes message from exchange. Main function is to update orders in orderbook relative to mid-price.
+
+:param simulation current time
+:param message received by self from ExchangeAgent
+
+:type currentTime: pd.Timestamp
+:type msg: str
+
+:return:"
+  + computeOrdersToCancel() : "Given a mid price, computes the orders that need to be removed from orderbook, and pops these orders from
+    bid and ask deques.
+
+:param mid: mid-price
+:type mid: int
+
+:return:"
+  + cancelOrders() : "Given a list of _Order objects, remove the corresponding orders from ExchangeAgent's orderbook
+
+:param orders_to_cancel: orders to remove from orderbook
+:type orders_to_cancel: list(_Order)
+:return:"
+  + computeOrdersToPlace() : "Given a mid price, computes the orders that need to be removed from orderbook, and adds these orders to
+    bid and ask deques.
+
+:param mid: mid-price
+:type mid: int
+
+:return:"
+  + placeOrders() : "Given a mid-price, compute new orders that need to be placed, then send the orders to the Exchange.
+
+:param mid: mid-price
+:type mid: int"
+  + initialiseBidsAsksDeques() : "Initialise the current_bids and current_asks object attributes, which internally keep track of the limit
+orders sent to the Exchange.
+
+:param mid: mid-price
+:type mid: int"
+  + generateNewOrderId() : "Generate a _Order object for a particular price level
+
+:param price:
+:type price: int"
+  + getWakeFrequency() : "Get time increment corresponding to wakeup period."
+  + cancelAllOrders() : "Cancels all resting limit orders placed by the market maker"
+}
+TradingAgent <|-- SpreadBasedMarketMakerAgent
+}
+
+'' ===== From: contributed_traders/SimpleAgent =====
+package contributed_traders {
+class SimpleAgent {
+  + __init__()
+  + kernelStarting()
+  + wakeup() : "Agent wakeup is determined by self.wake_up_freq"
+  + dump_shares()
+  + receiveMessage() : "Momentum agent actions are determined after obtaining the best bid and ask in the LOB"
+  + getWakeFrequency()
+}
+TradingAgent <|-- SimpleAgent
+}
+
+'' ===== From: message/Message =====
+package message {
+class Message {
+  - uniq
+  + __init__()
+  + __lt__()
+  + __str__()
+}
+}
+
+'' ===== From: message/MessageType =====
+package message {
+class MessageType {
+  - MESSAGE
+  - WAKEUP
+  + __lt__()
+}
+Enum <|-- MessageType
+}
+
+'' ===== From: model/LatencyModel =====
+package model {
+class LatencyModel {
+  + __init__() : "Model-specific parameters may be specified as keyword args or a dictionary with key 'kwargs'.
+
+Required keyword parameters:
+  'latency_model' : 'cubic'
+
+Optional keyword parameters:
+  'random_state'  : an initialized np.random.RandomState object."
+  + get_latency() : "LatencyModel.get_latency() samples and returns the final latency for a single Message according to the
+model specified during initialization.
+
+Required parameters:
+  'sender_id'    : simulation agent_id for the agent sending the message
+  'recipient_id' : simulation agent_id for the agent receiving the message"
+  + _extract() : "Internal function to extract correct values for a sender->recipient pair from parameters that can
+be specified as scalar, 1-D ndarray, or 2-D ndarray.
+
+Required parameters:
+  'param' : the parameter (not parameter name) from which to extract a value
+  'sid'   : the simulation sender agent id
+  'rid'   : the simulation recipient agent id"
+}
+}
+
+'' ===== From: realism/Constants =====
+package realism {
+class Constants {
+  - fig_height
+  - fig_width
+  - tick_label_size
+  - legend_font_size
+  - axes_label_font_size
+  - title_font_size
+  - scatter_marker_styles_sizes
+  - interarrival_times_xlabel
+  - interarrival_times_ylabel
+  - interarrival_times_filename
+  - interarrival_fit_lower_bound
+  - interarrival_fit_upper_bound
+  - interarrival_linewidth
+  - binned_trade_counts_xlabel
+  - binned_trade_counts_ylabel
+  - binned_trade_counts_filename
+  - binned_count_linewidth
+  - intraday_volume_filename
+  - intraday_volume_linewidth
+}
+}
+
+'' ===== From: realism/metrics/AggregationNormality =====
+package realism.metrics {
+class AggregationNormality {
+  + __init__()
+  + compute()
+  + visualize()
+}
+Metric <|-- AggregationNormality
+}
+
+'' ===== From: realism/metrics/Autocorrelation =====
+package realism.metrics {
+class Autocorrelation {
+  + __init__()
+  + compute()
+  + visualize()
+}
+Metric <|-- Autocorrelation
+}
+
+'' ===== From: realism/metrics/Kurtosis =====
+package realism.metrics {
+class Kurtosis {
+  + __init__()
+  + compute()
+  + visualize()
+}
+Metric <|-- Kurtosis
+}
+
+'' ===== From: realism/metrics/Metric =====
+package realism.metrics {
+class Metric {
+  + compute()
+  + visualize()
+  + hist()
+  + line()
+}
+}
+
+'' ===== From: realism/metrics/MinutelyReturns =====
+package realism.metrics {
+class MinutelyReturns {
+  + compute()
+  + visualize()
+}
+Metric <|-- MinutelyReturns
+}
+
+'' ===== From: realism/metrics/ReturnsVolatilityCorrelation =====
+package realism.metrics {
+class ReturnsVolatilityCorrelation {
+  + __init__()
+  + compute()
+  + visualize()
+}
+Metric <|-- ReturnsVolatilityCorrelation
+}
+
+'' ===== From: realism/metrics/VolatilityClustering =====
+package realism.metrics {
+class VolatilityClustering {
+  + __init__()
+  + compute()
+  + visualize()
+}
+Metric <|-- VolatilityClustering
+}
+
+'' ===== From: realism/metrics/VolumeVolatilityCorrelation =====
+package realism.metrics {
+class VolumeVolatilityCorrelation {
+  + __init__()
+  + compute()
+  + visualize()
+}
+Metric <|-- VolumeVolatilityCorrelation
+}
+
+'' ===== From: util/OrderBook =====
+package util {
+class OrderBook {
+  + __init__()
+  + handleLimitOrder()
+  + handleMarketOrder()
+  + executeOrder()
+  + isMatch()
+  + enterOrder()
+  + cancelOrder()
+  + modifyOrder()
+  + getInsideBids()
+  + getInsideAsks()
+  + _get_recent_history() : "Gets portion of self.history that has arrived since last call of self.get_transacted_volume.
+
+    Also updates self._transacted_volume[self.history_previous_length]
+:return:"
+  + _update_unrolled_transactions() : "Updates self._transacted_volume["unrolled_transactions"] with data from recent_history
+
+:return:"
+  + _unrolled_transactions_from_order_history() : "Returns a DataFrame with columns ['execution_time', 'quantity'] from a dictionary with same format as
+self.history, describing executed transactions."
+  + get_transacted_volume() : "Method retrieves the total transacted volume for a symbol over a lookback period finishing at the current
+simulation time."
+  + isBetterPrice()
+  + isEqualPrice()
+  + isSameOrder()
+  + book_log_to_df() : "Returns a pandas DataFrame constructed from the order book log, to be consumed by
+    agent.ExchangeAgent.logOrderbookSnapshots.
+
+    The first column of the DataFrame is `QuoteTime`. The succeeding columns are prices quoted during the
+    simulation (as taken from self.quotes_seen).
+
+    Each row is a snapshot at a specific time instance. If there is volume at a certain price level (negative
+    for bids, positive for asks) this volume is written in the column corresponding to the price level. If there
+    is no volume at a given price level, the corresponding column has a `0`.
+
+    The data is stored in a sparse format, such that a value of `0` takes up no space.
+
+:return:"
+  + prettyPrint()
+}
+}
+
+'' ===== From: util/formatting/Oracle =====
+package util.formatting {
+class Oracle {
+  - COLUMNS
+  - DIRECTION
+  + __init__()
+  + processOrders()
+}
+}
+
+'' ===== From: util/model/QTable =====
+package util.model {
+class QTable {
+  + __init__()
+}
+}
+
+'' ===== From: util/oracle/DataOracle =====
+package util.oracle {
+class DataOracle {
+  + __init__()
+  + getDailyOpenPrice()
+  + getLatestTrade()
+  + observePrice()
+}
+}
+
+'' ===== From: util/oracle/ExternalFileOracle =====
+package util.oracle {
+class ExternalFileOracle {
+  + __init__()
+  + load_fundamentals() : "Method extracts fundamentals for each symbol into DataFrames. Note that input files must be of the form
+generated by util/formatting/mid_price_from_orderbook.py."
+  + getDailyOpenPrice()
+  + getPriceAtTime() : "Get the true price of a symbol at the requested time.
+:param symbol: which symbol to query
+:type symbol: str
+:param time: at this time
+:type time: pd.Timestamp"
+  + observePrice() : "Make observation of price at a given time.
+:param symbol: symbol for which to observe price
+:type symbol: str
+:param currentTime: time of observation
+:type currentTime: pd.Timestamp
+:param sigma_n: Observation noise parameter
+:type sigma_n: float
+:param random_state: random state for Agent making observation
+:type random_state: np.RandomState
+:return: int, price in cents"
+  + getInterpolatedPrice() : "Get the price at current_time, linearly interpolated between price_low and price_high measured at times
+time_low and time_high
+:param current_time: time for which price is to be interpolated
+:type current_time: pd.Timestamp
+:param time_low: time of first fundamental value
+:type time_low: pd.Timestamp
+:param time_high: time of first fundamental value
+:type time_high: pd.Timestamp
+:param price_low: first fundamental value
+:type price_low: float
+:param price_high: first fundamental value
+:type price_high: float
+:return float of interpolated price:"
+}
+}
+
+'' ===== From: util/oracle/MeanRevertingOracle =====
+package util.oracle {
+class MeanRevertingOracle {
+  + __init__()
+  + generate_fundamental_value_series()
+  + getDailyOpenPrice()
+  + observePrice()
+}
+}
+
+'' ===== From: util/oracle/SparseMeanRevertingOracle =====
+package util.oracle {
+class SparseMeanRevertingOracle {
+  + __init__()
+  + compute_fundamental_at_timestamp()
+  + advance_fundamental_value_series()
+  + getDailyOpenPrice()
+  + observePrice()
+}
+MeanRevertingOracle <|-- SparseMeanRevertingOracle
+}
+
+'' ===== From: util/order/LimitOrder =====
+package util.order {
+class LimitOrder {
+  + __init__()
+  + __str__()
+  + __repr__()
+  + __copy__()
+  + __deepcopy__()
+}
+Order <|-- LimitOrder
+}
+
+'' ===== From: util/order/MarketOrder =====
+package util.order {
+class MarketOrder {
+  + __init__()
+  + __str__()
+  + __repr__()
+  + __copy__()
+  + __deepcopy__()
+}
+Order <|-- MarketOrder
+}
+
+'' ===== From: util/order/Order =====
+package util.order {
+class Order {
+  - order_id
+  - _order_ids
+  + __init__()
+  + generateOrderId()
+  + to_dict()
+  + __copy__()
+  + __deepcopy__()
+}
+}
+
+'' ===== From: util/order/etf/BasketOrder =====
+package util.order.etf {
+class BasketOrder {
+  + __init__()
+  + __str__()
+  + __repr__()
+}
+Order <|-- BasketOrder
+}
+
+'' ===== From: util/plotting/Constants =====
+package util.plotting {
+class Constants {
+  - fig_width
+  - fig_height
+  - tick_label_size
+  - axes_label_font_size
+  - title_font_size
+  - legend_font_size
+  - filename
+}
+}
+
+@enduml

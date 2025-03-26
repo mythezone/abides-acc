@@ -1,0 +1,20 @@
+@startuml
+class ExchangeAgent {
+  + __init__()
+  + kernelInitializing()
+  + kernelTerminating()
+  + receiveMessage()
+  + updateSubscriptionDict()
+  + publishOrderBookData() : "The exchange agents sends an order book update to the agents using the subscription API if one of the following
+conditions are met:
+1) agent requests ALL order book updates (freq == 0)
+2) order book update timestamp > last time agent was updated AND the orderbook update time stamp is greater than
+the last agent update time stamp by a period more than that specified in the freq parameter."
+  + logOrderBookSnapshots() : "Log full depth quotes (price, volume) from this order book at some pre-determined frequency. Here we are looking at
+the actual log for this order book (i.e. are there snapshots to export, independent of the requested frequency)."
+  + sendMessage()
+  + getMarketOpen()
+  + getMarketClose()
+}
+FinancialAgent <|-- ExchangeAgent
+@enduml

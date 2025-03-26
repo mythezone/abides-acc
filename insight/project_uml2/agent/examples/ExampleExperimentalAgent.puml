@@ -1,0 +1,26 @@
+@startuml
+class ExampleExperimentalAgent {
+  + __init__() : ":param args: superclass args
+:param wake_freq: Frequency of wakeup -- str to be parsed by pd.Timedelta
+:param order_size: size of orders to place
+:param short_window: length of mid price short moving average window -- str to be parsed by pd.Timedelta
+:param long_window: length of mid price long moving average window -- str to be parsed by pd.Timedelta
+:param kwargs: superclass kwargs"
+  + getCurrentMidPrice() : "Retrieve mid price from most recent subscription data.
+
+:return:"
+  + receiveMessage() : "Action taken when agent receives a message from the exchange -- action here is for agent to update internal
+    log of most recently observed mid-price.
+
+:param currentTime: pd.Timestamp for current simulation time
+:param msg: message from exchange
+:return:"
+  + computeMidPriceMovingAverages() : "Returns the short-window and long-window moving averages of mid price.
+:return:"
+  + wakeup() : "Action to be taken by agent at each wakeup.
+
+:param currentTime: pd.Timestamp for current simulation time"
+  + getWakeFrequency() : "Set next wakeup time for agent."
+}
+ExampleExperimentalAgentTemplate <|-- ExampleExperimentalAgent
+@enduml

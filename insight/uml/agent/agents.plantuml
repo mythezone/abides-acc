@@ -1,0 +1,31 @@
+@startuml
+
+package "agent" #DDDDDD {
+    class Agent {
+    + id: String
+    + name: String
+    + type: String
+    + random_state: np.random.RandomState
+    + log: Array 
+    + kernel: Kernel
+    + currentTime: time 
+
+    void kernelInitializing(kernel: Kernel)
+    void kernelStarting(startTime: time)
+    void kernelStopping()
+    void kernelTerminating()
+    void logEvent(eventType,event:String,appendSummaryLog:Boolean)
+    void receiveMessage(currentTime: time, message: Message)
+    void wakeup(currentTime: time)
+    void sendMessage(recipientID: int, msg: Message, delay:int)
+    void setWakeup(requestedTime: time)
+    void getComputationDelay()
+    void delay(additionalDelay: int)
+    void writeLog(dfLog: DataFrame, filename: String)
+}
+}
+
+!include message.plantuml
+
+
+@enduml

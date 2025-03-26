@@ -1,0 +1,14 @@
+@startuml
+class ValueAgent {
+  + __init__()
+  + kernelStarting()
+  + kernelStopping()
+  + wakeup()
+  + updateEstimates()
+  + placeOrder()
+  + receiveMessage()
+  + cancelOrders()
+  + getWakeFrequency()
+}
+TradingAgent <|-- ValueAgent
+@enduml

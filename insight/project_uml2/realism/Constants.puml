@@ -1,0 +1,23 @@
+@startuml
+class Constants {
+  - fig_height
+  - fig_width
+  - tick_label_size
+  - legend_font_size
+  - axes_label_font_size
+  - title_font_size
+  - scatter_marker_styles_sizes
+  - interarrival_times_xlabel
+  - interarrival_times_ylabel
+  - interarrival_times_filename
+  - interarrival_fit_lower_bound
+  - interarrival_fit_upper_bound
+  - interarrival_linewidth
+  - binned_trade_counts_xlabel
+  - binned_trade_counts_ylabel
+  - binned_trade_counts_filename
+  - binned_count_linewidth
+  - intraday_volume_filename
+  - intraday_volume_linewidth
+}
+@enduml

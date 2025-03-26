@@ -1,0 +1,8 @@
+@startuml
+class Message {
+  - uniq
+  + __init__()
+  + __lt__()
+  + __str__()
+}
+@enduml

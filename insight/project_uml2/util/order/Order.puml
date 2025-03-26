@@ -1,0 +1,11 @@
+@startuml
+class Order {
+  - order_id
+  - _order_ids
+  + __init__()
+  + generateOrderId()
+  + to_dict()
+  + __copy__()
+  + __deepcopy__()
+}
+@enduml

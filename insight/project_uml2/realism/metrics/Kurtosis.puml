@@ -1,0 +1,8 @@
+@startuml
+class Kurtosis {
+  + __init__()
+  + compute()
+  + visualize()
+}
+Metric <|-- Kurtosis
+@enduml

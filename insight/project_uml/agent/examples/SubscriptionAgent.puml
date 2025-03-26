@@ -1,0 +1,10 @@
+@startuml
+class SubscriptionAgent {
+  + __init__()
+  + kernelStarting()
+  + wakeup()
+  + receiveMessage()
+  + getWakeFrequency()
+}
+TradingAgent <|-- SubscriptionAgent
+@enduml

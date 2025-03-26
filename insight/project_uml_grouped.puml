@@ -1,0 +1,704 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam backgroundColor #FDFDFD
+
+
+package . {
+  '' From: Kernel.puml
+  class Kernel {
+    + __init__()
+    + runner()
+    + sendMessage()
+    + setWakeup()
+    + getAgentComputeDelay()
+    + setAgentComputeDelay()
+    + delayAgent()
+    + findAgentByType()
+    + writeLog()
+    + appendSummaryLog()
+    + writeSummaryLog()
+    + updateAgentState()
+    + fmtTime()
+  }
+}
+
+package agent {
+  '' From: agent/Agent.puml
+  class Agent {
+    + __init__()
+    + kernelInitializing()
+    + kernelStarting()
+    + kernelStopping()
+    + kernelTerminating()
+    + logEvent()
+    + receiveMessage()
+    + wakeup()
+    + sendMessage()
+    + setWakeup()
+    + getComputationDelay()
+    + setComputationDelay()
+    + delay()
+    + writeLog()
+    + updateAgentState()
+    + __lt__()
+  }
+  '' From: agent/ExchangeAgent.puml
+  class ExchangeAgent {
+    + __init__()
+    + kernelInitializing()
+    + kernelTerminating()
+    + receiveMessage()
+    + updateSubscriptionDict()
+    + publishOrderBookData()
+    + logOrderBookSnapshots()
+    + sendMessage()
+    + getMarketOpen()
+    + getMarketClose()
+  }
+  FinancialAgent <|-- ExchangeAgent
+  '' From: agent/FinancialAgent.puml
+  class FinancialAgent {
+    + __init__()
+    + dollarize()
+  }
+  Agent <|-- FinancialAgent
+  '' From: agent/FundamentalTrackingAgent.puml
+  class FundamentalTrackingAgent {
+    + __init__()
+    + kernelStarting()
+    + kernelStopping()
+    + measureFundamental()
+    + wakeup()
+    + writeFundamental()
+    + getWakeFrequency()
+  }
+  TradingAgent <|-- FundamentalTrackingAgent
+  '' From: agent/HeuristicBeliefLearningAgent.puml
+  class HeuristicBeliefLearningAgent {
+    + __init__()
+    + wakeup()
+    + placeOrder()
+    + receiveMessage()
+  }
+  ZeroIntelligenceAgent <|-- HeuristicBeliefLearningAgent
+  '' From: agent/NoiseAgent.puml
+  class NoiseAgent {
+    + __init__()
+    + kernelStarting()
+    + kernelStopping()
+    + wakeup()
+    + placeOrder()
+    + receiveMessage()
+    + cancelOrders()
+    + getWakeFrequency()
+  }
+  TradingAgent <|-- NoiseAgent
+  '' From: agent/OrderBookImbalanceAgent.puml
+  class OrderBookImbalanceAgent {
+    + __init__()
+    + kernelStarting()
+    + wakeup()
+    + receiveMessage()
+    + getWakeFrequency()
+    + computeRequiredPrice()
+    + cancelOrders()
+    + kernelTerminating()
+  }
+  TradingAgent <|-- OrderBookImbalanceAgent
+  '' From: agent/TradingAgent.puml
+  class TradingAgent {
+    + __init__()
+    + kernelStarting()
+    + kernelStopping()
+    + wakeup()
+    + requestDataSubscription()
+    + cancelDataSubscription()
+    + receiveMessage()
+    + getLastTrade()
+    + getCurrentSpread()
+    + getOrderStream()
+    + get_transacted_volume()
+    + placeLimitOrder()
+    + placeMarketOrder()
+    + cancelOrder()
+    + modifyOrder()
+    + orderExecuted()
+    + orderAccepted()
+    + orderCancelled()
+    + marketClosed()
+    + queryLastTrade()
+    + querySpread()
+    + handleMarketData()
+    + queryOrderStream()
+    + query_transacted_volume()
+    + getKnownBidAsk()
+    + getKnownLiquidity()
+    + getBookLiquidity()
+    + markToMarket()
+    + getHoldings()
+    + getKnownBidAskMidpoint()
+    + get_average_transaction_price()
+    + fmtHoldings()
+  }
+  FinancialAgent <|-- TradingAgent
+  '' From: agent/ValueAgent.puml
+  class ValueAgent {
+    + __init__()
+    + kernelStarting()
+    + kernelStopping()
+    + wakeup()
+    + updateEstimates()
+    + placeOrder()
+    + receiveMessage()
+    + cancelOrders()
+    + getWakeFrequency()
+  }
+  TradingAgent <|-- ValueAgent
+  '' From: agent/ZeroIntelligenceAgent.puml
+  class ZeroIntelligenceAgent {
+    + __init__()
+    + kernelStarting()
+    + kernelStopping()
+    + wakeup()
+    + updateEstimates()
+    + placeOrder()
+    + receiveMessage()
+    + cancelOrders()
+    + getWakeFrequency()
+  }
+  TradingAgent <|-- ZeroIntelligenceAgent
+}
+
+package agent.etf {
+  '' From: agent/etf/EtfArbAgent.puml
+  class EtfArbAgent {
+    + __init__()
+    + kernelStarting()
+    + kernelStopping()
+    + wakeup()
+    + getPriceEstimates()
+    + placeOrder()
+    + receiveMessage()
+    + cancelOrders()
+    + getWakeFrequency()
+  }
+  TradingAgent <|-- EtfArbAgent
+  '' From: agent/etf/EtfMarketMakerAgent.puml
+  class EtfMarketMakerAgent {
+    + __init__()
+    + kernelStarting()
+    + wakeup()
+    + placeOrder()
+    + decideBasket()
+    + receiveMessage()
+    + getEtfNav()
+    + placeBasketOrder()
+    + queryEtfNav()
+  }
+  EtfArbAgent <|-- EtfMarketMakerAgent
+  '' From: agent/etf/EtfPrimaryAgent.puml
+  class EtfPrimaryAgent {
+    + __init__()
+    + kernelStarting()
+    + kernelStopping()
+    + wakeup()
+    + receiveMessage()
+    + queryLastTrade()
+    + getLastTrade()
+    + getPrimeOpen()
+    + getPrimeClose()
+  }
+  FinancialAgent <|-- EtfPrimaryAgent
+}
+
+package agent.examples {
+  '' From: agent/examples/ExampleExperimentalAgent.puml
+  class ExampleExperimentalAgent {
+    + __init__()
+    + getCurrentMidPrice()
+    + receiveMessage()
+    + computeMidPriceMovingAverages()
+    + wakeup()
+    + getWakeFrequency()
+  }
+  ExampleExperimentalAgentTemplate <|-- ExampleExperimentalAgent
+  '' From: agent/examples/ExampleExperimentalAgentTemplate.puml
+  class ExampleExperimentalAgentTemplate {
+    + __init__()
+    + wakeup()
+    + receiveMessage()
+    + getWakeFrequency()
+    + placeLimitOrder()
+    + placeMarketOrder()
+    + cancelAllOrders()
+  }
+  SubscriptionAgent <|-- ExampleExperimentalAgentTemplate
+  '' From: agent/examples/ImpactAgent.puml
+  class ImpactAgent {
+    + __init__()
+    + wakeup()
+    + receiveMessage()
+    + placeLimitOrder()
+    + computeRequiredPrice()
+    + getLastTrade()
+    + getCurrentSpread()
+    + getWakeFrequency()
+  }
+  TradingAgent <|-- ImpactAgent
+  '' From: agent/examples/L3OrdersProcessor.puml
+  class L3OrdersProcessor {
+    - COLUMNS
+    - DIRECTION
+    + __init__()
+    + processOrders()
+  }
+  '' From: agent/examples/MarketReplayAgent.puml
+  class MarketReplayAgent {
+    + __init__()
+    + wakeup()
+    + receiveMessage()
+    + placeOrder()
+    + getWakeFrequency()
+  }
+  TradingAgent <|-- MarketReplayAgent
+  '' From: agent/examples/MomentumAgent.puml
+  class MomentumAgent {
+    + __init__()
+    + kernelStarting()
+    + wakeup()
+    + receiveMessage()
+    + placeOrders()
+    + getWakeFrequency()
+    + ma()
+  }
+  TradingAgent <|-- MomentumAgent
+  '' From: agent/examples/QLearningAgent.puml
+  class QLearningAgent {
+    + __init__()
+    + kernelStopping()
+    + wakeup()
+    + placeOrder()
+    + receiveMessage()
+    + cancelOrders()
+    + getWakeFrequency()
+  }
+  TradingAgent <|-- QLearningAgent
+  '' From: agent/examples/SubscriptionAgent.puml
+  class SubscriptionAgent {
+    + __init__()
+    + kernelStarting()
+    + wakeup()
+    + receiveMessage()
+    + getWakeFrequency()
+  }
+  TradingAgent <|-- SubscriptionAgent
+  '' From: agent/examples/SumClientAgent.puml
+  class SumClientAgent {
+    + __init__()
+    + kernelStarting()
+    + wakeup()
+    + receiveMessage()
+  }
+  Agent <|-- SumClientAgent
+  '' From: agent/examples/SumServiceAgent.puml
+  class SumServiceAgent {
+    + __init__()
+    + kernelStarting()
+    + kernelStopping()
+    + receiveMessage()
+    + processSum()
+  }
+  Agent <|-- SumServiceAgent
+}
+
+package agent.examples.crypto {
+  '' From: agent/examples/crypto/PPFL_ClientAgent.puml
+  class PPFL_ClientAgent {
+    + __init__()
+    + kernelStarting()
+    + kernelStopping()
+    + wakeup()
+    + receiveMessage()
+  }
+  Agent <|-- PPFL_ClientAgent
+  '' From: agent/examples/crypto/PPFL_ServiceAgent.puml
+  class PPFL_ServiceAgent {
+    + __init__()
+    + kernelStarting()
+    + kernelStopping()
+    + receiveMessage()
+    + combineWeights()
+  }
+  Agent <|-- PPFL_ServiceAgent
+  '' From: agent/examples/crypto/PPFL_TemplateClientAgent.puml
+  class PPFL_TemplateClientAgent {
+    + __init__()
+    + kernelStarting()
+    + kernelStopping()
+    + wakeup()
+    + receiveMessage()
+  }
+  Agent <|-- PPFL_TemplateClientAgent
+}
+
+package agent.execution {
+  '' From: agent/execution/ExecutionAgent.puml
+  class ExecutionAgent {
+    + __init__()
+    + kernelStopping()
+    + wakeup()
+    + receiveMessage()
+    + handleOrderExecution()
+    + handleOrderAcceptance()
+    + placeOrders()
+    + cancelOrders()
+    + getWakeFrequency()
+  }
+  TradingAgent <|-- ExecutionAgent
+  '' From: agent/execution/POVExecutionAgent.puml
+  class POVExecutionAgent {
+    + __init__()
+    + processEndTime()
+    + wakeup()
+    + getWakeFrequency()
+    + receiveMessage()
+    + handleOrderAcceptance()
+    + handleOrderExecution()
+    + cancelOrders()
+  }
+  TradingAgent <|-- POVExecutionAgent
+  '' From: agent/execution/TWAPExecutionAgent.puml
+  class TWAPExecutionAgent {
+    + __init__()
+    + generate_schedule()
+  }
+  ExecutionAgent <|-- TWAPExecutionAgent
+  '' From: agent/execution/VWAPExecutionAgent.puml
+  class VWAPExecutionAgent {
+    + __init__()
+    + generate_schedule()
+    + synthetic_volume_profile()
+  }
+  ExecutionAgent <|-- VWAPExecutionAgent
+}
+
+package agent.market_makers {
+  '' From: agent/market_makers/AdaptiveMarketMakerAgent.puml
+  class AdaptiveMarketMakerAgent {
+    + __init__()
+    + initialiseState()
+    + validateAnchor()
+    + validateWindowSize()
+    + kernelStarting()
+    + wakeup()
+    + receiveMessage()
+    + _adaptive_update_spread()
+    + _adaptive_update_window_and_tick_size()
+    + updateOrderSize()
+    + computeOrdersToPlace()
+    + placeOrders()
+    + getWakeFrequency()
+    + cancelAllOrders()
+  }
+  TradingAgent <|-- AdaptiveMarketMakerAgent
+  '' From: agent/market_makers/MarketMakerAgent.puml
+  class MarketMakerAgent {
+    + __init__()
+    + kernelStarting()
+    + wakeup()
+    + receiveMessage()
+    + placeOrders()
+    + cancelOrders()
+    + getWakeFrequency()
+  }
+  TradingAgent <|-- MarketMakerAgent
+  '' From: agent/market_makers/POVMarketMakerAgent.puml
+  class POVMarketMakerAgent {
+    + __init__()
+    + initialiseState()
+    + validateAnchor()
+    + kernelStarting()
+    + wakeup()
+    + receiveMessage()
+    + updateOrderSize()
+    + computeOrdersToPlace()
+    + placeOrders()
+    + getWakeFrequency()
+    + cancelAllOrders()
+  }
+  TradingAgent <|-- POVMarketMakerAgent
+  '' From: agent/market_makers/SpreadBasedMarketMakerAgent.puml
+  class SpreadBasedMarketMakerAgent {
+    - _Order
+    + __init__()
+    + validateAnchor()
+    + kernelStarting()
+    + wakeup()
+    + receiveMessage()
+    + computeOrdersToCancel()
+    + cancelOrders()
+    + computeOrdersToPlace()
+    + placeOrders()
+    + initialiseBidsAsksDeques()
+    + generateNewOrderId()
+    + getWakeFrequency()
+    + cancelAllOrders()
+  }
+  TradingAgent <|-- SpreadBasedMarketMakerAgent
+}
+
+package contributed_traders {
+  '' From: contributed_traders/SimpleAgent.puml
+  class SimpleAgent {
+    + __init__()
+    + kernelStarting()
+    + wakeup()
+    + dump_shares()
+    + receiveMessage()
+    + getWakeFrequency()
+  }
+  TradingAgent <|-- SimpleAgent
+}
+
+package message {
+  '' From: message/Message.puml
+  class Message {
+    - uniq
+    + __init__()
+    + __lt__()
+    + __str__()
+  }
+  '' From: message/MessageType.puml
+  class MessageType {
+    - MESSAGE
+    - WAKEUP
+    + __lt__()
+  }
+  Enum <|-- MessageType
+}
+
+package model {
+  '' From: model/LatencyModel.puml
+  class LatencyModel {
+    + __init__()
+    + get_latency()
+    + _extract()
+  }
+}
+
+package realism {
+  '' From: realism/Constants.puml
+  class Constants {
+    - fig_height
+    - fig_width
+    - tick_label_size
+    - legend_font_size
+    - axes_label_font_size
+    - title_font_size
+    - scatter_marker_styles_sizes
+    - interarrival_times_xlabel
+    - interarrival_times_ylabel
+    - interarrival_times_filename
+    - interarrival_fit_lower_bound
+    - interarrival_fit_upper_bound
+    - interarrival_linewidth
+    - binned_trade_counts_xlabel
+    - binned_trade_counts_ylabel
+    - binned_trade_counts_filename
+    - binned_count_linewidth
+    - intraday_volume_filename
+    - intraday_volume_linewidth
+  }
+}
+
+package realism.metrics {
+  '' From: realism/metrics/AggregationNormality.puml
+  class AggregationNormality {
+    + __init__()
+    + compute()
+    + visualize()
+  }
+  Metric <|-- AggregationNormality
+  '' From: realism/metrics/Autocorrelation.puml
+  class Autocorrelation {
+    + __init__()
+    + compute()
+    + visualize()
+  }
+  Metric <|-- Autocorrelation
+  '' From: realism/metrics/Kurtosis.puml
+  class Kurtosis {
+    + __init__()
+    + compute()
+    + visualize()
+  }
+  Metric <|-- Kurtosis
+  '' From: realism/metrics/Metric.puml
+  class Metric {
+    + compute()
+    + visualize()
+    + hist()
+    + line()
+  }
+  '' From: realism/metrics/MinutelyReturns.puml
+  class MinutelyReturns {
+    + compute()
+    + visualize()
+  }
+  Metric <|-- MinutelyReturns
+  '' From: realism/metrics/ReturnsVolatilityCorrelation.puml
+  class ReturnsVolatilityCorrelation {
+    + __init__()
+    + compute()
+    + visualize()
+  }
+  Metric <|-- ReturnsVolatilityCorrelation
+  '' From: realism/metrics/VolatilityClustering.puml
+  class VolatilityClustering {
+    + __init__()
+    + compute()
+    + visualize()
+  }
+  Metric <|-- VolatilityClustering
+  '' From: realism/metrics/VolumeVolatilityCorrelation.puml
+  class VolumeVolatilityCorrelation {
+    + __init__()
+    + compute()
+    + visualize()
+  }
+  Metric <|-- VolumeVolatilityCorrelation
+}
+
+package util {
+  '' From: util/OrderBook.puml
+  class OrderBook {
+    + __init__()
+    + handleLimitOrder()
+    + handleMarketOrder()
+    + executeOrder()
+    + isMatch()
+    + enterOrder()
+    + cancelOrder()
+    + modifyOrder()
+    + getInsideBids()
+    + getInsideAsks()
+    + _get_recent_history()
+    + _update_unrolled_transactions()
+    + _unrolled_transactions_from_order_history()
+    + get_transacted_volume()
+    + isBetterPrice()
+    + isEqualPrice()
+    + isSameOrder()
+    + book_log_to_df()
+    + prettyPrint()
+  }
+}
+
+package util.formatting {
+  '' From: util/formatting/Oracle.puml
+  class Oracle {
+    - COLUMNS
+    - DIRECTION
+    + __init__()
+    + processOrders()
+  }
+}
+
+package util.model {
+  '' From: util/model/QTable.puml
+  class QTable {
+    + __init__()
+  }
+}
+
+package util.oracle {
+  '' From: util/oracle/DataOracle.puml
+  class DataOracle {
+    + __init__()
+    + getDailyOpenPrice()
+    + getLatestTrade()
+    + observePrice()
+  }
+  '' From: util/oracle/ExternalFileOracle.puml
+  class ExternalFileOracle {
+    + __init__()
+    + load_fundamentals()
+    + getDailyOpenPrice()
+    + getPriceAtTime()
+    + observePrice()
+    + getInterpolatedPrice()
+  }
+  '' From: util/oracle/MeanRevertingOracle.puml
+  class MeanRevertingOracle {
+    + __init__()
+    + generate_fundamental_value_series()
+    + getDailyOpenPrice()
+    + observePrice()
+  }
+  '' From: util/oracle/SparseMeanRevertingOracle.puml
+  class SparseMeanRevertingOracle {
+    + __init__()
+    + compute_fundamental_at_timestamp()
+    + advance_fundamental_value_series()
+    + getDailyOpenPrice()
+    + observePrice()
+  }
+  MeanRevertingOracle <|-- SparseMeanRevertingOracle
+}
+
+package util.order {
+  '' From: util/order/LimitOrder.puml
+  class LimitOrder {
+    + __init__()
+    + __str__()
+    + __repr__()
+    + __copy__()
+    + __deepcopy__()
+  }
+  Order <|-- LimitOrder
+  '' From: util/order/MarketOrder.puml
+  class MarketOrder {
+    + __init__()
+    + __str__()
+    + __repr__()
+    + __copy__()
+    + __deepcopy__()
+  }
+  Order <|-- MarketOrder
+  '' From: util/order/Order.puml
+  class Order {
+    - order_id
+    - _order_ids
+    + __init__()
+    + generateOrderId()
+    + to_dict()
+    + __copy__()
+    + __deepcopy__()
+  }
+}
+
+package util.order.etf {
+  '' From: util/order/etf/BasketOrder.puml
+  class BasketOrder {
+    + __init__()
+    + __str__()
+    + __repr__()
+  }
+  Order <|-- BasketOrder
+}
+
+package util.plotting {
+  '' From: util/plotting/Constants.puml
+  class Constants {
+    - fig_width
+    - fig_height
+    - tick_label_size
+    - axes_label_font_size
+    - title_font_size
+    - legend_font_size
+    - filename
+  }
+}
+@enduml

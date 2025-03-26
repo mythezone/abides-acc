@@ -1,0 +1,8 @@
+@startuml
+class VolatilityClustering {
+  + __init__()
+  + compute()
+  + visualize()
+}
+Metric <|-- VolatilityClustering
+@enduml

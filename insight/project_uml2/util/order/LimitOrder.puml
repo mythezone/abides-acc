@@ -1,0 +1,10 @@
+@startuml
+class LimitOrder {
+  + __init__()
+  + __str__()
+  + __repr__()
+  + __copy__()
+  + __deepcopy__()
+}
+Order <|-- LimitOrder
+@enduml

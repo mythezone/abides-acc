@@ -1,0 +1,10 @@
+@startuml
+class PPFL_TemplateClientAgent {
+  + __init__()
+  + kernelStarting()
+  + kernelStopping()
+  + wakeup()
+  + receiveMessage()
+}
+Agent <|-- PPFL_TemplateClientAgent
+@enduml

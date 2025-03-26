@@ -1,0 +1,23 @@
+@startuml
+class OrderBook {
+  + __init__()
+  + handleLimitOrder()
+  + handleMarketOrder()
+  + executeOrder()
+  + isMatch()
+  + enterOrder()
+  + cancelOrder()
+  + modifyOrder()
+  + getInsideBids()
+  + getInsideAsks()
+  + _get_recent_history()
+  + _update_unrolled_transactions()
+  + _unrolled_transactions_from_order_history()
+  + get_transacted_volume()
+  + isBetterPrice()
+  + isEqualPrice()
+  + isSameOrder()
+  + book_log_to_df()
+  + prettyPrint()
+}
+@enduml

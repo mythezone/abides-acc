@@ -1,0 +1,15 @@
+@startuml
+class FundamentalTrackingAgent {
+  + __init__() : "Constructor for FundamentalTrackingAgent
+
+:param log_frequency: Frequency to update log (in nanoseconds)
+:param symbol: symbol for which fundamental is being logged"
+  + kernelStarting()
+  + kernelStopping() : "Stops kernel and saves fundamental series to disk."
+  + measureFundamental() : "Saves the fundamental value at self.currentTime to self.fundamental_series."
+  + wakeup() : "Advances agent in time and takes measurement of fundamental."
+  + writeFundamental() : "Logs fundamental series to file."
+  + getWakeFrequency()
+}
+TradingAgent <|-- FundamentalTrackingAgent
+@enduml

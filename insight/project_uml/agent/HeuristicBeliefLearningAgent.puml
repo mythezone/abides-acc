@@ -1,0 +1,9 @@
+@startuml
+class HeuristicBeliefLearningAgent {
+  + __init__()
+  + wakeup()
+  + placeOrder()
+  + receiveMessage()
+}
+ZeroIntelligenceAgent <|-- HeuristicBeliefLearningAgent
+@enduml

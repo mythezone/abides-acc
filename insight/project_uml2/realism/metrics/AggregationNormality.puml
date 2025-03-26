@@ -1,0 +1,8 @@
+@startuml
+class AggregationNormality {
+  + __init__()
+  + compute()
+  + visualize()
+}
+Metric <|-- AggregationNormality
+@enduml

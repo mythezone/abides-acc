@@ -1,0 +1,14 @@
+@startuml
+class EtfArbAgent {
+  + __init__()
+  + kernelStarting()
+  + kernelStopping()
+  + wakeup()
+  + getPriceEstimates()
+  + placeOrder()
+  + receiveMessage()
+  + cancelOrders()
+  + getWakeFrequency()
+}
+TradingAgent <|-- EtfArbAgent
+@enduml

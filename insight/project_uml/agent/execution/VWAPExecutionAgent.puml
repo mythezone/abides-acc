@@ -1,0 +1,8 @@
+@startuml
+class VWAPExecutionAgent {
+  + __init__()
+  + generate_schedule()
+  + synthetic_volume_profile()
+}
+ExecutionAgent <|-- VWAPExecutionAgent
+@enduml

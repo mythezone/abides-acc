@@ -1,0 +1,16 @@
+@startuml
+class POVMarketMakerAgent {
+  + __init__()
+  + initialiseState()
+  + validateAnchor()
+  + kernelStarting()
+  + wakeup()
+  + receiveMessage()
+  + updateOrderSize()
+  + computeOrdersToPlace()
+  + placeOrders()
+  + getWakeFrequency()
+  + cancelAllOrders()
+}
+TradingAgent <|-- POVMarketMakerAgent
+@enduml

@@ -1,0 +1,10 @@
+@startuml
+class PPFL_ServiceAgent {
+  + __init__()
+  + kernelStarting()
+  + kernelStopping()
+  + receiveMessage()
+  + combineWeights()
+}
+Agent <|-- PPFL_ServiceAgent
+@enduml

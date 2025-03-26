@@ -1,0 +1,7 @@
+@startuml
+class MinutelyReturns {
+  + compute()
+  + visualize()
+}
+Metric <|-- MinutelyReturns
+@enduml

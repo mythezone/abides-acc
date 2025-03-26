@@ -1,0 +1,15 @@
+@startuml
+class ExchangeAgent {
+  + __init__()
+  + kernelInitializing()
+  + kernelTerminating()
+  + receiveMessage()
+  + updateSubscriptionDict()
+  + publishOrderBookData()
+  + logOrderBookSnapshots()
+  + sendMessage()
+  + getMarketOpen()
+  + getMarketClose()
+}
+FinancialAgent <|-- ExchangeAgent
+@enduml

@@ -1,0 +1,13 @@
+@startuml
+class OrderBookImbalanceAgent {
+  + __init__()
+  + kernelStarting()
+  + wakeup()
+  + receiveMessage()
+  + getWakeFrequency()
+  + computeRequiredPrice()
+  + cancelOrders()
+  + kernelTerminating()
+}
+TradingAgent <|-- OrderBookImbalanceAgent
+@enduml

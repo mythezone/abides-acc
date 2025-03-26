@@ -1,0 +1,12 @@
+@startuml
+class MarketMakerAgent {
+  + __init__()
+  + kernelStarting()
+  + wakeup() : "Agent wakeup is determined by self.wake_up_freq"
+  + receiveMessage() : "Market Maker actions are determined after obtaining the bids and asks in the LOB"
+  + placeOrders()
+  + cancelOrders() : "cancels all resting limit orders placed by the market maker"
+  + getWakeFrequency()
+}
+TradingAgent <|-- MarketMakerAgent
+@enduml

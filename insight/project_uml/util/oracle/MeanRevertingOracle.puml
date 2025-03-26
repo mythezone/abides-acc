@@ -1,0 +1,8 @@
+@startuml
+class MeanRevertingOracle {
+  + __init__()
+  + generate_fundamental_value_series()
+  + getDailyOpenPrice()
+  + observePrice()
+}
+@enduml

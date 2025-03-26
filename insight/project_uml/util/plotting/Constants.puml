@@ -1,0 +1,11 @@
+@startuml
+class Constants {
+  - fig_width
+  - fig_height
+  - tick_label_size
+  - axes_label_font_size
+  - title_font_size
+  - legend_font_size
+  - filename
+}
+@enduml

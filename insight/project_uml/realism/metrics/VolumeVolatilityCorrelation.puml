@@ -1,0 +1,8 @@
+@startuml
+class VolumeVolatilityCorrelation {
+  + __init__()
+  + compute()
+  + visualize()
+}
+Metric <|-- VolumeVolatilityCorrelation
+@enduml

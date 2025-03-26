@@ -1,0 +1,10 @@
+@startuml
+class MarketReplayAgent {
+  + __init__()
+  + wakeup()
+  + receiveMessage()
+  + placeOrder()
+  + getWakeFrequency()
+}
+TradingAgent <|-- MarketReplayAgent
+@enduml

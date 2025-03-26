@@ -1,0 +1,12 @@
+@startuml
+class ExampleExperimentalAgentTemplate {
+  + __init__()
+  + wakeup()
+  + receiveMessage()
+  + getWakeFrequency()
+  + placeLimitOrder()
+  + placeMarketOrder()
+  + cancelAllOrders()
+}
+SubscriptionAgent <|-- ExampleExperimentalAgentTemplate
+@enduml

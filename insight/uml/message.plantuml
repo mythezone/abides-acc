@@ -1,0 +1,8 @@
+package "message" #DDDDDD {
+class Message {
+    ~ MESSAGE: 1
+    ~ WAKEUP: 2
+    + body: Any
+    - uniq: int 
+    }
+}

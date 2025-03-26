@@ -1,0 +1,19 @@
+@startuml
+class AdaptiveMarketMakerAgent {
+  + __init__()
+  + initialiseState()
+  + validateAnchor()
+  + validateWindowSize()
+  + kernelStarting()
+  + wakeup()
+  + receiveMessage()
+  + _adaptive_update_spread()
+  + _adaptive_update_window_and_tick_size()
+  + updateOrderSize()
+  + computeOrdersToPlace()
+  + placeOrders()
+  + getWakeFrequency()
+  + cancelAllOrders()
+}
+TradingAgent <|-- AdaptiveMarketMakerAgent
+@enduml

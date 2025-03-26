@@ -1,0 +1,10 @@
+@startuml
+class ExternalFileOracle {
+  + __init__()
+  + load_fundamentals()
+  + getDailyOpenPrice()
+  + getPriceAtTime()
+  + observePrice()
+  + getInterpolatedPrice()
+}
+@enduml

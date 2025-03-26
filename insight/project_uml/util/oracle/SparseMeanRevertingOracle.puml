@@ -1,0 +1,10 @@
+@startuml
+class SparseMeanRevertingOracle {
+  + __init__()
+  + compute_fundamental_at_timestamp()
+  + advance_fundamental_value_series()
+  + getDailyOpenPrice()
+  + observePrice()
+}
+MeanRevertingOracle <|-- SparseMeanRevertingOracle
+@enduml

@@ -1,0 +1,11 @@
+@startuml
+class ExampleExperimentalAgent {
+  + __init__()
+  + getCurrentMidPrice()
+  + receiveMessage()
+  + computeMidPriceMovingAverages()
+  + wakeup()
+  + getWakeFrequency()
+}
+ExampleExperimentalAgentTemplate <|-- ExampleExperimentalAgent
+@enduml

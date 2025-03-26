@@ -9,7 +9,7 @@ from util.util import log_print, be_silent
 
 from copy import deepcopy
 import pandas as pd
-from pandas.io.json import json_normalize
+from pandas import json_normalize
 from functools import reduce
 from scipy.sparse import dok_matrix
 from tqdm import tqdm
@@ -43,6 +43,9 @@ class OrderBook:
             "self.history_previous_length": 0
         }
 
+        #代码优化：
+        self.history_index = {}
+
     def handleLimitOrder(self, order):
         # Matches a limit order or adds it to the order book.  Handles partial matches piecewise,
         # consuming all possible shares at the best price before moving on, without regard to
@@ -62,6 +65,8 @@ class OrderBook:
                                            'limit_price': order.limit_price, 'transactions': [],
                                            'modifications': [],
                                            'cancellations': []}
+        # 代码优化：
+        self.history_index[order.order_id] = 0
 
         matching = True
 
@@ -237,7 +242,7 @@ class OrderBook:
             # When two limit orders are matched, they execute at the price that
             # was being "advertised" in the order book.
             matched_order.fill_price = matched_order.limit_price
-
+            
             # Record the transaction in the order history and push the indices
             # out one, possibly truncating to the maximum history length.
 
@@ -251,6 +256,14 @@ class OrderBook:
                 # Found the matched order in history.  Update it with this transaction.
                 self.history[idx][matched_order.order_id]['transactions'].append(
                     (self.owner.currentTime, matched_order.quantity))
+                
+            #     # 代码优化：start
+            #     if matched_order.order_id in self.history[idx]:
+            #         del self.history_index[idx][matched_order.order_id]
+            
+            # if matched_order.order_id in self.history_index:
+            #     del self.history_index[matched_order.order_id]
+            #     # 代码优化：end
 
             # Return (only the executed portion of) the matched order.
             return matched_order
@@ -317,6 +330,10 @@ class OrderBook:
         # There are orders on this side.  Find the price level of the order to cancel,
         # then find the exact order and cancel it.
         # Note that o is a LIST of all orders (oldest at index 0) at this same price.
+
+        # 代码优化：
+        self.history_index = {order_id: idx for idx, orders in enumerate(self.history) for order_id in orders}
+
         for i, o in enumerate(book):
             if self.isEqualPrice(order, o[0]):
                 # This is the correct price level.
@@ -325,13 +342,25 @@ class OrderBook:
                         # Cancel this order.
                         cancelled_order = book[i].pop(ci)
 
-                        # Record cancellation of the order if it is still present in the recent history structure.
-                        for idx, orders in enumerate(self.history):
-                            if cancelled_order.order_id not in orders: continue
 
-                            # Found the cancelled order in history.  Update it with the cancelation.
+                        # 代码优化：start
+                        if cancelled_order.order_id in self.history_index:
+                            idx = self.history_index[cancelled_order.order_id]
                             self.history[idx][cancelled_order.order_id]['cancellations'].append(
-                                (self.owner.currentTime, cancelled_order.quantity))
+                                (self.owner.currentTime, cancelled_order.quantity)
+                            )
+                        # 代码优化：end
+                        
+                        ## 被优化的原来的代码---start
+                        # # Record cancellation of the order if it is still present in the recent history structure.
+                        # for idx, orders in enumerate(self.history):
+                        #     if cancelled_order.order_id not in orders: continue
+
+                        #     # Found the cancelled order in history.  Update it with the cancelation.
+                        #     self.history[idx][cancelled_order.order_id]['cancellations'].append(
+                        #         (self.owner.currentTime, cancelled_order.quantity))
+
+                        ## 被优化的原来的代码---end
 
                         # If the cancelled price now has no orders, remove it completely.
                         if not book[i]:

@@ -1,0 +1,47 @@
+@startuml
+class TradingAgent {
+  + __init__()
+  + kernelStarting()
+  + kernelStopping()
+  + wakeup()
+  + requestDataSubscription()
+  + cancelDataSubscription()
+  + receiveMessage()
+  + getLastTrade()
+  + getCurrentSpread()
+  + getOrderStream()
+  + get_transacted_volume() : "Used by any trading agent subclass to query the total transacted volume in a given lookback period"
+  + placeLimitOrder()
+  + placeMarketOrder() : "Used by any Trading Agent subclass to place a market order. The market order is created as multiple limit orders
+crossing the spread walking the book until all the quantities are matched.
+:param symbol (str):        name of the stock traded
+:param quantity (int):      order quantity
+:param is_buy_order (bool): True if Buy else False
+:param order_id:            Order ID for market replay
+:param ignore_risk (bool):  Determines whether cash or risk limits should be enforced or ignored for the order
+:return:"
+  + cancelOrder() : "Used by any Trading Agent subclass to cancel any order.  The order must currently
+appear in the agent's open orders list."
+  + modifyOrder() : "Used by any Trading Agent subclass to modify any existing limit order.  The order must currently
+appear in the agent's open orders list.  Some additional tests might be useful here
+to ensure the old and new orders are the same in some way."
+  + orderExecuted()
+  + orderAccepted()
+  + orderCancelled()
+  + marketClosed()
+  + queryLastTrade()
+  + querySpread()
+  + handleMarketData() : "Handles Market Data messages for agents using subscription mechanism"
+  + queryOrderStream()
+  + query_transacted_volume() : "Handles the QUERY_TRANSACTED_VOLUME messages from the exchange agent"
+  + getKnownBidAsk()
+  + getKnownLiquidity()
+  + getBookLiquidity()
+  + markToMarket()
+  + getHoldings()
+  + getKnownBidAskMidpoint()
+  + get_average_transaction_price() : "Calculates the average price paid (weighted by the order size)"
+  + fmtHoldings()
+}
+FinancialAgent <|-- TradingAgent
+@enduml

@@ -1,0 +1,12 @@
+@startuml
+class QLearningAgent {
+  + __init__()
+  + kernelStopping()
+  + wakeup()
+  + placeOrder()
+  + receiveMessage()
+  + cancelOrders()
+  + getWakeFrequency()
+}
+TradingAgent <|-- QLearningAgent
+@enduml

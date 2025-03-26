@@ -1,0 +1,11 @@
+@startuml
+class SimpleAgent {
+  + __init__()
+  + kernelStarting()
+  + wakeup()
+  + dump_shares()
+  + receiveMessage()
+  + getWakeFrequency()
+}
+TradingAgent <|-- SimpleAgent
+@enduml

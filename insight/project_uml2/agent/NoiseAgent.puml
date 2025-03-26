@@ -1,0 +1,13 @@
+@startuml
+class NoiseAgent {
+  + __init__()
+  + kernelStarting()
+  + kernelStopping()
+  + wakeup()
+  + placeOrder()
+  + receiveMessage()
+  + cancelOrders()
+  + getWakeFrequency()
+}
+TradingAgent <|-- NoiseAgent
+@enduml

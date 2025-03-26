@@ -1,0 +1,12 @@
+@startuml
+class MarketMakerAgent {
+  + __init__()
+  + kernelStarting()
+  + wakeup()
+  + receiveMessage()
+  + placeOrders()
+  + cancelOrders()
+  + getWakeFrequency()
+}
+TradingAgent <|-- MarketMakerAgent
+@enduml

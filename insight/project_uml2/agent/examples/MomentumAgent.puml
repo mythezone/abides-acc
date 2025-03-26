@@ -1,0 +1,12 @@
+@startuml
+class MomentumAgent {
+  + __init__()
+  + kernelStarting()
+  + wakeup() : "Agent wakeup is determined by self.wake_up_freq"
+  + receiveMessage() : "Momentum agent actions are determined after obtaining the best bid and ask in the LOB"
+  + placeOrders() : "Momentum Agent actions logic"
+  + getWakeFrequency()
+  + ma()
+}
+TradingAgent <|-- MomentumAgent
+@enduml

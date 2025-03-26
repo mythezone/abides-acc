@@ -1,0 +1,56 @@
+@startuml
+class SpreadBasedMarketMakerAgent {
+  - _Order
+  + __init__()
+  + validateAnchor() : "Checks that input parameter anchor takes allowed value, raises ValueError if not.
+
+:param anchor: str
+:return:"
+  + kernelStarting()
+  + wakeup() : "Agent wakeup is determined by self.wake_up_freq"
+  + receiveMessage() : "Processes message from exchange. Main function is to update orders in orderbook relative to mid-price.
+
+:param simulation current time
+:param message received by self from ExchangeAgent
+
+:type currentTime: pd.Timestamp
+:type msg: str
+
+:return:"
+  + computeOrdersToCancel() : "Given a mid price, computes the orders that need to be removed from orderbook, and pops these orders from
+    bid and ask deques.
+
+:param mid: mid-price
+:type mid: int
+
+:return:"
+  + cancelOrders() : "Given a list of _Order objects, remove the corresponding orders from ExchangeAgent's orderbook
+
+:param orders_to_cancel: orders to remove from orderbook
+:type orders_to_cancel: list(_Order)
+:return:"
+  + computeOrdersToPlace() : "Given a mid price, computes the orders that need to be removed from orderbook, and adds these orders to
+    bid and ask deques.
+
+:param mid: mid-price
+:type mid: int
+
+:return:"
+  + placeOrders() : "Given a mid-price, compute new orders that need to be placed, then send the orders to the Exchange.
+
+:param mid: mid-price
+:type mid: int"
+  + initialiseBidsAsksDeques() : "Initialise the current_bids and current_asks object attributes, which internally keep track of the limit
+orders sent to the Exchange.
+
+:param mid: mid-price
+:type mid: int"
+  + generateNewOrderId() : "Generate a _Order object for a particular price level
+
+:param price:
+:type price: int"
+  + getWakeFrequency() : "Get time increment corresponding to wakeup period."
+  + cancelAllOrders() : "Cancels all resting limit orders placed by the market maker"
+}
+TradingAgent <|-- SpreadBasedMarketMakerAgent
+@enduml

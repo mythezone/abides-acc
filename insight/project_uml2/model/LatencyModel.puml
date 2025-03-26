@@ -1,0 +1,24 @@
+@startuml
+class LatencyModel {
+  + __init__() : "Model-specific parameters may be specified as keyword args or a dictionary with key 'kwargs'.
+
+Required keyword parameters:
+  'latency_model' : 'cubic'
+
+Optional keyword parameters:
+  'random_state'  : an initialized np.random.RandomState object."
+  + get_latency() : "LatencyModel.get_latency() samples and returns the final latency for a single Message according to the
+model specified during initialization.
+
+Required parameters:
+  'sender_id'    : simulation agent_id for the agent sending the message
+  'recipient_id' : simulation agent_id for the agent receiving the message"
+  + _extract() : "Internal function to extract correct values for a sender->recipient pair from parameters that can
+be specified as scalar, 1-D ndarray, or 2-D ndarray.
+
+Required parameters:
+  'param' : the parameter (not parameter name) from which to extract a value
+  'sid'   : the simulation sender agent id
+  'rid'   : the simulation recipient agent id"
+}
+@enduml

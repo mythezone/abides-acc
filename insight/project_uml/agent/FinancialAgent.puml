@@ -1,0 +1,7 @@
+@startuml
+class FinancialAgent {
+  + __init__()
+  + dollarize()
+}
+Agent <|-- FinancialAgent
+@enduml

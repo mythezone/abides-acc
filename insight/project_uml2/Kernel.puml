@@ -1,0 +1,22 @@
+@startuml
+class Kernel {
+  + __init__()
+  + runner()
+  + sendMessage()
+  + setWakeup()
+  + getAgentComputeDelay()
+  + setAgentComputeDelay()
+  + delayAgent()
+  + findAgentByType()
+  + writeLog()
+  + appendSummaryLog()
+  + writeSummaryLog()
+  + updateAgentState() : "Called by an agent that wishes to replace its custom state in the dictionary
+the Kernel will return at the end of simulation.  Shared state must be set directly,
+and agents should coordinate that non-destructively.
+
+Note that it is never necessary to use this kernel state dictionary for an agent
+to remember information about itself, only to report it back to the config file."
+  + fmtTime()
+}
+@enduml

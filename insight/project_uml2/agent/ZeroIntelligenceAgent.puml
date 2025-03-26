@@ -1,0 +1,14 @@
+@startuml
+class ZeroIntelligenceAgent {
+  + __init__()
+  + kernelStarting()
+  + kernelStopping()
+  + wakeup()
+  + updateEstimates()
+  + placeOrder()
+  + receiveMessage()
+  + cancelOrders()
+  + getWakeFrequency()
+}
+TradingAgent <|-- ZeroIntelligenceAgent
+@enduml

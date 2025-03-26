@@ -1,0 +1,8 @@
+@startuml
+class Oracle {
+  - COLUMNS
+  - DIRECTION
+  + __init__()
+  + processOrders()
+}
+@enduml

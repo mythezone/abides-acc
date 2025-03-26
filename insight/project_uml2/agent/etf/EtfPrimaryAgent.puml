@@ -1,0 +1,14 @@
+@startuml
+class EtfPrimaryAgent {
+  + __init__()
+  + kernelStarting()
+  + kernelStopping()
+  + wakeup()
+  + receiveMessage()
+  + queryLastTrade()
+  + getLastTrade()
+  + getPrimeOpen()
+  + getPrimeClose()
+}
+FinancialAgent <|-- EtfPrimaryAgent
+@enduml

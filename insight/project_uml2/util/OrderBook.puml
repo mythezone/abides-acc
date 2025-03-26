@@ -1,0 +1,42 @@
+@startuml
+class OrderBook {
+  + __init__()
+  + handleLimitOrder()
+  + handleMarketOrder()
+  + executeOrder()
+  + isMatch()
+  + enterOrder()
+  + cancelOrder()
+  + modifyOrder()
+  + getInsideBids()
+  + getInsideAsks()
+  + _get_recent_history() : "Gets portion of self.history that has arrived since last call of self.get_transacted_volume.
+
+    Also updates self._transacted_volume[self.history_previous_length]
+:return:"
+  + _update_unrolled_transactions() : "Updates self._transacted_volume["unrolled_transactions"] with data from recent_history
+
+:return:"
+  + _unrolled_transactions_from_order_history() : "Returns a DataFrame with columns ['execution_time', 'quantity'] from a dictionary with same format as
+self.history, describing executed transactions."
+  + get_transacted_volume() : "Method retrieves the total transacted volume for a symbol over a lookback period finishing at the current
+simulation time."
+  + isBetterPrice()
+  + isEqualPrice()
+  + isSameOrder()
+  + book_log_to_df() : "Returns a pandas DataFrame constructed from the order book log, to be consumed by
+    agent.ExchangeAgent.logOrderbookSnapshots.
+
+    The first column of the DataFrame is `QuoteTime`. The succeeding columns are prices quoted during the
+    simulation (as taken from self.quotes_seen).
+
+    Each row is a snapshot at a specific time instance. If there is volume at a certain price level (negative
+    for bids, positive for asks) this volume is written in the column corresponding to the price level. If there
+    is no volume at a given price level, the corresponding column has a `0`.
+
+    The data is stored in a sparse format, such that a value of `0` takes up no space.
+
+:return:"
+  + prettyPrint()
+}
+@enduml

@@ -1,0 +1,17 @@
+@startuml
+class Kernel {
+  + __init__()
+  + runner()
+  + sendMessage()
+  + setWakeup()
+  + getAgentComputeDelay()
+  + setAgentComputeDelay()
+  + delayAgent()
+  + findAgentByType()
+  + writeLog()
+  + appendSummaryLog()
+  + writeSummaryLog()
+  + updateAgentState()
+  + fmtTime()
+}
+@enduml

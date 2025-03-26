@@ -1,0 +1,12 @@
+@startuml
+class FundamentalTrackingAgent {
+  + __init__()
+  + kernelStarting()
+  + kernelStopping()
+  + measureFundamental()
+  + wakeup()
+  + writeFundamental()
+  + getWakeFrequency()
+}
+TradingAgent <|-- FundamentalTrackingAgent
+@enduml
