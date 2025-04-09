@@ -1,5 +1,5 @@
 from util.order.Order import Order
-from Kernel import Kernel
+from core.Kernel import Kernel
 from agent.FinancialAgent import dollarize
 from copy import deepcopy
 

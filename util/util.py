@@ -3,7 +3,9 @@ import pandas as pd
 from contextlib import contextmanager
 import warnings
 from scipy.spatial.distance import pdist, squareform
+from util.logger import Logger  
 
+logger = Logger()
 
 # General purpose utility functions for the simulator, attached to no particular class.
 # Available to any agent or other module/utility.  Should not require references to
@@ -18,8 +20,12 @@ silent_mode = False
 # Use it for all permanent logging print statements to allow fastest possible
 # execution when verbose flag is not set.  This is especially fast because
 # the arguments will not even be formatted when in silent mode.
-def log_print (str, *args):
-  if not silent_mode: print (str.format(*args))
+def log_print (msg:str,current_time:pd.Timestamp, *args):
+  if not silent_mode: 
+        formatted = msg.format(*args)
+    #   print (str.format(*args))
+        logger.log(formatted,current_time)   
+
 
 
 # Accessor method for the global silent_mode variable.

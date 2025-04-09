@@ -1,19 +1,26 @@
+import sys,os 
 import pandas as pd
+import numpy as np 
 
 from copy import deepcopy
 from util.util import log_print
+from typing import List, Dict 
+from core.Kernel import Kernel 
 
 class Agent:
 
-  agents_list = []
-  uniq = 0 
+  agents_list:List = []
+  uniq:int = 0 
 
   @classmethod
   def get_agent_by_id(cls, agent_id):
     return cls.agents_list[agent_id] if agent_id < len(cls.agents_list) else None
   
 
-  def __init__ (self, name, type, random_state, log_to_file=True):
+  def __init__ (self, name:str,
+                type:str,
+                random_state:np.random.RandomState,
+                log_to_file:bool=True):
 
     # ID must be a unique number (usually autoincremented).
     # Name is for human consumption, should be unique (often type + number).
@@ -58,13 +65,10 @@ class Agent:
     self.log = []
     self.logEvent("AGENT_TYPE", type)
 
-
-
-
   ### Flow of required kernel listening methods:
   ### init -> start -> (entire simulation) -> end -> terminate
 
-  def kernelInitializing (self, kernel):
+  def kernelInitializing (self, kernel:Kernel):
     # Called by kernel one time when simulation first begins.
     # No other agents are guaranteed to exist at this time.
 

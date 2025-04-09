@@ -1,4 +1,4 @@
-from Kernel import Kernel
+from core.Kernel import Kernel
 from agent.ExchangeAgent import ExchangeAgent
 from agent.OrderBookImbalanceAgent import OrderBookImbalanceAgent
 from agent.ValueAgent import ValueAgent

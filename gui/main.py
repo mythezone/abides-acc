@@ -1,6 +1,6 @@
 import gradio as gr
 from config.rmsc03_gui import build_simulation
-from Kernel import Kernel
+from core.Kernel import Kernel
 import argparse
 import threading
 import sys

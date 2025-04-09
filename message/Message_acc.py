@@ -2,6 +2,7 @@ from enum import Enum, unique
 from agent.Agent import Agent
 import pandas as pd 
 
+
 @unique
 class MessageType(Enum):
     MESSAGE = 0 
@@ -45,9 +46,6 @@ class Message:
   @classmethod
   def get_message_by_id(cls, message_id):
      return cls.message_list[message_id] if message_id < len(cls.message_list) else None
-  
-
-
 
   def __init__ (self, mtype:MessageType, 
                 sender: Agent|int,
