@@ -1,14 +1,7 @@
-# ABIDES: Agent-Based Interactive Discrete Event Simulation environment
+# ABIDES-ACC: Acceleration of ABIDES for Financial Calibration
+[![Build](https://github.com/mythezone/abides-acc/actions/workflows/CI.yml/badge.svg)](https://github.com/mythezone/abides-acc/actions)
+[![License](https://img.shields.io/github/license/mythezone/abides-acc.svg)](https://github.com/mythezone/abides-acc/blob/main/LICENSE)
 
-> ABIDES is an Agent-Based Interactive Discrete Event Simulation environment. ABIDES is designed from the ground up to support AI agent research in market applications. While simulations are certainly available within trading firms for their own internal use, there are no broadly available high-fidelity market simulation environments. We hope that the availability of such a platform will facilitate AI research in this important area. ABIDES currently enables the simulation of tens of thousands of trading agents interacting with an exchange agent to facilitate transactions. It supports configurable pairwise network latencies between each individual agent as well as the exchange. Our simulator's message-based design is modeled after NASDAQ's published equity trading protocols ITCH and OUCH. 
-
-Please see our arXiv paper for preliminary documentation:
-
-https://arxiv.org/abs/1904.12066
-
-Please see the wiki for tutorials and example configurations:
-
-https://github.com/abides-sim/abides/wiki
 
 ## Quickstart
 ```
@@ -20,3 +13,6 @@ cd abides
 pip install -r requirements.txt
 ```
 
+## Acknowledgements
+
+This project builds upon [abides](https://github.com/abides-sim/abides), an excellent agent-based market simulator.
