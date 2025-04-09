@@ -31,12 +31,7 @@ class LimitOrder(Order):
         # Until we make explicit market orders, we make a few assumptions that EXTREME prices on limit
         # orders are trying to represent a market order.  This only affects printing - they still hit
         # the order book like limit orders, which is wrong.
-        return "(Agent {} @ {}{}) : {} {} {} @ {}{}".format(self.agent_id, Kernel.fmtTime(self.time_placed),
-                                                            f" [{self.tag}]" if self.tag is not None else "",
-                                                            "BUY" if self.is_buy_order else "SELL", self.quantity,
-                                                            self.symbol,
-                                                            dollarize(self.limit_price) if abs(
-                                                                self.limit_price) < sys.maxsize else 'MKT', filled)
+        return "(Agent {} @ {}{}) : {} {} {} @ {}{}".format(self.agent_id, Kernel.fmtTime(self.time_placed),f" [{self.tag}]" if self.tag is not None else "","BUY" if self.is_buy_order else "SELL", self.quantity,self.symbol,dollarize(self.limit_price) if abs(self.limit_price) < sys.maxsize else 'MKT', filled)
 
     def __repr__(self):
         if silent_mode: return ''

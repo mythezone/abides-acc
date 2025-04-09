@@ -86,7 +86,7 @@ starting_cash = 10000000  # Cash in this simulator is always in CENTS.
 
 # 1) 1 Exchange Agent
 mkt_open = historical_date + pd.to_timedelta('09:30:00')
-mkt_close = historical_date + pd.to_timedelta('16:00:00')
+mkt_close = historical_date + pd.to_timedelta('10:30:00')
 
 agents.extend([ExchangeAgent(id=0,
                              name="EXCHANGE_AGENT",

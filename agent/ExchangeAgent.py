@@ -6,7 +6,7 @@
 # for stochasticity.
 from agent.FinancialAgent import FinancialAgent
 from message.Message import Message
-from util.OrderBook_nohistory import OrderBook
+from util.OrderBook import OrderBook
 from util.util import log_print
 
 import datetime as dt
@@ -384,7 +384,7 @@ class ExchangeAgent(FinancialAgent):
       # Final cleanup
       if not self.wide_book:
         dfLog.rename('Volume')
-        df = pd.SparseDataFrame(index=dfLog.index)
+        df = pd.DataFrame(index=dfLog.index,dtype="Sparse[int]")
         df['Volume'] = dfLog
       else:
         df = dfLog

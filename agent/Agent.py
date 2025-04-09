@@ -5,7 +5,15 @@ from util.util import log_print
 
 class Agent:
 
-  def __init__ (self, id, name, type, random_state, log_to_file=True):
+  agents_list = []
+  uniq = 0 
+
+  @classmethod
+  def get_agent_by_id(cls, agent_id):
+    return cls.agents_list[agent_id] if agent_id < len(cls.agents_list) else None
+  
+
+  def __init__ (self, name, type, random_state, log_to_file=True):
 
     # ID must be a unique number (usually autoincremented).
     # Name is for human consumption, should be unique (often type + number).
@@ -13,7 +21,11 @@ class Agent:
     # agents following the same strategy (incl. parameter settings).
     # Every agent is given a random state to use for any stochastic needs.
     # This is an np.random.RandomState object, already seeded.
-    self.id = id
+    self.id = Agent.uniq 
+    Agent.uniq += 1
+    Agent.agents_list.append(self)
+
+
     self.name = name
     self.type = type
     self.log_to_file = log_to_file
@@ -45,6 +57,8 @@ class Agent:
     # as a class, with enumerated EventTypes and so forth.
     self.log = []
     self.logEvent("AGENT_TYPE", type)
+
+
 
 
   ### Flow of required kernel listening methods:
