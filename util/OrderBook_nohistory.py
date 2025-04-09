@@ -32,7 +32,7 @@ class OrderBook:
         self.quotes_seen = set()
 
         # Create an order history for the exchange to report to certain agent types.
-        self.history = [{}]
+        # self.history = [{}]
 
         # Last timestamp the orderbook for that symbol was updated
         self.last_update_ts = None
@@ -57,11 +57,11 @@ class OrderBook:
             return
 
         # Add the order under index 0 of history: orders since the most recent trade.
-        self.history[0][order.order_id] = {'entry_time': self.owner.currentTime,
-                                           'quantity': order.quantity, 'is_buy_order': order.is_buy_order,
-                                           'limit_price': order.limit_price, 'transactions': [],
-                                           'modifications': [],
-                                           'cancellations': []}
+        # self.history[0][order.order_id] = {'entry_time': self.owner.currentTime,
+        #                                    'quantity': order.quantity, 'is_buy_order': order.is_buy_order,
+        #                                    'limit_price': order.limit_price, 'transactions': [],
+        #                                    'modifications': [],
+        #                                    'cancellations': []}
 
         matching = True
 
@@ -134,10 +134,10 @@ class OrderBook:
                 self.last_trade = avg_price
 
                 # Transaction occurred, so advance indices.
-                self.history.insert(0, {})
+                # self.history.insert(0, {})
 
                 # Truncate history to required length.
-                self.history = self.history[:self.owner.stream_history + 1]
+                # self.history = self.history[:self.owner.stream_history + 1]
 
             # Finally, log the full depth of the order book, ONLY if we have been requested to store the order book
             # for later visualization.  (This is slow.)
@@ -153,7 +153,7 @@ class OrderBook:
                                 "WARNING: THIS IS A REAL PROBLEM: an order book contains bids and asks at the same quote price!")
                     row[quote] = volume
                     self.quotes_seen.add(quote)
-                self.book_log.append(row)
+                # self.book_log.append(row)
         self.last_update_ts = self.owner.currentTime
         self.prettyPrint()
 
@@ -242,16 +242,16 @@ class OrderBook:
             # out one, possibly truncating to the maximum history length.
 
             # The incoming order is guaranteed to exist under index 0.
-            self.history[0][order.order_id]['transactions'].append((self.owner.currentTime, order.quantity))
+            # self.history[0][order.order_id]['transactions'].append((self.owner.currentTime, order.quantity))
 
             # The pre-existing order may or may not still be in the recent history.
             # 最耗时的两步：
-            for idx, orders in enumerate(self.history):
-                if matched_order.order_id not in orders: continue
+            # for idx, orders in enumerate(self.history):
+            #     if matched_order.order_id not in orders: continue
 
-                # Found the matched order in history.  Update it with this transaction.
-                self.history[idx][matched_order.order_id]['transactions'].append(
-                    (self.owner.currentTime, matched_order.quantity))
+            #     # Found the matched order in history.  Update it with this transaction.
+            #     self.history[idx][matched_order.order_id]['transactions'].append(
+            #         (self.owner.currentTime, matched_order.quantity))
                 
 
             # Return (only the executed portion of) the matched order.
@@ -329,17 +329,15 @@ class OrderBook:
                         # Cancel this order.
                         cancelled_order = book[i].pop(ci)
                         
-                        ## 被优化的原来的代码---start
                         # Record cancellation of the order if it is still present in the recent history structure.
                         # 第二耗时的两步：
-                        for idx, orders in enumerate(self.history):
-                            if cancelled_order.order_id not in orders: continue
+                        # for idx, orders in enumerate(self.history):
+                        #     if cancelled_order.order_id not in orders: continue
 
-                            # Found the cancelled order in history.  Update it with the cancelation.
-                            self.history[idx][cancelled_order.order_id]['cancellations'].append(
-                                (self.owner.currentTime, cancelled_order.quantity))
+                        #     # Found the cancelled order in history.  Update it with the cancelation.
+                        #     self.history[idx][cancelled_order.order_id]['cancellations'].append(
+                        #         (self.owner.currentTime, cancelled_order.quantity))
 
-                        ## 被优化的原来的代码---end
 
                         # If the cancelled price now has no orders, remove it completely.
                         if not book[i]:
@@ -360,20 +358,20 @@ class OrderBook:
         if not self.isSameOrder(order, new_order): return
         book = self.bids if order.is_buy_order else self.asks
         if not book: return
-        for i, o in enumerate(book):
-            if self.isEqualPrice(order, o[0]):
-                for mi, mo in enumerate(book[i]):
-                    if order.order_id == mo.order_id:
-                        book[i][0] = new_order
-                        for idx, orders in enumerate(self.history):
-                            if new_order.order_id not in orders: continue
-                            self.history[idx][new_order.order_id]['modifications'].append(
-                                (self.owner.currentTime, new_order.quantity))
-                            log_print("MODIFIED: order {}", order)
-                            log_print("SENT: notifications of order modification to agent {} for order {}",
-                                      new_order.agent_id, new_order.order_id)
-                            self.owner.sendMessage(order.agent_id,
-                                                   Message({"msg": "ORDER_MODIFIED", "new_order": new_order}))
+        # for i, o in enumerate(book):
+        #     if self.isEqualPrice(order, o[0]):
+        #         for mi, mo in enumerate(book[i]):
+        #             if order.order_id == mo.order_id:
+        #                 book[i][0] = new_order
+        #                 for idx, orders in enumerate(self.history):
+        #                     if new_order.order_id not in orders: continue
+        #                     self.history[idx][new_order.order_id]['modifications'].append(
+        #                         (self.owner.currentTime, new_order.quantity))
+        #                     log_print("MODIFIED: order {}", order)
+        #                     log_print("SENT: notifications of order modification to agent {} for order {}",
+        #                               new_order.agent_id, new_order.order_id)
+        #                     self.owner.sendMessage(order.agent_id,
+        #                                            Message({"msg": "ORDER_MODIFIED", "new_order": new_order}))
         if order.is_buy_order:
             self.bids = book
         else:
@@ -412,16 +410,17 @@ class OrderBook:
             Also updates self._transacted_volume[self.history_previous_length]
         :return:
         """
-        if self._transacted_volume["self.history_previous_length"] == 0:
-            self._transacted_volume["self.history_previous_length"] = len(self.history)
-            return self.history
-        elif self._transacted_volume["self.history_previous_length"] == len(self.history):
-            return {}
-        else:
-            idx = len(self.history) - self._transacted_volume["self.history_previous_length"] - 1
-            recent_history = self.history[0:idx]
-            self._transacted_volume["self.history_previous_length"] = len(self.history)
-            return recent_history
+        # if self._transacted_volume["self.history_previous_length"] == 0:
+        #     self._transacted_volume["self.history_previous_length"] = len(self.history)
+        #     return self.history
+        # elif self._transacted_volume["self.history_previous_length"] == len(self.history):
+        #     return {}
+        # else:
+        #     idx = len(self.history) - self._transacted_volume["self.history_previous_length"] - 1
+        #     recent_history = self.history[0:idx]
+        #     self._transacted_volume["self.history_previous_length"] = len(self.history)
+        #     return recent_history
+        return None
 
     def _update_unrolled_transactions(self, recent_history):
         """ Updates self._transacted_volume["unrolled_transactions"] with data from recent_history
@@ -466,18 +465,18 @@ class OrderBook:
         """
 
         # Update unrolled transactions DataFrame
-        recent_history = self._get_recent_history()
-        self._update_unrolled_transactions(recent_history)
-        unrolled_transactions = self._transacted_volume["unrolled_transactions"]
+        # recent_history = self._get_recent_history()
+        # self._update_unrolled_transactions(recent_history)
+        # unrolled_transactions = self._transacted_volume["unrolled_transactions"]
 
-        #  Get transacted volume in time window
-        lookback_pd = pd.to_timedelta(lookback_period)
-        window_start = self.owner.currentTime - lookback_pd
-        executed_within_lookback_period = unrolled_transactions[unrolled_transactions['execution_time'] >= window_start]
-        transacted_volume = executed_within_lookback_period['quantity'].sum()
+        # #  Get transacted volume in time window
+        # lookback_pd = pd.to_timedelta(lookback_period)
+        # window_start = self.owner.currentTime - lookback_pd
+        # executed_within_lookback_period = unrolled_transactions[unrolled_transactions['execution_time'] >= window_start]
+        # transacted_volume = executed_within_lookback_period['quantity'].sum()
 
-        return transacted_volume
-
+        # return transacted_volume
+        return 0.0
     # These could be moved to the LimitOrder class.  We could even operator overload them
     # into >, <, ==, etc.
     def isBetterPrice(self, order, o):

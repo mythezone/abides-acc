@@ -18,9 +18,9 @@ pd.options.display.max_rows = 1000
 pd.options.display.max_colwidth = 200
 
 # Initialize a persistent memcache.
-mem = Memory(cachedir='./.cached_plot_book', verbose=0)
-mem_hist = Memory(cachedir='./.cached_plot_book_historical', verbose=0)
-mem_hist_plot = Memory(cachedir='./.cached_plot_book_historical_heatmap', verbose=0)
+mem = Memory(location='./.cached_plot_book', verbose=0)
+mem_hist = Memory(location='./.cached_plot_book_historical', verbose=0)
+mem_hist_plot = Memory(location='./.cached_plot_book_historical_heatmap', verbose=0)
 
 
 # Turn these into command line parameters.
@@ -101,7 +101,7 @@ book_file = sys.argv[1]
 
 print ("Visualizing order book from {}".format(book_file))
 
-sns.set()
+sns.set_theme()
 
 df_book = read_book_quotes(book_file)
 #df_hist = read_historical_quotes('./data/nbbo/nbbo_2018/nbbom_20180518.bgz', 'IBM')

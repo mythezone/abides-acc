@@ -1,0 +1,1536 @@
+File: /Users/mythezone/project/gitlab/abides-acc/util/OrderBook.py (Total time: 98.97990799 sec)
+  Line 155: executed 2824323 times, time 0.11127830 sec
+  Line 253: executed 903552017 times, time 29.25151920 sec
+  Line 254: executed 903496018 times, time 29.16597128 sec
+  Line 347: executed 622223510 times, time 20.02392054 sec
+  Line 348: executed 622187598 times, time 19.12187386 sec
+  Line 403: executed 8193776 times, time 0.26472330 sec
+  Line 404: executed 6234456 times, time 0.20038724 sec
+  Line 415: executed 6975231 times, time 0.23500657 sec
+  Line 416: executed 4083730 times, time 0.13193464 sec
+  Line 542: executed 4902581 times, time 0.16121149 sec
+  Line 543: executed 4809615 times, time 0.15746188 sec
+  Line 545: executed 4716649 times, time 0.15461969 sec
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/_index.py (Total time: 8.62534475 sec)
+  Line 112: executed 4716649 times, time 0.15541220 sec
+  Line 115: executed 4716649 times, time 0.15443397 sec
+  Line 149: executed 4716649 times, time 0.15476465 sec
+  Line 151: executed 4716649 times, time 0.15411663 sec
+  Line 152: executed 4716649 times, time 0.15532756 sec
+  Line 153: executed 4716649 times, time 0.15576005 sec
+  Line 155: executed 4716649 times, time 0.15386105 sec
+  Line 156: executed 4716649 times, time 0.12640357 sec
+  Line 202: executed 4716649 times, time 0.15535736 sec
+  Line 205: executed 4716649 times, time 0.15479183 sec
+  Line 208: executed 4716649 times, time 0.15506291 sec
+  Line 209: executed 4716649 times, time 0.15427971 sec
+  Line 210: executed 4716649 times, time 0.15460944 sec
+  Line 211: executed 14149947 times, time 0.46336627 sec
+  Line 212: executed 9433298 times, time 0.30899811 sec
+  Line 216: executed 9433298 times, time 0.30793047 sec
+  Line 218: executed 9433298 times, time 0.30768013 sec
+  Line 219: executed 9433298 times, time 0.30901051 sec
+  Line 220: executed 9433298 times, time 0.30857301 sec
+  Line 233: executed 4716649 times, time 0.15454125 sec
+  Line 234: executed 4716649 times, time 0.15701461 sec
+  Line 240: executed 4716649 times, time 0.15498519 sec
+  Line 241: executed 4716649 times, time 0.15515733 sec
+  Line 242: executed 4716649 times, time 0.15374112 sec
+  Line 243: executed 4716649 times, time 0.15440464 sec
+  Line 244: executed 14149947 times, time 0.46300054 sec
+  Line 245: executed 9433298 times, time 0.30853510 sec
+  Line 247: executed 9433298 times, time 0.30842996 sec
+  Line 253: executed 9433298 times, time 0.30907798 sec
+  Line 254: executed 9433298 times, time 0.30965114 sec
+  Line 255: executed 9433298 times, time 0.30950379 sec
+  Line 257: executed 9433298 times, time 0.31002545 sec
+  Line 258: executed 9433298 times, time 0.30847907 sec
+  Line 259: executed 9433298 times, time 0.30754733 sec
+  Line 278: executed 4716649 times, time 0.15405035 sec
+  Line 282: executed 4716649 times, time 0.15379333 sec
+  Line 291: executed 4716649 times, time 0.15497732 sec
+  Line 295: executed 4716649 times, time 0.15471506 sec
+  Line 297: executed 4716649 times, time 0.15397477 sec
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/copy.py (Total time: 7.07875800 sec)
+  Line 124: executed 18970640 times, time 0.63071775 sec
+  Line 127: executed 18970640 times, time 0.62195253 sec
+  Line 128: executed 18970640 times, time 0.61865854 sec
+  Line 129: executed 18970640 times, time 0.61801839 sec
+  Line 132: executed 18970640 times, time 0.61709833 sec
+  Line 134: executed 18970640 times, time 0.61777186 sec
+  Line 135: executed 18970640 times, time 0.61732078 sec
+  Line 136: executed 17434002 times, time 0.56788421 sec
+  Line 165: executed 18970640 times, time 0.62029028 sec
+  Line 168: executed 18970640 times, time 0.61934686 sec
+  Line 173: executed 16639040 times, time 0.54461718 sec
+  Line 220: executed 3764058 times, time 0.12377000 sec
+  Line 221: executed 3305048 times, time 0.10908890 sec
+  Line 252: executed 4609914 times, time 0.15222239 sec
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/fromnumeric.py (Total time: 3.12001014 sec)
+  Line 3520: executed 18866600 times, time 0.62301302 sec
+  Line 3556: executed 18866600 times, time 0.62419248 sec
+  Line 3557: executed 18866600 times, time 0.61858416 sec
+  Line 3558: executed 18866598 times, time 0.63469744 sec
+  Line 3559: executed 18866598 times, time 0.61952305 sec
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/_sputils.py (Total time: 2.48894668 sec)
+  Line 356: executed 18866599 times, time 0.62127495 sec
+  Line 358: executed 18866598 times, time 0.62548518 sec
+  Line 359: executed 18866598 times, time 0.62098193 sec
+  Line 369: executed 18866598 times, time 0.62120461 sec
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/_dok.py (Total time: 0.46466970 sec)
+  Line 270: executed 4716649 times, time 0.15619326 sec
+  Line 271: executed 4716649 times, time 0.15408993 sec
+  Line 272: executed 4716649 times, time 0.15438652 sec
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/_base.py (Total time: 0.31146169 sec)
+  Line 72: executed 9433303 times, time 0.31146169 sec
+
+File: /Users/mythezone/project/gitlab/abides-acc/util/util.py (Total time: 0.25184155 sec)
+  Line 22: executed 6965271 times, time 0.25184155 sec
+
+File: /Users/mythezone/project/gitlab/abides-acc/Kernel.py (Total time: 0.13221431 sec)
+  Line 555: executed 4052728 times, time 0.13221431 sec
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/rich/__init__.py (Total time: 0.00000000 sec)
+
+File: <frozen importlib._bootstrap> (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/rich/console.py (Total time: 0.00000000 sec)
+
+File: <frozen _collections_abc> (Total time: 0.00000000 sec)
+
+File: <frozen os> (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/threading.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/rich/_log_render.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/rich/theme.py (Total time: 0.00000000 sec)
+
+File: <string> (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/rich/protocol.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/typing.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/rich/markup.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/rich/_emoji_replace.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/rich/text.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/rich/control.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/rich/highlighter.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/re/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/re/_compiler.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/enum.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/re/_parser.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/rich/_loop.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/inspect.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/rich/_pick.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/rich/containers.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/rich/_wrap.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/rich/cells.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/rich/segment.py (Total time: 0.00000000 sec)
+
+File: <frozen abc> (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/argparse.py (Total time: 0.00000000 sec)
+
+File: <frozen posixpath> (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/gettext.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/locale.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/encodings/__init__.py (Total time: 0.00000000 sec)
+
+File: <frozen genericpath> (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/shutil.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/importlib/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/_distutils_hack/__init__.py (Total time: 0.00000000 sec)
+
+File: <frozen importlib._bootstrap_external> (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/project/gitlab/abides-acc/config/__init__.py (Total time: 0.00000000 sec)
+
+File: <frozen zipimport> (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/project/gitlab/abides-acc/config/rmsc03.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_globals.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_utils/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_utils/_convertions.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_expired_attrs_2_0.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/version.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_distributor_init.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/__config__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/multiarray.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/overrides.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_utils/_inspect.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/exceptions.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/_exceptions.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/printoptions.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/contextvars.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/dtypes.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/collections/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/functools.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/umath.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/numerictypes.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/_string_helpers.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/_type_aliases.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/_dtype.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/numeric.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/shape_base.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/_methods.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/pickle.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/_compat_pickle.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/_ufunc_config.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/arrayprint.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/contextlib.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/_asarray.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/records.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/memmap.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/function_base.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/_machar.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/getlimits.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/einsumfunc.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/_add_newdocs.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/_add_newdocs_scalars.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/_dtype_ctypes.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/_internal.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/ctypes/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/ctypes/_endian.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/copyreg.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_pytesttester.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/array_utils.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/_array_utils_impl.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/introspect.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/mixins.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/npyio.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/_npyio_impl.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/format.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/_utils_impl.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/_datasource.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/_iotools.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/scimath.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/_scimath_impl.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/_type_check_impl.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/_ufunclike_impl.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/stride_tricks.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/_stride_tricks_impl.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/_index_tricks_impl.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/matrixlib/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/matrixlib/defmatrix.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/linalg/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/linalg/linalg.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/linalg/_linalg.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/_twodim_base_impl.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_typing/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_typing/_nested_sequence.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_typing/_nbit_base.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_typing/_nbit.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_typing/_char_codes.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_typing/_scalars.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_typing/_shape.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_typing/_dtype_like.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_typing/_array_like.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_typing/_ufunc.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/_histograms_impl.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/_nanfunctions_impl.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/_shape_base_impl.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/_arraysetops_impl.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/_polynomial_impl.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/warnings.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/_arrayterator_impl.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/_arraypad_impl.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/lib/_version.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_array_api_info.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pytz/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pytz/exceptions.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pytz/lazy.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pytz/tzinfo.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pytz/tzfile.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/dateutil/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/dateutil/_version.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/compat/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/compat/_constants.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/sysconfig.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/platform.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/_sysconfigdata__darwin_darwin.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/_osx_support.py (Total time: 0.00000000 sec)
+
+File: <frozen codecs> (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/compat/compressors.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/compat/numpy/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/util/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/util/version/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/compat/pyarrow.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/_config/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/_config/config.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/_typing.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/random/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/random/_pickle.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/secrets.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/hmac.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/hashlib.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/random.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/util/_exceptions.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/_config/dates.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/_config/display.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/config_init.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/api.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/_libs/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/_libs/tslibs/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/compat/_optional.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/zoneinfo/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/zoneinfo/_tzpath.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/zoneinfo/_common.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/weakref.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/dateutil/tz/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/dateutil/tz/tz.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/six.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/dateutil/tz/_common.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/dateutil/tz/_factories.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/dateutil/tz/win.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/_strptime.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/calendar.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/_config/localization.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/subprocess.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/signal.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/types.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/dateutil/parser/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/dateutil/parser/_parser.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/dateutil/relativedelta.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/dateutil/_common.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/dateutil/parser/isoparser.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/dtypes/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/dtypes/dtypes.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/errors/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/dtypes/base.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/dtypes/generic.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/dtypes/inference.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/dtypes/missing.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/dtypes/common.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/algorithms.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/util/_decorators.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/dtypes/cast.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/_util.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/dtypes/concat.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/dtypes/astype.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/array_algos/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/array_algos/take.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/construction.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/ma/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/ma/core.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/textwrap.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/ma/extras.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/common.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/indexers/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/indexers/utils.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/arrow/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/arrow/accessors.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/arrow/array.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/util/_validators.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/missing.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/ops/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/ops/array_ops.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/roperator.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/computation/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/computation/expressions.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/computation/check.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/ops/missing.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/ops/dispatch.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/ops/invalid.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/ops/common.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/ops/docstrings.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/ops/mask_ops.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arraylike.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/_arrow_string_mixins.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/_utils.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/base.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/compat/numpy/function.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/array_algos/quantile.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/sorting.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/masked.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/nanops.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/array_algos/masked_accumulations.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/array_algos/masked_reductions.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/util/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/util/hashing.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/string_.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/floating.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/numeric.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/integer.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/numpy_.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/_mixins.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/array_algos/transforms.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/strings/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/strings/object_array.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/strings/base.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/tseries/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/tseries/frequencies.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/boolean.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/categorical.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/accessor.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/base.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/formats/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/formats/console.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/datetimes.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/datetimelike.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/array_algos/datetimelike_accumulations.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/_ranges.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/tseries/offsets.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/interval.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/timedeltas.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/period.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/sparse/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/sparse/accessor.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/sparse/array.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/formats/printing.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/arrays/string_arrow.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/flags.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/groupby/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/groupby/generic.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/apply.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/_numba/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/_numba/executor.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/frame.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/generic.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/json/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/json/decoder.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/json/scanner.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/json/encoder.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/indexing.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/indexes/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/indexes/api.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/indexes/base.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/array_algos/putmask.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/indexes/frozen.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/strings/accessor.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/indexes/category.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/indexes/extension.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/indexes/datetimes.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/indexes/datetimelike.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/indexes/range.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/tools/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/tools/timedeltas.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/tools/times.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/indexes/interval.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/indexes/multi.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/indexes/timedeltas.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/indexes/period.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/sample.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/array_algos/replace.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/internals/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/internals/api.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/internals/blocks.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/internals/array_manager.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/internals/base.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/internals/managers.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/internals/ops.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/internals/concat.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/internals/construction.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/methods/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/methods/describe.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/reshape/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/reshape/concat.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/formats/format.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/common.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/gzip.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/tarfile.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/urllib/parse.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/shared_docs.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/dataclasses.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/window/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/window/ewm.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/_libs/window/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/indexers/objects.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/util/numba_.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/window/common.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/window/doc.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/window/numba_.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/window/online.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/window/rolling.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/window/expanding.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/methods/selectn.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/reshape/melt.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/reshape/util.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/tools/numeric.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/series.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/indexes/accessors.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/tools/datetimes.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/arrays/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/formats/info.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/plotting/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/plotting/_core.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/plotting/_misc.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/groupby/base.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/groupby/ops.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/groupby/grouper.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/groupby/categorical.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/groupby/groupby.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/groupby/numba_.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/groupby/indexing.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/tseries/api.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/computation/api.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/computation/eval.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/computation/engines.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/computation/align.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/computation/common.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/computation/ops.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/computation/scope.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/pprint.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/computation/expr.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/computation/parsing.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/reshape/api.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/reshape/encoding.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/reshape/merge.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/uuid.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/reshape/pivot.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/reshape/tile.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/api/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/api/extensions/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/api/indexers/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/api/interchange/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/interchange/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/interchange/dataframe_protocol.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/interchange/from_dataframe.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/interchange/utils.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/api/types/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/dtypes/api.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/api/typing/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/resample.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/json/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/json/_json.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/json/_normalize.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/json/_table_schema.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/parsers/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/parsers/readers.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/parsers/arrow_parser_wrapper.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/parsers/base_parser.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/parsers/c_parser_wrapper.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/parsers/python_parser.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/stata.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/testing.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/_testing/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/_testing/_io.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/_testing/contexts.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/_testing/_warnings.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/_testing/asserters.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/_testing/compat.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/util/_print_versions.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/api.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/clipboards.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/excel/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/excel/_base.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/excel/_util.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/excel/_calamine.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/excel/_odfreader.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/excel/_openpyxl.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/excel/_pyxlsb.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/excel/_xlrd.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/excel/_odswriter.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/excel/_xlsxwriter.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/feather_format.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/gbq.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/html.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/orc.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/parquet.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/pickle.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/compat/pickle_compat.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/pytables.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/core/computation/pytables.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/sas/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/sas/sasreader.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/spss.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/sql.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/io/xml.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/util/_tester.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/pandas/_version_meson.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/queue.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/heapq.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/project/gitlab/abides-acc/message/Message.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/project/gitlab/abides-acc/util/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/__config__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/version.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_distributor_init.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_lib/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_lib/_testutils.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_lib/_pep440.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_lib/_ccallback.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/spatial/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/spatial/_kdtree.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_lib/_util.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_lib/_array_api.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/typing/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_typing/_add_docstring.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_lib/array_api_compat/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_lib/array_api_compat/common/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_lib/array_api_compat/common/_helpers.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_lib/array_api_compat/numpy/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/strings/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/strings.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/core/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/core/_utils.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/char/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/_core/defchararray.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/rec/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/f2py/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/f2py/f2py2e.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/f2py/crackfortran.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/fileinput.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/charset_normalizer/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/charset_normalizer/api.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/charset_normalizer/cd.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/charset_normalizer/constant.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/charset_normalizer/utils.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/charset_normalizer/models.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/logging/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/_weakrefset.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/charset_normalizer/legacy.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/charset_normalizer/version.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/f2py/__version__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/f2py/auxfuncs.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/f2py/cfuncs.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/f2py/symbolic.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/f2py/rules.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/f2py/capi_maps.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/f2py/cb_rules.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/f2py/_isocbind.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/f2py/common_rules.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/f2py/func2subr.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/f2py/use_rules.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/f2py/f90mod_rules.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/f2py/_backends/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/f2py/diagnose.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/ctypeslib.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/polynomial/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/polynomial/polynomial.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/polynomial/polyutils.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/polynomial/_polybase.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/polynomial/chebyshev.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/polynomial/legendre.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/polynomial/hermite.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/polynomial/hermite_e.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/polynomial/laguerre.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/fft/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/fft/_pocketfft.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/fft/_helper.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/fft/helper.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/testing/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/unittest/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/unittest/result.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/unittest/util.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/unittest/case.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/difflib.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/unittest/suite.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/unittest/loader.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/unittest/main.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/unittest/runner.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/unittest/signals.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/testing/_private/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/testing/_private/utils.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/concurrent/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/concurrent/futures/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/concurrent/futures/_base.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/testing/_private/extbuild.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/numpy/testing/overrides.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_lib/array_api_compat/numpy/_aliases.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_lib/array_api_compat/common/_aliases.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_lib/array_api_compat/_internal.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_lib/array_api_compat/numpy/_info.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_lib/array_api_compat/numpy/linalg.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_lib/array_api_compat/common/_linalg.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_lib/array_api_compat/numpy/fft.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_lib/array_api_compat/common/_fft.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_lib/_docscrape.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/pydoc.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/pkgutil.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/reprlib.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/_matrix.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/_csr.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/_compressed.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/_data.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/_csc.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/_lil.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/_coo.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/_dia.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/_bsr.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/_construct.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/_extract.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/_matrix_io.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/csgraph/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/csgraph/_laplacian.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_isolve/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_isolve/iterative.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_interface.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_isolve/utils.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/_misc.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/blas.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/lapack.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/_basic.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/_decomp.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/_decomp_svd.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/_decomp_lu.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/_decomp_ldl.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/_decomp_cholesky.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/_decomp_qr.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/_decomp_qz.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/_decomp_schur.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/_decomp_polar.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/_matfuncs.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/_expm_frechet.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/_matfuncs_sqrtm.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/_special_matrices.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/_solvers.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/_procrustes.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/_sketches.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/_decomp_cossin.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/decomp.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_lib/deprecation.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/decomp_cholesky.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/decomp_lu.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/decomp_qr.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/decomp_svd.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/decomp_schur.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/basic.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/misc.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/special_matrices.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/linalg/matfuncs.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_isolve/minres.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_isolve/lgmres.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_isolve/_gcrotmk.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_isolve/lsqr.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_isolve/lsmr.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_isolve/tfqmr.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_dsolve/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_dsolve/linsolve.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_dsolve/_add_newdocs.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_eigen/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_eigen/arpack/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_eigen/arpack/arpack.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_lib/_threadsafety.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_lib/decorator.py (Total time: 0.00000000 sec)
+
+File: <decorator-gen-0> (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_eigen/lobpcg/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_eigen/lobpcg/lobpcg.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_eigen/_svds.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_svdp.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_matfuncs.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_expm_multiply.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_onenormest.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_norm.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/_special_sparse_arrays.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/isolve.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/dsolve.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/interface.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/eigen.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/linalg/matfuncs.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/csgraph/_validation.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/base.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/bsr.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/compressed.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/construct.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/coo.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/csc.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/csr.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/data.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/dia.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/dok.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/extract.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/lil.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/sparsetools.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/sparse/sputils.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/spatial/_spherical_voronoi.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/spatial/_plotutils.py (Total time: 0.00000000 sec)
+
+File: <decorator-gen-1> (Total time: 0.00000000 sec)
+
+File: <decorator-gen-2> (Total time: 0.00000000 sec)
+
+File: <decorator-gen-3> (Total time: 0.00000000 sec)
+
+File: <decorator-gen-4> (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/spatial/_procrustes.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/spatial/_geometric_slerp.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/spatial/distance.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/special/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/special/_sf_error.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/special/_support_alternative_backends.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/special/_basic.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/special/_input_validation.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/special/_multiufuncs.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/special/_logsumexp.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_lib/array_api_extra/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/_lib/array_api_extra/_funcs.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/special/_orthogonal.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/special/_spfun_stats.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/special/_ellip_harm.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/special/_lambertw.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/special/_spherical_bessel.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/special/add_newdocs.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/special/basic.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/special/orthogonal.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/special/specfun.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/special/sf_error.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/special/spfun_stats.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/spatial/ckdtree.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/spatial/kdtree.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/spatial/qhull.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/spatial/transform/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/spatial/transform/_rotation_groups.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/constants/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/constants/_codata.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/constants/_constants.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/constants/codata.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/constants/constants.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/spatial/transform/_rotation_spline.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/scipy/spatial/transform/rotation.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/project/gitlab/abides-acc/util/order/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/project/gitlab/abides-acc/util/order/LimitOrder.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/project/gitlab/abides-acc/util/order/Order.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/project/gitlab/abides-acc/agent/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/project/gitlab/abides-acc/agent/FinancialAgent.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/project/gitlab/abides-acc/agent/Agent.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/project/gitlab/abides-acc/util/oracle/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/project/gitlab/abides-acc/util/oracle/SparseMeanRevertingOracle.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/project/gitlab/abides-acc/util/oracle/MeanRevertingOracle.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/project/gitlab/abides-acc/agent/ExchangeAgent.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/tqdm/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/tqdm/_monitor.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/tqdm/_tqdm_pandas.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/tqdm/cli.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/ast.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/tqdm/std.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/tqdm/utils.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/tqdm/version.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/tqdm/_dist_ver.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/site-packages/tqdm/gui.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/project/gitlab/abides-acc/agent/NoiseAgent.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/project/gitlab/abides-acc/agent/TradingAgent.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/project/gitlab/abides-acc/util/order/MarketOrder.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/project/gitlab/abides-acc/agent/ValueAgent.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/project/gitlab/abides-acc/agent/market_makers/AdaptiveMarketMakerAgent.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/project/gitlab/abides-acc/agent/examples/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/project/gitlab/abides-acc/agent/examples/MomentumAgent.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/project/gitlab/abides-acc/agent/execution/POVExecutionAgent.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/project/gitlab/abides-acc/model/LatencyModel.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/pathlib.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/bz2.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/_compression.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/multiprocessing/__init__.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/multiprocessing/context.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/multiprocessing/process.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/multiprocessing/reduction.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/multiprocessing/synchronize.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/multiprocessing/util.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/tempfile.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/multiprocessing/resource_tracker.py (Total time: 0.00000000 sec)
+
+File: /Users/mythezone/miniconda3/envs/simlob312/lib/python3.12/multiprocessing/spawn.py (Total time: 0.00000000 sec)
+
+File: <frozen runpy> (Total time: 0.00000000 sec)
+

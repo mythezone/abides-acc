@@ -141,6 +141,7 @@ log_orders = None
 book_freq = 0
 
 simulation_start_time = dt.datetime.now()
+
 print("Simulation Start Time: {}".format(simulation_start_time))
 print("Configuration seed: {}\n".format(seed))
 ########################################################################################################################
@@ -196,21 +197,21 @@ agent_types.extend("ExchangeAgent")
 agent_count += 1
 
 # 2) Noise Agents
-num_noise = 5000
-noise_mkt_open = historical_date + pd.to_timedelta("09:00:00")  # These times needed for distribution of arrival times
-                                                                # of Noise Agents
-noise_mkt_close = historical_date + pd.to_timedelta("16:00:00")
-agents.extend([NoiseAgent(id=j,
-                          name="NoiseAgent {}".format(j),
-                          type="NoiseAgent",
-                          symbol=symbol,
-                          starting_cash=starting_cash,
-                          wakeup_time=util.get_wake_time(noise_mkt_open, noise_mkt_close),
-                          log_orders=log_orders,
-                          random_state=np.random.RandomState(seed=np.random.randint(low=0, high=2 ** 32, dtype='uint64')))
-               for j in range(agent_count, agent_count + num_noise)])
-agent_count += num_noise
-agent_types.extend(['NoiseAgent'])
+# num_noise = 5000
+# noise_mkt_open = historical_date + pd.to_timedelta("09:00:00")  # These times needed for distribution of arrival times
+#                                                                 # of Noise Agents
+# noise_mkt_close = historical_date + pd.to_timedelta("16:00:00")
+# agents.extend([NoiseAgent(id=j,
+#                           name="NoiseAgent {}".format(j),
+#                           type="NoiseAgent",
+#                           symbol=symbol,
+#                           starting_cash=starting_cash,
+#                           wakeup_time=util.get_wake_time(noise_mkt_open, noise_mkt_close),
+#                           log_orders=log_orders,
+#                           random_state=np.random.RandomState(seed=np.random.randint(low=0, high=2 ** 32, dtype='uint64')))
+#                for j in range(agent_count, agent_count + num_noise)])
+# agent_count += num_noise
+# agent_types.extend(['NoiseAgent'])
 
 # 3) Value Agents
 num_value = 100

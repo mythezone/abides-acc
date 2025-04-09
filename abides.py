@@ -3,13 +3,13 @@ import importlib
 import sys
 import time 
 
-#debug---1
-from rich import print 
-from rich.pretty import pprint
-#debug---2
-# import pudb 
+# #debug---1
+# from rich import print 
+# from rich.pretty import pprint
+# #debug---2
+# # import pudb 
 
-# pudb.set_trace()
+# # pudb.set_trace()
 
 # line_exec_count = {}
 # line_exec_time = {}
@@ -72,8 +72,28 @@ if __name__ == '__main__':
 
 #   sys.settrace(None)
 
-#   # 输出执行次数和时间
-#   for filename, line_counts in line_exec_count.items():
-#       print(f"File: {filename}")
-#       for lineno, count in sorted(line_counts.items()):
-#           print(f"Line {lineno}: executed {count} times, time {line_exec_time[filename][lineno]:.8f} sec")
+#   def save_trace_report(output_file="insight/logs/trace_report.txt"):
+#     # 计算每个文件的总运行时间（仅包括时间 >= 0.1 的行）
+#     file_exec_summary = []
+#     for filename, line_times in line_exec_time.items():
+#         total_time = sum(t for t in line_times.values() if t >= 0.1)
+#         file_exec_summary.append((filename, total_time))
+    
+#     # 按总运行时间从大到小排序
+#     file_exec_summary.sort(key=lambda x: x[1], reverse=True)
+
+#     with open(output_file, "w") as f:
+#         for filename, total_time in file_exec_summary:
+#             f.write(f"File: {filename} (Total time: {total_time:.8f} sec)\n")
+#             lines = line_exec_count[filename]
+#             times = line_exec_time[filename]
+#             # 只输出时间 >= 0.1 秒的行
+#             for lineno in sorted(lines):
+#                 exec_time = times[lineno]
+#                 if exec_time >= 0.1:
+#                     count = lines[lineno]
+#                     f.write(f"  Line {lineno}: executed {count} times, time {exec_time:.8f} sec\n")
+#             f.write("\n")
+            
+# save_trace_report("insight/logs/trace_report.txt")
+

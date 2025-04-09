@@ -6,7 +6,7 @@
 # for stochasticity.
 from agent.FinancialAgent import FinancialAgent
 from message.Message import Message
-from util.OrderBook import OrderBook
+from util.OrderBook_nohistory import OrderBook
 from util.util import log_print
 
 import datetime as dt
