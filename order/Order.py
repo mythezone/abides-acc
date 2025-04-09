@@ -3,31 +3,33 @@
 # Specific order types will inherit from this (like LimitOrder).
 
 from copy import deepcopy
+from agent.Agent import Agent
 
+import pandas as pd 
+import numpy as np 
+from typing import Dict, List 
 
-class Order:
-    order_id = 0
-    _order_ids = set()
+from util.base import Trackable
 
-    def __init__(self, agent_id, time_placed, symbol, quantity, is_buy_order, order_id=None, tag=None):
+class Order(Trackable):
+    # _order_id = 0
+    # _order_ids = set()
 
-        self.agent_id = agent_id
+    def __init__(self, agent:Agent|str, time_placed:pd.Timestamp, symbol:str, quantity:int, is_buy_order:bool, tag:Dict={}):
+        # Agent ID: either the agent object or its ID.
+        super().__init__()
+        
+
+        if isinstance(agent, Agent):
+            self.agent = agent.id
+        elif isinstance(agent, str):
+            self.agent = Agent.get_agent_by_id(agent)
 
         # Time at which the order was created by the agent.
         self.time_placed = time_placed
-
-        # Equity symbol for the order.
         self.symbol = symbol
-
-        # Number of equity units affected by the order.
         self.quantity = quantity
-
-        # Boolean: True indicates a buy order; False indicates a sell order.
         self.is_buy_order = is_buy_order
-
-        # Order ID: either self generated or assigned
-        self.order_id = self.generateOrderId() if not order_id else order_id
-        Order._order_ids.add(self.order_id)
 
         # Create placeholder fields that don't get filled in until certain
         # events happen.  (We could instead subclass to a special FilledOrder
@@ -40,15 +42,6 @@ class Order:
         #      order and in all logging mechanisms.  Intent: for strategy agents to set tags
         #      to help keep track of the intent of particular orders, to simplify their code.
         self.tag = tag
-
-    def generateOrderId(self):
-        # generates a unique order ID if the order ID is not specified
-        if not Order.order_id in Order._order_ids:
-            oid = Order.order_id
-        else:
-            Order.order_id += 1
-            oid = self.generateOrderId()
-        return oid
 
     def to_dict(self):
         as_dict = deepcopy(self).__dict__

@@ -6,32 +6,21 @@ from copy import deepcopy
 from util.util import log_print
 from typing import List, Dict 
 from core.Kernel import Kernel 
+from util.base import Trackable
 
-class Agent:
-
-  agents_list:List = []
-  uniq:int = 0 
-
-  @classmethod
-  def get_agent_by_id(cls, agent_id):
-    return cls.agents_list[agent_id] if agent_id < len(cls.agents_list) else None
-  
+class Agent(Trackable):
 
   def __init__ (self, name:str,
                 type:str,
                 random_state:np.random.RandomState,
                 log_to_file:bool=True):
-
+    super().__init__()
     # ID must be a unique number (usually autoincremented).
     # Name is for human consumption, should be unique (often type + number).
     # Type is for machine aggregation of results, should be same for all
     # agents following the same strategy (incl. parameter settings).
     # Every agent is given a random state to use for any stochastic needs.
     # This is an np.random.RandomState object, already seeded.
-    self.id = Agent.uniq 
-    Agent.uniq += 1
-    Agent.agents_list.append(self)
-
 
     self.name = name
     self.type = type
@@ -195,9 +184,5 @@ class Agent:
 
   ### Internal methods that should not be modified without a very good reason.
 
-  def __lt__(self, other):
-    # Required by Python3 for this object to be placed in a priority queue.
-
-    return ("{}".format(self.id) <
-            "{}".format(other.id))
+  
 

@@ -1,3 +1,4 @@
+from __future__ import annotations
 
 class Singleton:
     _instances = {}
@@ -11,3 +12,36 @@ class Singleton:
             
         return cls._instances[cls]
     
+
+class Trackable:
+    _subclass_instances = {}
+
+    def __init__(self, *args, **kwargs):
+        cls = self.__class__ 
+        if cls not in Trackable._subclass_instances:
+            Trackable._subclass_instances[cls] = []
+        self.id = len(Trackable._subclass_instances[cls])
+        Trackable._subclass_instances[cls].append(self)
+
+
+
+    @classmethod
+    def get_instance_by_id(cls, id_:int):
+        instances = Trackable._subclass_instances.get(cls, [])
+        if id_ < len(instances):
+            return instances[id_]
+        else:
+            raise ValueError(f"Instance with ID {id_} does not exist in {cls.__name__}.")
+        
+    @classmethod
+    def reset_all_instances(cls):
+        cls._subclass_instances.clear()
+        
+    def __lt__(self, other: Trackable) -> bool:
+        if not type(self) is type(other):
+            raise TypeError("Cannot compare instances of different classes.")
+        return self.id < other.id
+    
+    @classmethod 
+    def __class_getitem__(cls,id_:int):
+        return cls.get_instance_by_id(id_)

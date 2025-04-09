@@ -13,7 +13,7 @@ import pandas as pd
 import os, sys
 
 from math import sqrt
-from util.util import print, log_print
+from util.util import log_print
 
 from joblib import Memory
 mem = Memory(cachedir='./cache', verbose=0)
