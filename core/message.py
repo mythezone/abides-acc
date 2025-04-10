@@ -2,7 +2,7 @@ from enum import Enum, unique
 from agent.base import Agent
 import pandas as pd 
 
-from util.base import Trackable
+from core.base import Trackable
 
 @unique
 class MessageType(Enum):

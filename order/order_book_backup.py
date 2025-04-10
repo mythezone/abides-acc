@@ -3,7 +3,7 @@
 # List of ask prices (index zero is best ask), each with a list of LimitOrders.
 import sys
 
-from message.Message import Message
+from core.message import Message
 from order.limit_order import LimitOrder
 from util.util import log_print, be_silent
 
@@ -16,6 +16,8 @@ from tqdm import tqdm
 
 
 class OrderBook:
+
+    
 
     # An OrderBook requires an owning agent object, which it will use to send messages
     # outbound via the simulator Kernel (notifications of order creation, rejection,

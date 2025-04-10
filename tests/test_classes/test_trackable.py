@@ -1,5 +1,5 @@
 import unittest
-from util.base import Trackable
+from core.base import Trackable
 
 
 class DummyClass(Trackable):

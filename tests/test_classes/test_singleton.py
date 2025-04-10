@@ -1,6 +1,6 @@
 import unittest
 
-from util.base import Singleton  # 替换为你的路径
+from core.base import Singleton  # 替换为你的路径
 
 
 # 示例子类

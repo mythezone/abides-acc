@@ -1,5 +1,5 @@
 import random
-from message.Message_acc import Message 
+from core.message import Message 
 from agent.base import Agent
 
 import pandas as pd

@@ -1,5 +1,5 @@
-from util.order.Order import Order
-from core.Kernel import Kernel
+from order.base import Order
+from core.kernel import Kernel
 from agent.FinancialAgent import dollarize
 from copy import deepcopy
 
@@ -28,7 +28,7 @@ class MarketOrder(Order):
         order = MarketOrder(self.agent_id, self.time_placed, self.symbol, self.quantity, self.is_buy_order,
                             order_id=self.order_id,
                             tag=self.tag)
-        Order._order_ids.pop()  # remove duplicate agent ID
+        # Order._order_ids.pop()  # remove duplicate agent ID
         order.fill_price = self.fill_price
         return order
 

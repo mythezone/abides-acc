@@ -20,6 +20,15 @@
 13. 将python的支持版本提升到3.12 (Pandas的几个函数在3.12中有了新的实现方式，使用了新的语法糖，提升了代码的可读性和性能，但是可能会不兼容3.9及以下版本)
 
 
+## 仿真流程
+
+1. 创建所有`Symbol`对象，对应股市中所有可购买的股票。
+2. 为每个`Symbol`创建对应的`OrderBook`对象，两者之间可以通过`Symbol.name`的属性进行关联。 
+3. 创建`Exchange`对象，包含所有可交易的`Symbol`对象和对应的`OrderBook`对象。
+4. 初始化所有`Agent`对象.
+5. 初始化`Simulator`对象，该对象会包含一个`Kernel`对象和一个`Exchange`对象。通过`Kernel`对象来控制整个仿真过程，主要是对事件的处理和对模拟时间的推进。一些全局的参数也应该放置在`Simulator`对象中，比如`start_time`，`end_time`，`log_frequency`，`log_level`,`log_file`等。
+6. 仿真由`Message`对象驱动，`Message`对象会在`Kernel`中被处理。
+
 
 
 ## Quickstart

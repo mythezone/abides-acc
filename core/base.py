@@ -12,6 +12,7 @@ class Singleton:
             
         return cls._instances[cls]
     
+    
 
 class Trackable:
     _subclass_instances = {}
@@ -23,8 +24,6 @@ class Trackable:
         self.id = len(Trackable._subclass_instances[cls])
         Trackable._subclass_instances[cls].append(self)
 
-
-
     @classmethod
     def get_instance_by_id(cls, id_:int):
         instances = Trackable._subclass_instances.get(cls, [])
@@ -32,6 +31,7 @@ class Trackable:
             return instances[id_]
         else:
             raise ValueError(f"Instance with ID {id_} does not exist in {cls.__name__}.")
+        
         
     @classmethod
     def reset_all_instances(cls):

@@ -12,13 +12,13 @@ import sys
 import datetime as dt
 import importlib
 
-from core.Kernel import Kernel
+from core.kernel import Kernel
 from util import util
-from util.order import LimitOrder
+from order.limit_order import LimitOrder
 from util.oracle.SparseMeanRevertingOracle import SparseMeanRevertingOracle
 from model.latency import LatencyModel
 
-from core.Exchange import ExchangeAgent
+from core.exchange import ExchangeAgent
 from agent.market_makers.MarketMakerAgent import MarketMakerAgent
 from agent.examples.MomentumAgent import MomentumAgent
 

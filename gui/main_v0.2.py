@@ -1,11 +1,12 @@
 import gradio as gr 
 from gui.init.agent import Agents
-from gui.init.symbol import Symbols, Symbol
+from core.symbol import Symbol, Symbol
 from gui.init.simulator import Simulator
 
 
 simulator = Simulator()
-symbols = Symbols()
+# TODO: 待完善下面的Symbol调用
+symbols = Symbol()
 agents = Agents(simulator=simulator)
 
 

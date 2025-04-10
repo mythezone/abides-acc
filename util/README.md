@@ -17,5 +17,10 @@
 2. 将model下的QTable模块改名为`qtable`，并且将其移动至`model`模块下(暂时没考虑这个合理性，只是从命名角度考虑)
 
 
+### 4. 添加了用于高效排序订单的OrderBook的辅助类`OrderHeap`
+1. 相比`queue.PriorityQueue`, `OrderHeap`封装了`heapq`，由于不带安全的线程锁，性能比优先队列高出2.2倍。
+2. 实现了`peek`方法，在不影响队列排序的情况下可以查看队首元素，减少了`get-put`造成的计算资源浪费。
+
+
 
 
