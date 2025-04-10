@@ -9,9 +9,9 @@ from core.Kernel import Kernel
 from util import util
 from util.order import LimitOrder
 from util.oracle.ExternalFileOracle import ExternalFileOracle
-from model.LatencyModel import LatencyModel
+from model.latency import LatencyModel
 
-from agent.ExchangeAgent import ExchangeAgent
+from core.Exchange import ExchangeAgent
 from agent.NoiseAgent import NoiseAgent
 from agent.ValueAgent import ValueAgent
 

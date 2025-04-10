@@ -1,6 +1,6 @@
-from util.order import Order 
+from order.base import Order 
 import unittest
-from agent.Agent import Agent
+from agent.base import Agent
 from numpy import random 
 from pandas import Timestamp
 

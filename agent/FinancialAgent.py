@@ -1,4 +1,4 @@
-from agent.Agent import Agent
+from agent.base import Agent
 import sys
 import traceback
 

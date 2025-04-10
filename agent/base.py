@@ -5,8 +5,14 @@ import numpy as np
 from copy import deepcopy
 from util.util import log_print
 from typing import List, Dict 
-from core.Kernel import Kernel 
+
 from util.base import Trackable
+
+# 在类型检测时不会出现循环引用错误
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from core.kernel import Kernel
+
 
 class Agent(Trackable):
 
@@ -57,7 +63,7 @@ class Agent(Trackable):
   ### Flow of required kernel listening methods:
   ### init -> start -> (entire simulation) -> end -> terminate
 
-  def kernelInitializing (self, kernel:Kernel):
+  def kernelInitializing (self, kernel:"Kernel"):
     # Called by kernel one time when simulation first begins.
     # No other agents are guaranteed to exist at this time.
 

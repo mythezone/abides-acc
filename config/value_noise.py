@@ -1,5 +1,5 @@
 from core.Kernel import Kernel
-from agent.ExchangeAgent import ExchangeAgent
+from core.Exchange import ExchangeAgent
 from agent.NoiseAgent import NoiseAgent
 from agent.ValueAgent import ValueAgent
 from agent.market_makers.MarketMakerAgent import MarketMakerAgent

@@ -1,5 +1,5 @@
 from core.Kernel import Kernel
-from agent.ExchangeAgent import ExchangeAgent
+from core.Exchange import ExchangeAgent
 from agent.HeuristicBeliefLearningAgent import HeuristicBeliefLearningAgent
 from agent.examples.ImpactAgent import ImpactAgent
 from agent.ZeroIntelligenceAgent import ZeroIntelligenceAgent

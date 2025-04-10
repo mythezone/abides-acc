@@ -5,7 +5,7 @@
 # whether to log all order activity to the agent log, and a random state object (already seeded) to use
 # for stochasticity.
 from agent.FinancialAgent import FinancialAgent
-from agent.ExchangeAgent import ExchangeAgent
+from core.Exchange import ExchangeAgent
 from message.Message import Message
 from util.util import log_print
 

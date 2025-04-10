@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 
 import os, queue, sys
-from message.Message import MessageType
-from agent.Agent import Agent
+from core.message import MessageType
+from agent.base import Agent
 from typing import List, Dict
 
 from util.util import log_print
@@ -13,6 +13,7 @@ from util.base import Singleton
 class Kernel(Singleton):
 
   def __init__(self, kernel_name:str, random_state:np.random.RandomState = None):
+    super().__init__()
     # kernel_name is for human readers only.
     self.name = kernel_name
     self.random_state = random_state
@@ -51,11 +52,20 @@ class Kernel(Singleton):
 
   # This is called to actually start the simulation, once all agent
   # configuration is done.
-  def runner(self, agents:List[Agent] = [], startTime = None, stopTime = None,
-             num_simulations = 1, defaultComputationDelay = 1,
-             defaultLatency = 1, agentLatency = None, latencyNoise = [ 1.0 ],
-             agentLatencyModel = None, skip_log = False,
-             seed = None, oracle = None, log_dir = None):
+  def runner(self, agents:List[Agent] = [], 
+             startTime:pd.Timestamp = None, 
+             stopTime:pd.Timestamp = None,
+             num_simulations:int = 1, 
+             defaultComputationDelay:int = 1,
+             defaultLatency:int = 1, 
+             agentLatency:int = None, 
+             latencyNoise:List[float] = [ 1.0 ],
+             agentLatencyModel = None, 
+             skip_log:bool = False,
+             seed:int = None, 
+             oracle = None, 
+             log_dir:str = None
+             ):
 
     # agents must be a list of agents for the simulation,
     #        based on class agent.Agent

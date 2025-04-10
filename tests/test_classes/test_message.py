@@ -1,6 +1,6 @@
 import random
 from message.Message_acc import Message 
-from agent.Agent import Agent
+from agent.base import Agent
 
 import pandas as pd
 import numpy as np

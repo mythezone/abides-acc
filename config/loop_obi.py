@@ -1,5 +1,5 @@
 from core.Kernel import Kernel
-from agent.ExchangeAgent import ExchangeAgent
+from core.Exchange import ExchangeAgent
 from agent.OrderBookImbalanceAgent import OrderBookImbalanceAgent
 from agent.ValueAgent import ValueAgent
 from agent.ZeroIntelligenceAgent import ZeroIntelligenceAgent
@@ -9,7 +9,7 @@ from statistics import median, mean, stdev
 from util.order import LimitOrder
 from util.oracle.SparseMeanRevertingOracle import SparseMeanRevertingOracle
 from util import util
-from util.model.QTable import QTable
+from model.q_table import QTable
 
 import numpy as np
 import pandas as pd

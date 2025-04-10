@@ -1,4 +1,4 @@
-from agent.Agent import Agent
+from agent.base import Agent
 from agent.examples.crypto.PPFL_ServiceAgent import PPFL_ServiceAgent
 from message.Message import Message
 from util.util import log_print

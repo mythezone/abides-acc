@@ -3,7 +3,7 @@
 # Specific order types will inherit from this (like LimitOrder).
 
 from copy import deepcopy
-from agent.Agent import Agent
+from agent.base import Agent
 
 import pandas as pd 
 import numpy as np 
@@ -15,7 +15,13 @@ class Order(Trackable):
     # _order_id = 0
     # _order_ids = set()
 
-    def __init__(self, agent:Agent|str, time_placed:pd.Timestamp, symbol:str, quantity:int, is_buy_order:bool, tag:Dict={}):
+    def __init__(self, 
+                 agent:Agent|str, 
+                 time_placed:pd.Timestamp, 
+                 symbol:str, 
+                 quantity:int, 
+                 is_buy_order:bool, 
+                 tag:Dict={}):
         # Agent ID: either the agent object or its ID.
         super().__init__()
         

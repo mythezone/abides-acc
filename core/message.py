@@ -1,7 +1,8 @@
 from enum import Enum, unique
-from agent.Agent import Agent
+from agent.base import Agent
 import pandas as pd 
 
+from util.base import Trackable
 
 @unique
 class MessageType(Enum):
@@ -38,14 +39,8 @@ class MessageType(Enum):
         return self.value < other.value 
 
 
-class Message:
+class Message(Trackable):
 
-  uniq = 0
-  message_list = []
-
-  @classmethod
-  def get_message_by_id(cls, message_id):
-     return cls.message_list[message_id] if message_id < len(cls.message_list) else None
 
   def __init__ (self, mtype:MessageType, 
                 sender: Agent|int,
@@ -53,11 +48,10 @@ class Message:
                 send_time: pd.Timestamp,
                 content: dict = {}
                 ):
-    
-    self.message_type = MessageType.MESSAGE
-    self.id = Message.uniq
-    Message.uniq += 1
-    Message.message_list.append(self)
+    super().__init__()
+
+    self.message_type = mtype 
+
     if sender is not None:
         if isinstance(sender, Agent):
             self.sender = sender

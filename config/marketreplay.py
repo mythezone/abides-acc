@@ -7,7 +7,7 @@ import datetime as dt
 from core.Kernel import Kernel
 from util import util
 from util.order import LimitOrder
-from agent.ExchangeAgent import ExchangeAgent
+from core.Exchange import ExchangeAgent
 from agent.examples.MarketReplayAgent import MarketReplayAgent
 
 ########################################################################################################################

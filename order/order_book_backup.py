@@ -4,7 +4,7 @@
 import sys
 
 from message.Message import Message
-from util.order.LimitOrder import LimitOrder
+from order.limit_order import LimitOrder
 from util.util import log_print, be_silent
 
 from copy import deepcopy

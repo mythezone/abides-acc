@@ -19,7 +19,7 @@ from util import util
 from util.order import LimitOrder
 from util.oracle.SparseMeanRevertingOracle import SparseMeanRevertingOracle
 
-from agent.ExchangeAgent import ExchangeAgent
+from core.Exchange import ExchangeAgent
 from agent.market_makers.MarketMakerAgent import MarketMakerAgent
 from agent.examples.MomentumAgent import MomentumAgent
 from agent.examples.SubscriptionAgent import SubscriptionAgent

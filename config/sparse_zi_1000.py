@@ -1,5 +1,5 @@
 from core.Kernel import Kernel
-from agent.ExchangeAgent import ExchangeAgent
+from core.Exchange import ExchangeAgent
 from agent.ZeroIntelligenceAgent import ZeroIntelligenceAgent
 from util.order import LimitOrder
 from util.oracle.SparseMeanRevertingOracle import SparseMeanRevertingOracle

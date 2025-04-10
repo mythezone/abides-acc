@@ -1,8 +1,8 @@
 from agent.FinancialAgent import FinancialAgent
-from agent.ExchangeAgent import ExchangeAgent
+from core.exchange import ExchangeAgent
 from message.Message import Message
-from util.order.LimitOrder import LimitOrder
-from util.order.MarketOrder import MarketOrder
+from order.limit_order import LimitOrder
+from order.market_order import MarketOrder
 from util.util import log_print
 
 from copy import deepcopy
