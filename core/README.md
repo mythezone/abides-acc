@@ -1,10 +1,10 @@
-## Kernel 优化
+## `Kernel` 优化
 
 ### 1. 单例
 `Kernel`改为使用单例实现，初始化`Agent`时，不再需要显式传入`Kernel`对象，而是在使用时可以自动获取该对象。
 
 
-## Message
+## `Message`类
 
 Message 目前的实现是基于字典传递消息，但是考虑到所有的消息都在同一个进程中被调用，直接调用Message的对象会更快一些，在处理消息时也可以使用Message类自带的方法，也会更加方便。
 
@@ -29,8 +29,8 @@ Message 目前的实现是基于字典传递消息，但是考虑到所有的消
     - `status`: 消息状态，默认值为0，表示未处理，1表示已处理
 
 
-## Symbol
-原ABIDES的symbol实现是一个字典，包含以下参数：
+## `Symbol`类
+原`ABIDES`的`symbol`实现是一个字典，包含以下参数：
 
 ```python
 symbol = {  'r_bar': 1e5, 
@@ -46,6 +46,12 @@ symbol = {  'r_bar': 1e5,
 ```
 1. 考虑到如果要模拟整个证券交易市场，我们需要更灵活的获取这组参数，因此将其改造为一个`Tractable`类，可以通过类名直接获取对应symbol的参数。
 2. 通过重载类方法`__class_getitem__`，可以通过`Symbol['AAPL']`的方式获取对应的symbol参数。
+
+
+## `Exchange`类
+原`ABIDES`的`Exchange`类是一个`Agent`的子类，考虑到其作为一个交易所的功能，应该是一个独立的模块，因此将其改为一个独立的类，并且将其放置在core模块下。
+1. 完全重写`Exchange`类，其作为`Singleton`类的子类，其他类可以直接获取该对象的实例并调用。
+
 
 
 

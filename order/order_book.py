@@ -17,7 +17,7 @@ from tqdm import tqdm
 
 # from queue import PriorityQueue
 
-# from order.base import Order
+from order.base import Order
 from order.limit_order import LimitOrder
 from core.kernel import Kernel
 from util.util import OrderHeap
@@ -241,7 +241,7 @@ class OrderBook:
             )
             self.handleLimitOrder(limit_order)
 
-    def execute_order(self, order):
+    def execute_order(self, order: Order):
         # Finds a single best match for this order, without regard for quantity.
         # Returns the matched order or None if no match found.  DOES remove,
         # or decrement quantity from, the matched order from the order book
