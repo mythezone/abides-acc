@@ -7,6 +7,8 @@ from agent.base import Agent
 
 import pandas as pd
 import numpy as np
+import heapq
+
 from typing import Dict, List, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -15,12 +17,22 @@ if TYPE_CHECKING:
 from core.base import Trackable
 
 
-class Transaction:
-    def __init__(self, time: pd.Timestamp, price: int, quantity: int, order: Order):
+class Transaction(Trackable):
+    def __init__(
+        self,
+        time: pd.Timestamp,
+        price: int,
+        quantity: int,
+        bid_order_id: int,
+        ask_order_id: int,
+    ):
+        super().__init__()
+
         self.time = time
         self.price = price
         self.quantity = quantity
-        self.order = order
+        self.bid_order_id = bid_order_id
+        self.ask_order_id = ask_order_id
 
 
 class Order(Trackable):
@@ -45,9 +57,14 @@ class Order(Trackable):
         self.remaining_quantity = quantity
         self.fill_price = None
 
-        self.transaction: List[Transaction] = []
+        self.histories: List = []
 
     def to_dict(self):
         as_dict = deepcopy(self).__dict__
         as_dict["time_placed"] = self.time_placed.isoformat()
         return as_dict
+
+    def transact(self, transaction: Transaction):
+        self.histories.append(transaction)
+        self.remaining_quantity -= transaction.quantity
+        self.fill_price = transaction.price

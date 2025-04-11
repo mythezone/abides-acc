@@ -8,6 +8,10 @@ from copy import deepcopy
 import pandas as pd
 from agent.base import Agent
 from functools import total_ordering
+import heapq
+from typing import Dict, List, TYPE_CHECKING
+from heapdict import heapdict
+
 
 import sys
 
@@ -47,3 +51,58 @@ class LimitOrder(Order):
         if self.compare_price == other.compare_price:
             return self.time_placed < other.time_placed
         return self.compare_price < other.compare_price
+
+
+# class OrderHeap:
+#     def __init__(self):
+#         self.heap: List[LimitOrder] = []
+
+#     def put(self, order: LimitOrder):
+#         heapq.heappush(self.heap, order)
+
+#     def get(self):
+#         return heapq.heappop(self.heap)
+
+#     def peek(self):
+#         return self.heap[0] if self.heap else None
+
+#     def empty(self):
+#         return not self.heap
+
+#     def __len__(self):
+#         return len(self.heap)
+
+
+class OrderHeap:
+    def __init__(self):
+        # 存储为 order_id -> order 的最小堆，优先级由 LimitOrder.__lt__ 决定
+        self.heap = heapdict()
+
+    def put(self, order: LimitOrder):
+        # 将 order_id 作为 key，order 作为 value，优先级由 order 本身定义
+        self.heap[order.order_id] = order
+
+    def get(self) -> LimitOrder:
+        # 弹出最小优先级的 order
+        _, order = self.heap.popitem()
+        return order
+
+    def get_by_id(self, order_id: int) -> LimitOrder:
+        # 按 id 删除指定 order 并返回
+        if order_id in self.heap:
+            order = self.heap.pop(order_id)
+            return order
+        return None
+
+    def peek(self) -> LimitOrder:
+        # 返回当前最小优先级的 order（不删除）
+        if self.heap:
+            _, order = self.heap.peekitem()
+            return order
+        return None
+
+    def empty(self):
+        return len(self.heap) == 0
+
+    def __len__(self):
+        return len(self.heap)

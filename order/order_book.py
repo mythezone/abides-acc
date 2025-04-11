@@ -17,10 +17,9 @@ from tqdm import tqdm
 
 # from queue import PriorityQueue
 
-from order.base import Order
-from order.limit_order import LimitOrder
+from order.base import Order, Transaction
+from order.limit_order import LimitOrder, OrderHeap
 from core.kernel import Kernel
-from util.util import OrderHeap
 
 
 class OrderBook:
@@ -185,44 +184,37 @@ class OrderBook:
             #     self.book_log.append(row)
         self.last_update_ts = self.owner.currentTime
 
-    def handle_market_order(self, order):
+    def handle_market_order(self, order: Order):
 
-        orderbook_side = (
-            self.getInsideAsks() if order.is_buy_order else self.getInsideBids()
-        )
+        # 匹配市价单，直到订单完全成交或对手盘耗尽
+        book = self.ask_side if order.is_buy_order else self.bid_side
+        matching = True
 
-        limit_orders = {}  # limit orders to be placed (key=price, value=quantity)
-        order_quantity = order.quantity
-        for price_level in orderbook_side:
-            price, size = price_level[0], price_level[1]
-            if order_quantity <= size:
-                limit_orders[price] = (
-                    order_quantity  # i.e. the top of the book has enough volume for the full order
-                )
-                break
-            else:
-                limit_orders[price] = (
-                    size  # i.e. not enough liquidity at the top of the book for the full order
-                )
-                # therefore walk through the book until all the quantities are matched
-                order_quantity -= size
-                continue
-        log_print(
-            "{} placing market order as multiple limit orders",
-            order.symbol,
-            order.quantity,
-        )
-        for lo in limit_orders.items():
-            p, q = lo[0], lo[1]
-            limit_order = LimitOrder(
-                order.agent_id,
-                order.time_placed,
-                order.symbol,
-                q,
-                order.is_buy_order,
-                p,
+        while matching and book:
+            best_order = book.peek()
+            trade_quantity = min(order.quantity, best_order.quantity)
+            trade_price = best_order.limit_price
+
+            transaction_time = self.owner.currentTime
+            transaction = Transaction(
+                time=transaction_time,
+                price=trade_price,
+                quantity=trade_quantity,
+                bid_order_id=order.id if order.is_buy_order else best_order.id,
+                ask_order_id=best_order.id if order.is_buy_order else order.id,
             )
-            self.handle_limit_order(limit_order)
+
+            order.transact(transaction)
+            best_order.transact(transaction)
+
+            if best_order.remaining_quantity == 0:
+                book.get()
+
+            if book.empty():
+                matching = False
+
+            if order.remaining_quantity == 0:
+                matching = False
 
     def execute_order(self, order: Order):
         # Finds a single best match for this order, without regard for quantity.

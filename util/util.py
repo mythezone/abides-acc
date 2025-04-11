@@ -6,6 +6,11 @@ from scipy.spatial.distance import pdist, squareform
 from util.logger import Logger
 import heapq
 
+from typing import List, Dict, TYPE_CHECKING
+
+# if TYPE_CHECKING:
+#     from order.base import Order
+
 logger = Logger()
 
 # General purpose utility functions for the simulator, attached to no particular class.
@@ -173,23 +178,3 @@ def sigmoid(x, beta):
         # zero because it's 1+z.
         z = np.exp(beta * x)
         return z / (1 + z)
-
-
-class OrderHeap:
-    def __init__(self):
-        self.heap = []
-
-    def put(self, order):
-        heapq.heappush(self.heap, order)
-
-    def get(self):
-        return heapq.heappop(self.heap)
-
-    def peek(self):
-        return self.heap[0] if self.heap else None
-
-    def empty(self):
-        return not self.heap
-
-    def __len__(self):
-        return len(self.heap)
