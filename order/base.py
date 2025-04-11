@@ -7,9 +7,20 @@ from agent.base import Agent
 
 import pandas as pd
 import numpy as np
-from typing import Dict, List
+from typing import Dict, List, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from order.base import Order
 
 from core.base import Trackable
+
+
+class Transaction:
+    def __init__(self, time: pd.Timestamp, price: int, quantity: int, order: Order):
+        self.time = time
+        self.price = price
+        self.quantity = quantity
+        self.order = order
 
 
 class Order(Trackable):
@@ -31,7 +42,10 @@ class Order(Trackable):
         self.is_buy_order = is_buy_order
         self.tag = tag
 
-        self.transaction = []
+        self.remaining_quantity = quantity
+        self.fill_price = None
+
+        self.transaction: List[Transaction] = []
 
     def to_dict(self):
         as_dict = deepcopy(self).__dict__

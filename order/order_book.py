@@ -59,7 +59,7 @@ class OrderBook:
             "self.history_previous_length": 0,
         }
 
-    def handleLimitOrder(self, order: LimitOrder):
+    def handle_limit_order(self, order: LimitOrder):
         # Matches a limit order or adds it to the order book.  Handles partial matches piecewise,
         # consuming all possible shares at the best price before moving on, without regard to
         # order size "fit" or minimizing number of transactions.  Sends one notification per
@@ -167,42 +167,25 @@ class OrderBook:
                 # Truncate history to required length.
                 self.history = self.history[: self.owner.stream_history + 1]
 
-            # Finally, log the full depth of the order book, ONLY if we have been requested to store the order book
-            # for later visualization.  (This is slow.)
-            if self.owner.book_freq is not None:
-                row = {"QuoteTime": self.owner.currentTime}
-                for quote, volume in self.getInsideBids():
-                    row[quote] = -volume
-                    self.quotes_seen.add(quote)
-                for quote, volume in self.getInsideAsks():
-                    if quote in row:
-                        if row[quote] is not None:
-                            print(
-                                "WARNING: THIS IS A REAL PROBLEM: an order book contains bids and asks at the same quote price!"
-                            )
-                    row[quote] = volume
-                    self.quotes_seen.add(quote)
-                self.book_log.append(row)
+            # # Finally, log the full depth of the order book, ONLY if we have been requested to store the order book
+            # # for later visualization.  (This is slow.)
+            # if self.owner.book_freq is not None:
+            #     row = {"QuoteTime": self.owner.currentTime}
+            #     for quote, volume in self.getInsideBids():
+            #         row[quote] = -volume
+            #         self.quotes_seen.add(quote)
+            #     for quote, volume in self.getInsideAsks():
+            #         if quote in row:
+            #             if row[quote] is not None:
+            #                 print(
+            #                     "WARNING: THIS IS A REAL PROBLEM: an order book contains bids and asks at the same quote price!"
+            #                 )
+            #         row[quote] = volume
+            #         self.quotes_seen.add(quote)
+            #     self.book_log.append(row)
         self.last_update_ts = self.owner.currentTime
-        self.prettyPrint()
 
-    def handleMarketOrder(self, order):
-
-        if order.symbol != self.symbol:
-            log_print(
-                "{} order discarded.  Does not match OrderBook symbol: {}",
-                order.symbol,
-                self.symbol,
-            )
-            return
-
-        if (order.quantity <= 0) or (int(order.quantity) != order.quantity):
-            log_print(
-                "{} order discarded.  Quantity ({}) must be a positive integer.",
-                order.symbol,
-                order.quantity,
-            )
-            return
+    def handle_market_order(self, order):
 
         orderbook_side = (
             self.getInsideAsks() if order.is_buy_order else self.getInsideBids()
@@ -239,7 +222,7 @@ class OrderBook:
                 order.is_buy_order,
                 p,
             )
-            self.handleLimitOrder(limit_order)
+            self.handle_limit_order(limit_order)
 
     def execute_order(self, order: Order):
         # Finds a single best match for this order, without regard for quantity.
