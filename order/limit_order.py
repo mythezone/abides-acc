@@ -8,9 +8,9 @@ from copy import deepcopy
 import pandas as pd
 from agent.base import Agent
 from functools import total_ordering
-import heapq
 from typing import Dict, List, TYPE_CHECKING
 from heapdict import heapdict
+from sortedcontainers import SortedList
 
 
 import sys
@@ -53,34 +53,13 @@ class LimitOrder(Order):
         return self.compare_price < other.compare_price
 
 
-# class OrderHeap:
-#     def __init__(self):
-#         self.heap: List[LimitOrder] = []
-
-#     def put(self, order: LimitOrder):
-#         heapq.heappush(self.heap, order)
-
-#     def get(self):
-#         return heapq.heappop(self.heap)
-
-#     def peek(self):
-#         return self.heap[0] if self.heap else None
-
-#     def empty(self):
-#         return not self.heap
-
-#     def __len__(self):
-#         return len(self.heap)
-
-
 class OrderHeap:
     def __init__(self):
-        # 存储为 order_id -> order 的最小堆，优先级由 LimitOrder.__lt__ 决定
         self.heap = heapdict()
 
     def put(self, order: LimitOrder):
-        # 将 order_id 作为 key，order 作为 value，优先级由 order 本身定义
-        self.heap[order.order_id] = order
+        # 将 id 作为 key，order 作为 value，优先级由 order 本身定义
+        self.heap[order.id] = order
 
     def get(self) -> LimitOrder:
         # 弹出最小优先级的 order

@@ -3,7 +3,13 @@
 ### 改动概览
 
 1. 将`Order`类及`Order`相关的类移动至`order`模块
-2. 将`Order`类放置在`order.base`模块中
+2. 将`Order`类放置在`order.base`模块中，重写`Order`类
+    1. `Order`类现在继承自`Trackable`类，使得所有的`Order`对象都可以追溯。 
+    2. 添加`history`属性，记录所有与`Order`变化有关的操作记录，比如撤单、成交（部分成交）、修改订单。
+    3. 添加与订单变化相关的接口方法`deal`, `cancel`, `modify`, `finish`等。
+    4. 添加组合类`Transaction`(名字待定)，用于记录所有与订单变化相关的信息。
+
+
 3. 重写`LimitOrder`类的实现方式
     1. 重写`LimitOrder`类全序的判断方法，因为`LimitOrder`的大小实际上与`LimitOrder`的创建先时间（也就是`id`属性的大小没有直接关系，而是与`LimitOrder`的方向（买或者卖）、价格以及提交至`Exchange`的时间有关。因此全序关系应该是先价格后时间（理论上不存在两个相同id的情况，如果考虑到这个可以将id也放到全序关系中）。
     2. 买方的`LimitOrder`是从大到小优先排序，在实现时，如果`LimitOrder`的方向时买方，即`is_buy_order`为`True`是，在对比时，就将`LimitOrder`的价格取反，这样就可以实现买方的`LimitOrder`是从大到小优先排序了。 
@@ -53,7 +59,25 @@
         - 删除了`getInsideAsks`和`getInsideBids`方法：该方法用于将对应的订单簿中每个价格档位的订单进行统计（不再区分逐笔订单）。
 
     8. 删除了`executeOrder`方法：
-        该方法用于处理已匹配的两个订单，但是在目前的实现中，已经不再需要单独处理，因为我们在`handle_limit_order`和`handle_market_order`方法中已经处理了所有的订单。
+        该方法用于处理已匹配的两个订单，但是在目前的实现中，已经不再需要单独处理，因为我们在`handle_limit_order`和`handle_market_order`方法中已经处理了所有的订单。也删除了与之相关的`enterBook`方法和`isMatching  `方法。
+
+    9. 删除了`history`列表和`_transacted_volume`字典。
+    10. 重新实现了`cancelOrder`方法：
+        1. 重命名为`cancel_order`方法
+        2. 删除了冗长的实现，因为现在`Order`是可追溯的，且`OrderBook`可以直接通过`Order`的id来获取对应的订单，因此不需要再遍历所有的订单来查找对应的订单，并直接使用数据结构提供的方法来删除指定元素（`get_by_id`方法）
+        
+    11. 我们重新实现了`modifyOrder`方法，现在不再是使用一个新的`Order`对象来替代原有订单，而是通过一些`modify`方法来调整订单的属性，这些调整也会被记录在`Order`实例中。仅有`LimitOrder`支持修改。
+
+    12. 删除不再需要的`getInsideBids`和`getInsideAsks`方法
+    13. 删除不再需要的`_get_recent_history`,`_update_unrolled_transactions`, `_unrolled_transactions_from_order_history`,`get_transacted_volume`, `isBetterPrice`, `isEqualPrice`, `isSameOrder`方法。
+
+    14. 重写`book_log_to_df`方法: TODO
+
+    
+
+
+
+    
 
 
             

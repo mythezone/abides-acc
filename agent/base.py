@@ -6,7 +6,7 @@ from copy import deepcopy
 from util.util import log_print
 from typing import List, Dict
 
-from core.base import Trackable
+from core.base import Trackable, RandomState
 
 # 在类型检测时不会出现循环引用错误
 from typing import TYPE_CHECKING
@@ -14,9 +14,11 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from core.kernel import Kernel
 
+RANDOM_SEED = 1234
+
 
 class Agent(Trackable):
-    def __init__(self, type_: str, random_state: np.random.RandomState):
+    def __init__(self, type_: str):
         super().__init__()
         # ID must be a unique number (usually autoincremented).
         # Name is for human consumption, should be unique (often type + number).
@@ -27,14 +29,7 @@ class Agent(Trackable):
 
         self.type_ = type_
 
-        if not random_state:
-            raise ValueError(
-                "A valid, seeded np.random.RandomState object is required "
-                + "for every agent.Agent",
-                self.name,
-            )
-            sys.exit()
-        self.random_state = random_state
+        self.random_state = RandomState(RANDOM_SEED)
 
         # What time does the agent think it is?  Should be updated each time
         # the agent wakes via wakeup or receiveMessage.  (For convenience

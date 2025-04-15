@@ -17,17 +17,19 @@ if TYPE_CHECKING:
 from core.base import Trackable
 
 
+# 类型包括： partial_deal | canceled | modified | finished
 class Transaction(Trackable):
     def __init__(
         self,
         time: pd.Timestamp,
         price: int,
         quantity: int,
-        bid_order_id: int,
-        ask_order_id: int,
+        bid_order_id: int = None,
+        ask_order_id: int = None,
+        type_: str = "trade",
     ):
         super().__init__()
-
+        self.type_ = type_
         self.time = time
         self.price = price
         self.quantity = quantity
@@ -64,7 +66,23 @@ class Order(Trackable):
         as_dict["time_placed"] = self.time_placed.isoformat()
         return as_dict
 
-    def transact(self, transaction: Transaction):
+    def deal(self, transaction: Transaction):
         self.histories.append(transaction)
         self.remaining_quantity -= transaction.quantity
         self.fill_price = transaction.price
+        if self.remaining_quantity == 0:
+            self.finish()
+
+    def cancel(self, transaction: Transaction):
+        self.histories.append(transaction)
+        self.remaining_quantity = 0
+        self.fill_price = transaction.price
+
+    def modify(self, transaction: Transaction):
+        self.histories.append(transaction)
+        self.remaining_quantity = transaction.quantity
+        self.fill_price = transaction.price
+
+    # 结算
+    def finish(self):
+        pass  # TODO
