@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 
-import os, queue, sys
+import os
+import queue
 from core.message import MessageType
 from agent.base import Agent
 from typing import List, Dict
@@ -24,6 +25,7 @@ class Kernel(metaclass=Singleton):
             )
         self.name = kernel_name
         self.random_state = RandomState()
+        self.messages = queue.PriorityQueue()
 
         # A single message queue to keep everything organized by increasing
         # delivery timestamp.
