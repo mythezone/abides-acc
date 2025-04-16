@@ -18,7 +18,7 @@ from order.limit_order import LimitOrder
 from util.oracle.SparseMeanRevertingOracle import SparseMeanRevertingOracle
 from model.latency import LatencyModel
 
-from core.exchange import ExchangeAgent
+from core.exchange import Exchange
 from agent.market_makers.MarketMakerAgent import MarketMakerAgent
 from agent.examples.MomentumAgent import MomentumAgent
 
@@ -87,7 +87,7 @@ mkt_close = historical_date + pd.to_timedelta("10:30:00")
 
 agents.extend(
     [
-        ExchangeAgent(
+        Exchange(
             id=0,
             name="EXCHANGE_AGENT",
             type="ExchangeAgent",

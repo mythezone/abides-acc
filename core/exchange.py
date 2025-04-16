@@ -25,7 +25,7 @@ from copy import deepcopy
 from core.base import Singleton
 
 
-class Exchange(Singleton):
+class Exchange(metaclass=Singleton):
 
     def __init__(
         self,
@@ -40,8 +40,6 @@ class Exchange(Singleton):
         log_orders=False,
         random_state=None,
     ):
-
-        super().__init__()
 
         # Do not request repeated wakeup calls.
         self.reschedule = False

@@ -3,16 +3,30 @@ from ast import Raise
 import numpy as np
 
 
-class Singleton:
+# class Singleton:
+#     _instances = {}
+
+#     def __new__(cls, *args, **kwargs):
+#         if cls not in cls._instances:
+#             instance = super(Singleton, cls).__new__(cls)
+#             instance.__init__(*args, **kwargs)
+#             instance._initialized = True
+#             cls._instances[cls] = instance
+
+#         return cls._instances[cls]
+
+
+class Singleton(type):
+    """
+    This is a thread-safe implementation of Singleton.
+    """
+
     _instances = {}
 
-    def __new__(cls, *args, **kwargs):
+    def __call__(cls, *args, **kwargs):
         if cls not in cls._instances:
-            instance = super(Singleton, cls).__new__(cls)
-            instance.__init__(*args, **kwargs)
-            instance._initialized = True
+            instance = super().__call__(*args, **kwargs)
             cls._instances[cls] = instance
-
         return cls._instances[cls]
 
 
@@ -50,10 +64,9 @@ class Trackable:
         return cls.get_instance_by_id(id_)
 
 
-class RandomState(Singleton):
+class RandomState(metaclass=Singleton):
 
     def __init__(self, seed: int = None):
-        super().__init__()
         if seed is not None:
             self.seed = seed
         else:
