@@ -16,3 +16,5 @@ abides-acc.wiki
 .env
 .gradio
 paper
+.DS_Store
+
