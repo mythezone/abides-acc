@@ -69,6 +69,10 @@ symbol = {  'r_bar': 1e5,
 1. 重新封装了`now`,`reset`,`tick`,`get_forward`方法，对应提供了获取当前时间、重置时间、推进时间和获取未来时间的方法。
 
 
+## `Logger`类
+针对ABIDES重新封装了python自带的`logging`模块，更好的记录在仿真过程中的日志信息。
+
+
 
 
 

@@ -361,7 +361,7 @@ class Kernel(metaclass=Singleton):
                 ttl_messages / (eventQueueWallClockElapsed / (np.timedelta64(1, "s"))),
             )
         )
-        log_print("Ending sim {}", sim)
+        # log_print("Ending sim {}", sim)
 
         # The Kernel adds a handful of custom state results for all simulations,
         # which configurations may use, print, log, or discard.
