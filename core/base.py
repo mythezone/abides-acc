@@ -65,13 +65,8 @@ class Trackable:
 
 
 class RandomState(metaclass=Singleton):
-
-    def __init__(self, seed: int = None):
-        if seed is not None:
-            self.seed = seed
-        else:
-            raise ValueError("Seed cannot be None")
-
+    def __init__(self, seed: int = 1234):
+        self.seed = seed
         self.state = np.random.RandomState(self.seed)
 
     def reset(self):

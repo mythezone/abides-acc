@@ -8,34 +8,24 @@ from typing import List, Dict
 
 from core.base import Trackable, RandomState
 
+
 # 在类型检测时不会出现循环引用错误
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from core.kernel import Kernel
 
-RANDOM_SEED = 1234
-
 
 class Agent(Trackable):
-    def __init__(self, type_: str):
+    def __init__(self, type_: str, current_time: pd.Timestamp = None):
         super().__init__()
-        # ID must be a unique number (usually autoincremented).
-        # Name is for human consumption, should be unique (often type + number).
-        # Type is for machine aggregation of results, should be same for all
-        # agents following the same strategy (incl. parameter settings).
-        # Every agent is given a random state to use for any stochastic needs.
-        # This is an np.random.RandomState object, already seeded.
 
-        self.type_ = type_
-
-        self.random_state = RandomState(RANDOM_SEED)
-
+        self.type_ = self.__class__.__name__
         # What time does the agent think it is?  Should be updated each time
         # the agent wakes via wakeup or receiveMessage.  (For convenience
         # of reference throughout the Agent class hierarchy, NOT THE
         # CANONICAL TIME.)
-        self.currentTime = None
+        self.agent_current_time = current_time
 
         # Agents may choose to maintain a log.  During simulation,
         # it should be stored as a list of dictionaries.  The expected
@@ -48,21 +38,11 @@ class Agent(Trackable):
         # It might, or might not, make sense to formalize these log Events
         # as a class, with enumerated EventTypes and so forth.
         self.log = []
-        self.logEvent("AGENT_TYPE", type)
+        self.random_state = RandomState().state
+        # self.logEvent("AGENT_TYPE", type)
 
     ### Flow of required kernel listening methods:
     ### init -> start -> (entire simulation) -> end -> terminate
-
-    def kernelInitializing(self, kernel: "Kernel"):
-        # Called by kernel one time when simulation first begins.
-        # No other agents are guaranteed to exist at this time.
-
-        # Kernel reference must be retained, as this is the only time the
-        # agent can "see" it.
-
-        self.kernel = kernel
-
-        log_print("{} exists!", self.name)
 
     def kernelStarting(self, startTime):
         # Called by kernel one time _after_ simulationInitializing.
@@ -73,12 +53,12 @@ class Agent(Trackable):
         # Base Agent schedules a wakeup call for the first available timestamp.
         # Subclass agents may override this behavior as needed.
 
-        log_print(
-            "Agent {} ({}) requesting kernel wakeup at time {}",
-            self.id,
-            self.name,
-            self.kernel.fmtTime(startTime),
-        )
+        # log_print(
+        #     "Agent {} ({}) requesting kernel wakeup at time {}",
+        #     self.id,
+        #     self.name,
+        #     self.kernel.fmtTime(startTime),
+        # )
 
         self.setWakeup(startTime)
 
@@ -111,7 +91,7 @@ class Agent(Trackable):
         # alter logs once recorded.
         e = deepcopy(event)
         self.log.append(
-            {"EventTime": self.currentTime, "EventType": eventType, "Event": e}
+            {"EventTime": self.agent_current_time, "EventType": eventType, "Event": e}
         )
 
         if appendSummaryLog:
@@ -128,7 +108,7 @@ class Agent(Trackable):
         # message -- the agent should treat this as "now".  msg is
         # an object guaranteed to inherit from the message.Message class.
 
-        self.currentTime = currentTime
+        self.agent_current_time = currentTime
 
         log_print(
             "At {}, agent {} ({}) received: {}",
@@ -143,7 +123,7 @@ class Agent(Trackable):
         # Agent.setWakeup().  This is the method called when the wakeup time
         # arrives.
 
-        self.currentTime = currentTime
+        self.agent_current_time = currentTime
 
         log_print(
             "At {}, agent {} ({}) received wakeup.",

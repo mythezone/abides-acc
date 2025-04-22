@@ -3,6 +3,7 @@ from agent.base import Agent
 import pandas as pd
 
 from core.base import Trackable
+from functools import total_ordering
 
 
 @unique
@@ -40,54 +41,34 @@ class MessageType(Enum):
         return self.value < other.value
 
 
+@total_ordering
 class Message(Trackable):
 
     def __init__(
         self,
         mtype: MessageType,
-        sender: Agent | int,
-        recipient: Agent | int,
-        send_time: pd.Timestamp,
+        sender_id: int,
+        recipient_id: int = None,
+        send_time: pd.Timestamp = None,
+        recive_time: pd.Timestamp = None,
         content: dict = {},
     ):
         super().__init__()
 
         self.message_type = mtype
-
-        if sender is not None:
-            if isinstance(sender, Agent):
-                self.sender = sender
-            else:
-                self.sender = Agent.get_agent_by_id(sender)
-        else:
-            raise ValueError("Sender cannot be None")
-
-        if recipient is not None:
-            if isinstance(recipient, Agent):
-                self.recipient = recipient
-            else:
-                self.recipient = Agent.get_agent_by_id(recipient)
-        else:
-            raise ValueError("Recipient cannot be None")
-
-        if send_time is not None:
-            if isinstance(send_time, pd.Timestamp):
-                self.send_time = send_time
-            else:
-                raise ValueError("send_time must be a pd.Timestamp")
-        else:
-            raise ValueError("send_time cannot be None")
+        self.sender_id = sender_id
+        self.recipient_id = recipient_id
+        self.send_time = send_time
+        self.recive_time = recive_time
 
         self.content = content
 
     def __lt__(self, other):
-        # Required by Python3 for this object to be placed in a priority queue.
-        # If we ever decide to place something on the queue other than Messages,
-        # we will need to alter the below to not assume the other object is
-        # also a Message.
+        return self.recive_time < other.recive_time
 
-        return self.uniq < other.id
+    def __eq__(self, other):
+        return self.id == other.id
 
     def __str__(self):
         # Make a printable representation of this message.
-        return f"{self.message_type} from {self.sender} to {self.recipient} at {self.send_time}: {self.content}"
+        return f"{self.message_type} from {self.sender_id} to {self.recipient_id} at {self.send_time}: {self.content}"

@@ -1,9 +1,11 @@
-from agent.FinancialAgent import FinancialAgent
-from core.exchange import ExchangeAgent
+from agent.base import Agent
+from core.exchange import Exchange
 from core.message import Message
 from order.limit_order import LimitOrder
 from order.market_order import MarketOrder
 from util.util import log_print
+
+import pandas as pd
 
 from copy import deepcopy
 import sys
@@ -14,20 +16,17 @@ import sys
 # market simulation.  It handles a lot of messaging (inbound and outbound)
 # and state maintenance automatically, so subclasses can focus just on
 # implementing a strategy without too much bookkeeping.
-class TradingAgent(FinancialAgent):
+class TradingAgent(Agent):
 
     def __init__(
         self,
-        id,
-        name,
-        type,
-        random_state=None,
-        starting_cash=100000,
-        log_orders=False,
-        log_to_file=True,
+        current_time: pd.Timestamp,
+        starting_cash: int = 100000,
+        log_orders: bool = False,
+        log_to_file: bool = True,
     ):
         # Base class init.
-        super().__init__(id, name, type, random_state, log_to_file)
+        super().__init__(current_time)
 
         # We don't yet know when the exchange opens or closes.
         self.mkt_open = None
@@ -35,6 +34,7 @@ class TradingAgent(FinancialAgent):
 
         # Log order activity?
         self.log_orders = log_orders
+        self.log_to_file = log_to_file
 
         # Log all activity to file?
         if log_orders is None:
@@ -119,7 +119,7 @@ class TradingAgent(FinancialAgent):
 
         # Find an exchange with which we can place orders.  It is guaranteed
         # to exist by now (if there is one).
-        self.exchangeID = self.kernel.findAgentByType(ExchangeAgent)
+        self.exchangeID = self.kernel.findAgentByType(Exchange)
 
         log_print(
             "Agent {} requested agent of type Agent.ExchangeAgent.  Given Agent ID: {}",
@@ -374,7 +374,7 @@ class TradingAgent(FinancialAgent):
     ):
         order = LimitOrder(
             self.id,
-            self.currentTime,
+            self.agent_current_time,
             symbol,
             quantity,
             is_buy_order,
@@ -440,7 +440,7 @@ class TradingAgent(FinancialAgent):
         :return:
         """
         order = MarketOrder(
-            self.id, self.currentTime, symbol, quantity, is_buy_order, order_id
+            self.id, self.agent_current_time, symbol, quantity, is_buy_order, order_id
         )
         if quantity > 0:
             # compute new holdings

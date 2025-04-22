@@ -24,7 +24,7 @@ class Kernel(metaclass=Singleton):
                 pd.Timestamp("now").strftime("%Y-%m-%d %H:%M:%S")
             )
         self.name = kernel_name
-        self.random_state = RandomState()
+        self.random_state = RandomState().state
         self.messages = queue.PriorityQueue()
 
         # A single message queue to keep everything organized by increasing
@@ -66,7 +66,7 @@ class Kernel(metaclass=Singleton):
         agentLatency: int = None,
         latencyNoise: List[float] = [1.0],
         agentLatencyModel=None,
-        skip_log: bool = False,
+        skip_log: bool = True,
         seed: int = None,
         oracle=None,
         log_dir: str = None,
@@ -163,9 +163,6 @@ class Kernel(metaclass=Singleton):
         # Kernel passes self-reference for agents to retain, so they can
         # communicate with the kernel in the future (as it does not have
         # an agentID).
-        log_print("\n--- Agent.kernelInitializing() ---")
-        for agent in self.agents:
-            agent.kernelInitializing(self)
 
         # Event notification for kernel start (agents may set up
         # communications or references to other agents, as all agents
@@ -667,22 +664,3 @@ class Kernel(metaclass=Singleton):
         if "agent_state" not in self.custom_state:
             self.custom_state["agent_state"] = {}
         self.custom_state["agent_state"][agent_id] = state
-
-    @staticmethod
-    def fmtTime(simulationTime):
-        # The Kernel class knows how to pretty-print time.  It is assumed simulationTime
-        # is in nanoseconds since midnight.  Note this is a static method which can be
-        # called either on the class or an instance.
-
-        # Try just returning the pd.Timestamp now.
-        return simulationTime
-
-        ns = simulationTime
-        hr = int(ns / (1000000000 * 60 * 60))
-        ns -= hr * 1000000000 * 60 * 60
-        m = int(ns / (1000000000 * 60))
-        ns -= m * 1000000000 * 60
-        s = int(ns / 1000000000)
-        ns = int(ns - (s * 1000000000))
-
-        return "{:02d}:{:02d}:{:02d}.{:09d}".format(hr, m, s, ns)

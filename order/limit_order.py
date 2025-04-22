@@ -3,7 +3,7 @@
 
 from order.base import Order
 from core.kernel import Kernel
-from agent.FinancialAgent import dollarize
+from old.agent.FinancialAgent import dollarize
 from copy import deepcopy
 import pandas as pd
 from agent.base import Agent

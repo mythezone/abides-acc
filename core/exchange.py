@@ -4,7 +4,7 @@
 # the levels of order stream history to maintain per symbol (maintains all orders that led to the last N trades),
 # whether to log all order activity to the agent log, and a random state object (already seeded) to use
 # for stochasticity.
-from agent.FinancialAgent import FinancialAgent
+from old.agent.FinancialAgent import FinancialAgent
 from core.message import Message
 from order.order_book import OrderBook
 from util.util import log_print

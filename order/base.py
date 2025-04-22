@@ -8,6 +8,7 @@ from agent.base import Agent
 import pandas as pd
 import numpy as np
 import heapq
+from dataclasses import dataclass
 
 from typing import Dict, List, TYPE_CHECKING
 
@@ -18,6 +19,7 @@ from core.base import Trackable
 
 
 # 类型包括： partial_deal | canceled | modified | finished
+@dataclass
 class Transaction(Trackable):
     def __init__(
         self,
