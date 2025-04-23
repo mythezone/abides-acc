@@ -10,41 +10,44 @@
         "book_freq": "3s",
         "book_depth": 5
     },
-    "agent": {
-        "zero_intelligence": {
+    "agent_args": [
+        {
+            "name": "zero_intelligence",
             "num": 1000,
             "sigma_n": 1e6
         },
-        "impace": {
+        {
+            "name": "impace",
             "num": 1,
             "trade": true
         },
-        "market": {
+        {
+            "name": "market",
             "num": 1,
             "starting_cash": 1e6,
             "min_size": 500,
             "max_size": 1000
         }
-    },
-    "symbol": {
-        "SYM1": {
+    ],
+    "symbol_args": [
+        {
+            "name": "SYM1",
             "r_bar": 1e5,
             "kappa": 0.05,
             "sigma_s": 5e5
         },
-        "SYM2": {
+        {
+            "name": "SYM2",
             "r_bar": 1.5e5,
             "kappa": 0.05,
             "sigma_s": 5e5
         }
-    },
+    ],
     "exchange": {
         "mkt_open": "09:30:00",
         "mkt_close": "11:30:00",
-        "delay": {
-            "pipeline": 0,
-            "computation": 0,
-            "network": 0
-        }
+        "pipeline_delay": 0,
+        "computation_delay": 0,
+        "network_delay": 0
     }
 }

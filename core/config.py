@@ -22,6 +22,10 @@ class ConfigManager(metaclass=Singleton):
 
     def _update_attributes(self, config_data: Dict, prefix: str = ""):
         for key, value in config_data.items():
+            if key.endswith("_args"):
+                attribute_name = prefix + key
+                self._set_nested_attribute(key, value)
+                continue
             if isinstance(value, dict):
                 self._update_attributes(value, prefix + key + ".")
             else:

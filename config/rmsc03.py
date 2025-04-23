@@ -19,8 +19,8 @@ from order.limit_order import LimitOrder
 from util.oracle.SparseMeanRevertingOracle import SparseMeanRevertingOracle
 
 from core.exchange import Exchange
-from agent.NoiseAgent import NoiseAgent
-from agent.ValueAgent import ValueAgent
+from agent.noise_agent import NoiseAgent
+from agent.value_agent import ValueAgent
 from agent.market_makers.AdaptiveMarketMakerAgent import AdaptiveMarketMakerAgent
 from agent.examples.MomentumAgent import MomentumAgent
 from agent.execution.POVExecutionAgent import POVExecutionAgent

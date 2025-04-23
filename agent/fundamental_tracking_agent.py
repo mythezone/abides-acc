@@ -1,4 +1,4 @@
-from agent.TradingAgent import TradingAgent
+from agent.trading_agent import TradingAgent
 from util.util import log_print
 import numpy as np
 import pandas as pd

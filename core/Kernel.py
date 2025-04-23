@@ -13,6 +13,8 @@ from core.base import RandomState
 from core.clock import Clock
 from core.logger import Logger
 from core.config import ConfigManager as CM
+from core.symbol import Symbol
+from agent import Agent 
 
 
 class Kernel(metaclass=Singleton):
@@ -40,13 +42,16 @@ class Kernel(metaclass=Singleton):
         self.kernel_wall_clock_start = Clock.real_time()
 
         # 初始化symbol
-        self.symbol_config = self.cm.symbol
+        self.symbol_args = self.cm.symbol_args
+        for symbol_arg in self.symbol_args:
+            Symbol(**symbol_arg)
 
         # 初始化Agent
-        self.agent_config = self.cm.agent
-
+        self.agent_args = self.cm.agent_args
+        for agent_arg in self.agent_args:
+            
         # 初始化 Exchange
-        self.exchange_config = self.cm.exchange
+        self.exchange_args = self.cm.exchange
 
         # # TODO: This is financial, and so probably should not be here...
         # self.mean_result_by_agent_type = {}

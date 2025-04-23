@@ -22,8 +22,8 @@ from core.exchange import Exchange
 from agent.market_makers.MarketMakerAgent import MarketMakerAgent
 from agent.examples.MomentumAgent import MomentumAgent
 
-from agent.ZeroIntelligenceAgent import ZeroIntelligenceAgent
-from agent.HeuristicBeliefLearningAgent import HeuristicBeliefLearningAgent
+from agent.zero_intelligentce_agent import ZeroIntelligenceAgent
+from agent.heuristic_belief_learning_agent import HeuristicBeliefLearningAgent
 
 ########################################################################################################################
 ############################################### GENERAL CONFIG #########################################################
