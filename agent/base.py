@@ -17,50 +17,22 @@ if TYPE_CHECKING:
 
 
 class Agent(Trackable):
-    def __init__(self, type_: str, current_time: pd.Timestamp = None):
+    def __init__(self):
         super().__init__()
 
-        self.type_ = self.__class__.__name__
         # What time does the agent think it is?  Should be updated each time
         # the agent wakes via wakeup or receiveMessage.  (For convenience
         # of reference throughout the Agent class hierarchy, NOT THE
         # CANONICAL TIME.)
-        self.agent_current_time = current_time
-
-        # Agents may choose to maintain a log.  During simulation,
-        # it should be stored as a list of dictionaries.  The expected
-        # keys by default are: EventTime, EventType, Event.  Other
-        # Columns may be added, but will then require specializing
-        # parsing and will increase output dataframe size.  If there
-        # is a non-empty log, it will be written to disk as a Dataframe
-        # at kernel termination.
-
-        # It might, or might not, make sense to formalize these log Events
-        # as a class, with enumerated EventTypes and so forth.
-        self.log = []
+        self.inbox = []
         self.random_state = RandomState().state
         # self.logEvent("AGENT_TYPE", type)
 
     ### Flow of required kernel listening methods:
     ### init -> start -> (entire simulation) -> end -> terminate
-
-    def kernelStarting(self, startTime):
-        # Called by kernel one time _after_ simulationInitializing.
-        # All other agents are guaranteed to exist at this time.
-        # startTime is the earliest time for which the agent can
-        # schedule a wakeup call (or could receive a message).
-
-        # Base Agent schedules a wakeup call for the first available timestamp.
-        # Subclass agents may override this behavior as needed.
-
-        # log_print(
-        #     "Agent {} ({}) requesting kernel wakeup at time {}",
-        #     self.id,
-        #     self.name,
-        #     self.kernel.fmtTime(startTime),
-        # )
-
-        self.setWakeup(startTime)
+    @property
+    def name(self):
+        return self.__class__.__name__ + "_" + str(self.id)
 
     def kernelStopping(self):
         # Called by kernel one time _before_ simulationTerminating.

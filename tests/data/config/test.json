@@ -1,0 +1,7 @@
+{
+    "kernel": {
+        "name": "test_kernel",
+        "start_datetime": "2023-10-01T09:30:00",
+        "end_datetime": "2023-10-01T11:30:00"
+    }
+}

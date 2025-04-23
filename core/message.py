@@ -4,6 +4,7 @@ import pandas as pd
 
 from core.base import Trackable
 from functools import total_ordering
+from queue import PriorityQueue
 
 
 @unique
@@ -72,3 +73,27 @@ class Message(Trackable):
     def __str__(self):
         # Make a printable representation of this message.
         return f"{self.message_type} from {self.sender_id} to {self.recipient_id} at {self.send_time}: {self.content}"
+
+
+class MessageBox:
+    def __init__(self):
+        self.messages = PriorityQueue()
+
+    def put(self, message: Message):
+        self.messages.put(message)
+
+    def get(self) -> Message:
+        if not self.messages.empty():
+            return self.messages.get()
+        else:
+            return None
+
+    def empty(self) -> bool:
+        return self.messages.empty()
+
+    def __iter__(self):
+        while not self.empty():
+            yield self.get()
+
+    def __len__(self):
+        return self.messages.qsize()

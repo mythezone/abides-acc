@@ -11,19 +11,19 @@ from util.util import log_print
 from core.base import Singleton
 from core.base import RandomState
 from core.clock import Clock
+from core.logger import Logger
+from core.config import ConfigManager as CM
 
 
 class Kernel(metaclass=Singleton):
 
-    def __init__(self, kernel_name: str = None):
-        super().__init__()
-
+    def __init__(self, config_path: str = "./config/test.json"):
         # kernel_name is for human readers only.
-        if not kernel_name:
-            kernel_name = "Simulatior at:".join(
-                pd.Timestamp("now").strftime("%Y-%m-%d %H:%M:%S")
-            )
-        self.name = kernel_name
+        self.cm = CM(config_path)
+
+        self.clock = Clock(initial_time=self.cm.kernel.start_datetime)
+
+        self.name = self.cm.kernel.name
         self.random_state = RandomState().state
         self.messages = queue.PriorityQueue()
 
@@ -55,6 +55,7 @@ class Kernel(metaclass=Singleton):
 
     # This is called to actually start the simulation, once all agent
     # configuration is done.
+
     def runner(
         self,
         agents: List[Agent] = [],

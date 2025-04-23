@@ -1,25 +1,26 @@
+from types import SimpleNamespace
 from core.base import Singleton
 import os
 import json
 from typing import Dict
 
 
-class ConfigManager(Singleton):
-    def __init__(self, config_path:str="./config/rmsc01.json"):
+class ConfigManager(metaclass=Singleton):
+    def __init__(self, config_path: str = "./config/test.json"):
         super().__init__()
 
         self.config_path = config_path
         self.load_config(config_path)
 
-    def load_config(self, config_path:str="./config/rmsc01.json"):
-        if os.path.isfile(config_path:str):
+    def load_config(self, config_path: str = "./config/test.json"):
+        if os.path.isfile(config_path):
             with open(config_path, "r") as config_file:
                 config_data = json.load(config_file)
                 self._update_attributes(config_data)
         else:
             raise FileNotFoundError(f"No {config_file} found in {self.config_dir}")
 
-    def _update_attributes(self, config_data:Dict, prefix:str = ""):
+    def _update_attributes(self, config_data: Dict, prefix: str = ""):
         for key, value in config_data.items():
             if isinstance(value, dict):
                 self._update_attributes(value, prefix + key + ".")
@@ -37,6 +38,4 @@ class ConfigManager(Singleton):
         setattr(obj, parts[-1], value)
 
     def __getattr__(self, name):
-        raise AttributeError(
-            f"Attribute '{name}' not found in {self.config_path}."
-        )
+        raise AttributeError(f"Attribute '{name}' not found in {self.config_path}.")
