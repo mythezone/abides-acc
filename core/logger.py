@@ -1,5 +1,6 @@
 import logging
 from core.base import Singleton
+import pandas as pd
 
 
 class FileHandler(logging.Handler):
@@ -43,18 +44,54 @@ class Logger(metaclass=Singleton):
             "exchange": logging.getLogger("Exchange"),
             "order": logging.getLogger("Order"),
             "msg": logging.getLogger("Msg"),
+            "kernel": logging.getLogger("Kernel"),
         }
 
         # 使用自定义的同步文件 Handler
         exchange_handler = FileHandler(filename)
         exchange_handler.setFormatter(
-            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            logging.Formatter("%(kernel_time)s - %(name)s - %(type_)s - %(message)s")
         )
         self.loggers["exchange"].addHandler(exchange_handler)
         self.loggers["exchange"].setLevel(logging.INFO)
 
-    def exchange_log(self, message: str):
+        # 设置kernel的handler
+        kernel_handler = FileHandler(filename)
+        kernel_handler.setFormatter(
+            logging.Formatter("%(kernel_time)s - %(name)s - %(type_)s - %(message)s")
+        )
+        self.loggers["kernel"].addHandler(kernel_handler)
+        self.loggers["kernel"].setLevel(logging.INFO)
+
+    def exchange_log(
+        self, message: str, kernel_time: str | pd.Timestamp, type_: str = "INIT"
+    ):
         """
         记录交易所日志。
         """
-        self.loggers["exchange"].info(message)
+
+        self.loggers["exchange"].info(
+            message,
+            extra={"kernel_time": self.iso_time_format(kernel_time), "type_": type_},
+        )
+
+    def kernel_log(
+        self, message: str, kernel_time: str | pd.Timestamp, type_: str = "INIT"
+    ):
+        """
+        记录内核日志。
+        """
+        self.loggers["kernel"].info(
+            message,
+            extra={"kernel_time": self.iso_time_format(kernel_time), "type_": type_},
+        )
+
+    @staticmethod
+    def iso_time_format(time: str | pd.Timestamp) -> str:
+        """
+        格式化时间戳为 ISO 格式。
+        """
+        if isinstance(time, pd.Timestamp):
+            return time.isoformat()
+        else:
+            return pd.Timestamp(time).isoformat()

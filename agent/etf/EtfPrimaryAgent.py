@@ -57,7 +57,7 @@ class EtfPrimaryAgent(FinancialAgent):
     def kernelStarting(self, startTime):
         # Find an exchange with which we can place orders.  It is guaranteed
         # to exist by now (if there is one).
-        self.exchangeID = self.kernel.findAgentByType(ExchangeAgent)
+        self.exchangeID = self.kernel.findAgentByType(Exchange)
 
         log_print(
             "Agent {} requested agent of type Agent.ExchangeAgent.  Given Agent ID: {}",

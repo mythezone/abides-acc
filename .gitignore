@@ -23,7 +23,8 @@ docs/source
 docs/make.bat
 docs/Makefile
 docs/build/doctrees
-.DS_Store
 
 rubbish
 old
+.pytest_cache
+result

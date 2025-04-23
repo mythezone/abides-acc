@@ -2,3 +2,59 @@
 2025-04-23 12:34:17,785 - Exchange - INFO - 第一条日志
 2025-04-23 12:34:17,785 - Exchange - INFO - 第二条日志
 2025-04-23 12:34:17,785 - Exchange - INFO - 测试日志
+2025-04-23 14:11:04,155 - Exchange - INFO - 这是测试日志
+2025-04-23 14:11:04,156 - Exchange - INFO - 第一条日志
+2025-04-23 14:11:04,156 - Exchange - INFO - 第二条日志
+2025-04-23 14:11:04,156 - Exchange - INFO - 测试日志
+2025-04-23 14:13:42,330 - Exchange - INFO - 这是测试日志
+2025-04-23 14:13:42,330 - Exchange - INFO - 第一条日志
+2025-04-23 14:13:42,330 - Exchange - INFO - 第二条日志
+2025-04-23 14:13:42,330 - Exchange - INFO - 测试日志
+2025-04-23 14:13:58,133 - Exchange - INFO - 这是测试日志
+2025-04-23 14:13:58,133 - Exchange - INFO - 第一条日志
+2025-04-23 14:13:58,133 - Exchange - INFO - 第二条日志
+2025-04-23 14:13:58,133 - Exchange - INFO - 测试日志
+2023-10-01 12:00:00 - Kernel - INFO - Kernel测试日志
+2025-04-23 14:14:25,834 - Exchange - INFO - 这是测试日志
+2025-04-23 14:14:25,835 - Exchange - INFO - 第一条日志
+2025-04-23 14:14:25,835 - Exchange - INFO - 第二条日志
+2025-04-23 14:14:25,835 - Exchange - INFO - 测试日志
+2023-10-01 12:00:00.000231 - Kernel - INFO - Kernel测试日志
+2025-04-23 14:16:16,300 - Exchange - INFO - 这是测试日志
+2025-04-23 14:16:16,300 - Exchange - INFO - 第一条日志
+2025-04-23 14:16:16,300 - Exchange - INFO - 第二条日志
+2025-04-23 14:16:16,300 - Exchange - INFO - 测试日志
+2023-10-01 12:00:00.000231 - Kernel - INFO - Kernel测试日志
+2025-04-23T14:16:16.301083 - Kernel - INFO - Kernel测试pandas ts
+2025-04-23 14:16:55,551 - Exchange - INFO - 这是测试日志
+2025-04-23 14:16:55,552 - Exchange - INFO - 第一条日志
+2025-04-23 14:16:55,552 - Exchange - INFO - 第二条日志
+2025-04-23 14:16:55,552 - Exchange - INFO - 测试日志
+2023-10-01T12:00:00.000231 - Kernel - INFO - Kernel测试日志
+2025-04-23T14:16:55.553058 - Kernel - INFO - Kernel测试pandas ts
+2025-04-23 14:19:23,931 - Exchange - INFO - 这是测试日志
+2025-04-23 14:19:23,932 - Exchange - INFO - 第一条日志
+2025-04-23 14:19:23,932 - Exchange - INFO - 第二条日志
+2025-04-23 14:19:23,932 - Exchange - INFO - 测试日志
+2025-04-23 14:20:50,709 - Exchange - INFO - 这是测试日志
+2025-04-23 14:20:50,709 - Exchange - INFO - 第一条日志
+2025-04-23 14:20:50,709 - Exchange - INFO - 第二条日志
+2025-04-23 14:20:50,710 - Exchange - INFO - 测试日志
+2023-10-01T12:00:00.000231 - INIT - INFO - Kernel测试日志
+2025-04-23T14:20:50.710422 - TEST - INFO - Kernel测试pandas ts
+2025-04-23 14:21:33,277 - Exchange - INFO - 这是测试日志
+2025-04-23 14:21:33,278 - Exchange - INFO - 第一条日志
+2025-04-23 14:21:33,278 - Exchange - INFO - 第二条日志
+2025-04-23 14:21:33,278 - Exchange - INFO - 测试日志
+2023-10-01T12:00:00.000231 - Kernel - INIT - Kernel测试日志
+2025-04-23T14:21:33.279276 - Kernel - TEST - Kernel测试pandas ts
+2023-10-01T12:00:00.000231 - Kernel - INIT - Kernel测试日志
+2025-04-23T14:22:44.010169 - Kernel - TEST - Kernel测试pandas ts
+2023-10-01T12:00:00.000231 - Kernel - INIT - Kernel测试日志
+2025-04-23T14:24:58.949025 - Kernel - TEST - Kernel测试pandas ts
+2023-10-01T12:00:00.000231 - Exchange - TEST1 - 这是测试日志
+2025-04-23T14:26:42.980094 - Exchange - TEST2 - 第一条日志
+2023-10-01T12:00:00.000231 - Exchange - INIT - 第二条日志
+2025-04-23T14:26:42.980422 - Exchange - INIT - 测试日志
+2023-10-01T12:00:00.000231 - Kernel - INIT - Kernel测试日志
+2025-04-23T14:26:42.980689 - Kernel - TEST - Kernel测试pandas ts

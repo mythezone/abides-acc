@@ -1,7 +1,50 @@
 {
     "kernel": {
         "name": "test_kernel",
-        "start_datetime": "2023-10-01T09:30:00",
-        "end_datetime": "2023-10-01T11:30:00"
+        "start_datetime": "2023-10-01T09:30:00.000000",
+        "end_datetime": "2023-10-01T11:30:00.000000"
+    },
+    "log": {
+        "dir": "result/test_kernel",
+        "file": "test_kernel.log",
+        "book_freq": "3s",
+        "book_depth": 5
+    },
+    "agent": {
+        "zero_intelligence": {
+            "num": 1000,
+            "sigma_n": 1e6
+        },
+        "impace": {
+            "num": 1,
+            "trade": true
+        },
+        "market": {
+            "num": 1,
+            "starting_cash": 1e6,
+            "min_size": 500,
+            "max_size": 1000
+        }
+    },
+    "symbol": {
+        "SYM1": {
+            "r_bar": 1e5,
+            "kappa": 0.05,
+            "sigma_s": 5e5
+        },
+        "SYM2": {
+            "r_bar": 1.5e5,
+            "kappa": 0.05,
+            "sigma_s": 5e5
+        }
+    },
+    "exchange": {
+        "mkt_open": "09:30:00",
+        "mkt_close": "11:30:00",
+        "delay": {
+            "pipeline": 0,
+            "computation": 0,
+            "network": 0
+        }
     }
 }
