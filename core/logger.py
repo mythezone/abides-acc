@@ -76,7 +76,7 @@ class Logger(metaclass=Singleton):
         with open(self.ohlc_file, "w") as file:
             file.write("symbol_name,kernel_time,open,high,low,close,volume\n")
         with open(self.lob_file, "w") as file:
-            file.write(self.format_lob_header(level))
+            file.write("")
 
         self.loggers = {
             "exchange": logging.getLogger("Exchange"),
@@ -107,7 +107,9 @@ class Logger(metaclass=Singleton):
 
             elif logger_name == "lob":
                 self.lob_handler = MemoryHandler()
-                formatter = logging.Formatter("%(symbol_name)s,%(kernel_time)s,%(lob)s")
+                formatter = logging.Formatter(
+                    "%(symbol_name)s,%(kernel_time)s,%(level)s,%(lob)s"
+                )
 
             else:
                 formatter = logging.Formatter(
@@ -169,7 +171,9 @@ class Logger(metaclass=Singleton):
             },
         )
 
-    def lob_log(self, symbol_name: str, kernel_time: str | pd.Timestamp, lob: str):
+    def lob_log(
+        self, symbol_name: str, kernel_time: str | pd.Timestamp, level: int, lob: str
+    ):
         """
         记录 LOB 日志。
         """
@@ -178,6 +182,7 @@ class Logger(metaclass=Singleton):
             extra={
                 "symbol_name": symbol_name,
                 "kernel_time": self.iso_time_format(kernel_time),
+                "level": level,
                 "lob": lob,
             },
         )

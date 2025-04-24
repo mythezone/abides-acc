@@ -6,8 +6,7 @@
     },
     "log": {
         "dir": "result/test_kernel",
-        "file": "test_kernel_memory.log",
-        "book_freq": "3s",
+        "lob_level": 5,
         "book_depth": 5
     },
     "agents": [
@@ -50,7 +49,10 @@
             "pipeline_delay": 40000,
             "computation_delay": 1,
             "network_delay": 0,
-            "book_freq": "3s"
+            "log_ohlc": true,
+            "log_lob": true,
+            "log_lob_level": 5,
+            "log_freq": "3s"
         }
     }
 }

@@ -37,12 +37,9 @@ class Kernel(metaclass=Singleton):
 
         # 初始化Logger
         self.log_dir = self.cm.log.dir
-        os.makedirs(self.log_dir, exist_ok=True)
-
-        self.log_file = self.cm.log.file
-        self.log_path = os.path.join(self.log_dir, self.log_file)
-
-        self.logger = Logger(self.log_path)
+        self.log_level = self.cm.log.lob_level
+        self.log_freq = self.cm.log.lob_freq
+        self.logger = Logger(log_folder=self.log_dir, level=self.log_level)
 
         # 初始化时钟
         self.clock = Clock(initial_time=self.cm.kernel.start_datetime)

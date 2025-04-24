@@ -74,7 +74,14 @@ symbol = {  'r_bar': 1e5,
     - 原`ABIDES`的`Exchange`类是一个`Agent`的子类，考虑到其作为一个交易所的功能，应该是一个独立的模块，因此将其改为一个独立的类，并且将其放置在core模块下。
     - 完全重写`Exchange`类，其作为`Singleton`类的子类，其他类可以直接获取该对象的实例并调用。
     - `Exchange`类原来使用`reciveMessage`方法，用`if-elif-else`方法进行分支判断和消息处理，现在改为使用更加优雅的字典映射方法，使用`message_type`作为键，消息处理函数作为值，直接调用对应的函数进行处理。
-    
+- 删除方法：
+    - `getMarketClose`
+    - `getMarketOpen`
+    - `sendMessage`
+
+- 重新实现：
+    - `logOrderBookSnapshots`
+
 
 
 

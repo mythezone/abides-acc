@@ -5,7 +5,10 @@
 # whether to log all order activity to the agent log, and a random state object (already seeded) to use
 # for stochasticity.
 
-from core.base import Singleton
+from math import log
+from core.base import Singleton, Handler
+
+from core.const import EXCHANGE_ID
 from core.symbol import Symbol
 from typing import TYPE_CHECKING
 import pandas as pd
@@ -18,7 +21,7 @@ if TYPE_CHECKING:
     from core.kernel import Kernel
 
 
-class Exchange(metaclass=Singleton):
+class Exchange(Handler, metaclass=Singleton):
 
     def __init__(
         self,
@@ -28,105 +31,83 @@ class Exchange(metaclass=Singleton):
         kernel: "Kernel" = None,
         pipeline_delay=40000,
         computation_delay=1,
+        log_ohlc=True,
+        log_lob=True,
+        log_lob_level=5,
+        log_freq="3s",
         **kwargs,
     ):
 
         self.kernel = kernel
-        # Store this exchange's open and close times.
         self.mkt_close = mkt_close
         self.mkt_open = mkt_open
 
-        # Right now, only the exchange agent has a parallel processing pipeline delay.  This is an additional
-        # delay added only to order activity (placing orders, etc) and not simple inquiries (market operating
-        # hours, etc).
         self.pipeline_delay = pipeline_delay
         self.computation_delay = computation_delay
+
+        self.log_ohlc = log_ohlc
+        self.log_lob = log_lob
+        self.log_lob_level = log_lob_level
+        self.log_freq = log_freq
 
         self.args = args
         for key, value in kwargs.items():
             setattr(self, key, value)
 
         self.logger = Logger()
-        # Computation delay is applied on every wakeup call or message received.
+        self.init_log_msg()
 
-        # The exchange maintains an order stream of all orders leading to the last L trades
-        # to support certain agents from the auction literature (GD, HBL, etc).
-        # self.stream_history = stream_history
+    def init_log_msg(self):
+        if self.log_lob:
+            lob_msg = Message(
+                message_type=MT.LOG_LOB,
+                sender_id=EXCHANGE_ID,
+                recipient_id=EXCHANGE_ID,
+                send_time=self.kernel.now(),
+                recive_time=self.kernel.now(),
+                content={
+                    "level": self.log_lob_level,
+                    "log_freq": self.log_freq,
+                },
+            )
+            self.send(lob_msg, recive_delay=0)
 
-        # Log all order activity?
-        # self.log_orders = log_orders
+        if self.log_ohlc:
+            ohlc_msg = Message(
+                message_type=MT.LOG_OHLC,
+                sender_id=EXCHANGE_ID,
+                recipient_id=EXCHANGE_ID,
+                send_time=self.kernel.now(),
+                recive_time=self.kernel.now(),
+                content={"log_freq": self.log_freq},
+            )
+            self.send(ohlc_msg, recive_delay=0)
 
-        # Create an order book for each symbol.
-
-        # At what frequency will we archive the order books for visualization and analysis?
-        # self.book_freq = book_freq
-
-        # Store orderbook in wide format? ONLY WORKS with book_freq == 0
-        # self.wide_book = wide_book
-
-        # The subscription dict is a dictionary with the key = agent ID,
-        # value = dict (key = symbol, value = list [levels (no of levels to recieve updates for),
-        # frequency (min number of ns between messages), last agent update timestamp]
-        # e.g. {101 : {'AAPL' : [1, 10, pd.Timestamp(10:00:00)}}
-
-    # The exchange agent overrides this to obtain a reference to an oracle.
-    # This is needed to establish a "last trade price" at open (i.e. an opening
-    # price) in case agents query last trade before any simulated trades are made.
-    # This can probably go away once we code the opening cross auction.
-
-    #     # The exchange agent overrides this to additionally log the full depth of its
-    #     # order books for the entire day.
-    #     def kernelTerminating(self):
-    #         super().kernelTerminating()
-
-    #         # If the oracle supports writing the fundamental value series for its
-    #         # symbols, write them to disk.
-    #         if hasattr(self.oracle, "f_log"):
-    #             for symbol in self.oracle.f_log:
-    #                 dfFund = pd.DataFrame(self.oracle.f_log[symbol])
-    #                 if not dfFund.empty:
-    #                     dfFund.set_index("FundamentalTime", inplace=True)
-    #                     self.writeLog(dfFund, filename="fundamental_{}".format(symbol))
-    #                     log_print("Fundamental archival complete.")
-    #         if self.book_freq is None:
-    #             return
-    #         else:
-    #             # Iterate over the order books controlled by this exchange.
-    #             for symbol in self.order_books:
-    #                 start_time = dt.datetime.now()
-    #                 self.logOrderBookSnapshots(symbol)
-    #                 end_time = dt.datetime.now()
-    #                 print(
-    #                     "Time taken to log the order book: {}".format(end_time - start_time)
-    #                 )
-    #                 print("Order book archival complete.")
-
-    def handle(self, msg: Message):
-        handler = getattr(self, msg.message_type.name, self.no_handler)
+    def process_msg(self, msg: Message):
+        handler = self.get_handler(self, msg.message_type)
         handler(msg)
 
-    def no_handler(self, msg: Message):
-        raise ValueError(
-            f"Exchange can't handle message type: {msg.message_type.name} now."
-        )
-
-    def LIMIT_ORDER(self, msg: Message):
+    @Handler.register_handler(MT.MKT_ORDER)
+    def handle_order_book(self, msg: Message):
         pass
 
-    def LOG_LOB(self, msg: Message):
+    @Handler.register_handler(MT.LOG_LOB)
+    def handle_log_lob(self, msg: Message):
         level = msg.content["level"]
         for symbol_name in Symbol._symbol_name_list:
             order_book = OrderBook[symbol_name]
             lob = order_book.report_lob(level=level)
-            self.logger.log_log(
-                symbol_name=symbol_name, kernel_time=self.kernel.now(), lob=lob
+            self.logger.lob_log(
+                symbol_name=symbol_name,
+                kernel_time=self.kernel.now(),
+                level=level,
+                lob=lob,
             )
-        msg.recive_time = self.next_log_time()
-        msg.send_time = self.kernel.now()
-
+        msg = self.update_log_msg(msg)
         self.send(msg, recive_delay=0)
 
-    def LOG_OHLC(self, msg: Message):
+    @Handler.register_handler(MT.LOG_OHLC)
+    def handle_log_ohlc(self, msg: Message):
         for symbol_name in Symbol._symbol_name_list:
             order_book = OrderBook[symbol_name]
             ohlc = order_book.ohlc
@@ -142,241 +123,21 @@ class Exchange(metaclass=Singleton):
             )
             order_book.reset_ohlc()
 
-        msg.recive_time = self.next_log_time()
-        msg.send_time = self.kernel.now()
-
+        msg = self.update_log_msg(msg)
         self.send(msg, recive_delay=0)
 
-    def next_log_time(self):
-        return self.kernel.now() + pd.Timedelta(self.book_freq)
+    @staticmethod
+    def update_log_msg(log_msg: Message):
+        log_msg.send_time = log_msg.recive_time
+        log_msg.recive_time += pd.Timedelta(log_msg.content["log_freq"])
+        return log_msg
 
     def send(self, msg: Message, recive_delay=0):
         self.kernel.inbox.put(msg, recive_delay=recive_delay)
 
     # def receiveMessage(self, currentTime, msg):
 
-    #     # Unless the intent of an experiment is to examine computational issues within an Exchange,
-    #     # it will typically have either 1 ns delay (near instant but cannot process multiple orders
-    #     # in the same atomic time unit) or 0 ns delay (can process any number of orders, always in
-    #     # the atomic time unit in which they are received).  This is separate from, and additional
-    #     # to, any parallel pipeline delay imposed for order book activity.
-
-    #     # Note that computation delay MUST be updated before any calls to sendMessage.
-    #     self.setComputationDelay(self.computation_delay)
-
-    #     # Is the exchange closed?  (This block only affects post-close, not pre-open.)
-    #     if currentTime > self.mkt_close:
-    #         # Most messages after close will receive a 'MKT_CLOSED' message in response.  A few things
-    #         # might still be processed, like requests for final trade prices or such.
-    #         if msg.body["msg"] in [
-    #             "LIMIT_ORDER",
-    #             "MARKET_ORDER",
-    #             "CANCEL_ORDER",
-    #             "MODIFY_ORDER",
-    #         ]:
-    #             log_print(
-    #                 "{} received {}: {}", self.name, msg.body["msg"], msg.body["order"]
-    #             )
-    #             self.sendMessage(msg.body["sender"], Message({"msg": "MKT_CLOSED"}))
-
-    #             # Don't do any further processing on these messages!
-    #             return
-    #         elif "QUERY" in msg.body["msg"]:
-    #             # Specifically do allow querying after market close, so agents can get the
-    #             # final trade of the day as their "daily close" price for a symbol.
-    #             pass
-    #         else:
-    #             log_print(
-    #                 "{} received {}, discarded: market is closed.",
-    #                 self.name,
-    #                 msg.body["msg"],
-    #             )
-    #             self.sendMessage(msg.body["sender"], Message({"msg": "MKT_CLOSED"}))
-
-    #             # Don't do any further processing on these messages!
-    #             return
-
-    #     # Log order messages only if that option is configured.  Log all other messages.
-    #     if msg.body["msg"] in [
-    #         "LIMIT_ORDER",
-    #         "MARKET_ORDER",
-    #         "CANCEL_ORDER",
-    #         "MODIFY_ORDER",
-    #     ]:
-    #         if self.log_orders:
-    #             self.logEvent(msg.body["msg"], msg.body["order"].to_dict())
-    #     else:
-    #         self.logEvent(msg.body["msg"], msg.body["sender"])
-
-    #     # Handle the DATA SUBSCRIPTION request and cancellation messages from the agents.
-    #     if msg.body["msg"] in [
-    #         "MARKET_DATA_SUBSCRIPTION_REQUEST",
-    #         "MARKET_DATA_SUBSCRIPTION_CANCELLATION",
-    #     ]:
-    #         log_print(
-    #             "{} received {} request from agent {}",
-    #             self.name,
-    #             msg.body["msg"],
-    #             msg.body["sender"],
-    #         )
-    #         self.updateSubscriptionDict(msg, currentTime)
-
-    #     # Handle all message types understood by this exchange.
-    #     if msg.body["msg"] == "WHEN_MKT_OPEN":
-    #         log_print(
-    #             "{} received WHEN_MKT_OPEN request from agent {}",
-    #             self.name,
-    #             msg.body["sender"],
-    #         )
-
-    #         # The exchange is permitted to respond to requests for simple immutable data (like "what are your
-    #         # hours?") instantly.  This does NOT include anything that queries mutable data, like equity
-    #         # quotes or trades.
-    #         self.setComputationDelay(0)
-
-    #         self.sendMessage(
-    #             msg.body["sender"],
-    #             Message({"msg": "WHEN_MKT_OPEN", "data": self.mkt_open}),
-    #         )
-    #     elif msg.body["msg"] == "WHEN_MKT_CLOSE":
-    #         log_print(
-    #             "{} received WHEN_MKT_CLOSE request from agent {}",
-    #             self.name,
-    #             msg.body["sender"],
-    #         )
-
-    #         # The exchange is permitted to respond to requests for simple immutable data (like "what are your
-    #         # hours?") instantly.  This does NOT include anything that queries mutable data, like equity
-    #         # quotes or trades.
-    #         self.setComputationDelay(0)
-
-    #         self.sendMessage(
-    #             msg.body["sender"],
-    #             Message({"msg": "WHEN_MKT_CLOSE", "data": self.mkt_close}),
-    #         )
-    #     elif msg.body["msg"] == "QUERY_LAST_TRADE":
-    #         symbol = msg.body["symbol"]
-    #         if symbol not in self.order_books:
-    #             log_print("Last trade request discarded.  Unknown symbol: {}", symbol)
-    #         else:
-    #             log_print(
-    #                 "{} received QUERY_LAST_TRADE ({}) request from agent {}",
-    #                 self.name,
-    #                 symbol,
-    #                 msg.body["sender"],
-    #             )
-
-    #             # Return the single last executed trade price (currently not volume) for the requested symbol.
-    #             # This will return the average share price if multiple executions resulted from a single order.
-    #             self.sendMessage(
-    #                 msg.body["sender"],
-    #                 Message(
-    #                     {
-    #                         "msg": "QUERY_LAST_TRADE",
-    #                         "symbol": symbol,
-    #                         "data": self.order_books[symbol].last_trade,
-    #                         "mkt_closed": (
-    #                             True if currentTime > self.mkt_close else False
-    #                         ),
-    #                     }
-    #                 ),
-    #             )
-    #     elif msg.body["msg"] == "QUERY_SPREAD":
-    #         symbol = msg.body["symbol"]
-    #         depth = msg.body["depth"]
-    #         if symbol not in self.order_books:
-    #             log_print(
-    #                 "Bid-ask spread request discarded.  Unknown symbol: {}", symbol
-    #             )
-    #         else:
-    #             log_print(
-    #                 "{} received QUERY_SPREAD ({}:{}) request from agent {}",
-    #                 self.name,
-    #                 symbol,
-    #                 depth,
-    #                 msg.body["sender"],
-    #             )
-
-    #             # Return the requested depth on both sides of the order book for the requested symbol.
-    #             # Returns price levels and aggregated volume at each level (not individual orders).
-    #             self.sendMessage(
-    #                 msg.body["sender"],
-    #                 Message(
-    #                     {
-    #                         "msg": "QUERY_SPREAD",
-    #                         "symbol": symbol,
-    #                         "depth": depth,
-    #                         "bids": self.order_books[symbol].getInsideBids(depth),
-    #                         "asks": self.order_books[symbol].getInsideAsks(depth),
-    #                         "data": self.order_books[symbol].last_trade,
-    #                         "mkt_closed": (
-    #                             True if currentTime > self.mkt_close else False
-    #                         ),
-    #                         "book": "",
-    #                     }
-    #                 ),
-    #             )
-
-    #             # It is possible to also send the pretty-printed order book to the agent for logging, but forcing pretty-printing
-    #             # of a large order book is very slow, so we should only do it with good reason.  We don't currently
-    #             # have a configurable option for it.
-    #             # "book": self.order_books[symbol].prettyPrint(silent=True) }))
-    #     elif msg.body["msg"] == "QUERY_ORDER_STREAM":
-    #         symbol = msg.body["symbol"]
-    #         length = msg.body["length"]
-
-    #         if symbol not in self.order_books:
-    #             log_print("Order stream request discarded.  Unknown symbol: {}", symbol)
-    #         else:
-    #             log_print(
-    #                 "{} received QUERY_ORDER_STREAM ({}:{}) request from agent {}",
-    #                 self.name,
-    #                 symbol,
-    #                 length,
-    #                 msg.body["sender"],
-    #             )
-
-    #         # We return indices [1:length] inclusive because the agent will want "orders leading up to the last
-    #         # L trades", and the items under index 0 are more recent than the last trade.
-    #         self.sendMessage(
-    #             msg.body["sender"],
-    #             Message(
-    #                 {
-    #                     "msg": "QUERY_ORDER_STREAM",
-    #                     "symbol": symbol,
-    #                     "length": length,
-    #                     "mkt_closed": True if currentTime > self.mkt_close else False,
-    #                     "orders": self.order_books[symbol].history[1 : length + 1],
-    #                 }
-    #             ),
-    #         )
-    #     elif msg.body["msg"] == "QUERY_TRANSACTED_VOLUME":
-    #         symbol = msg.body["symbol"]
-    #         lookback_period = msg.body["lookback_period"]
-    #         if symbol not in self.order_books:
-    #             log_print("Order stream request discarded.  Unknown symbol: {}", symbol)
-    #         else:
-    #             log_print(
-    #                 "{} received QUERY_TRANSACTED_VOLUME ({}:{}) request from agent {}",
-    #                 self.name,
-    #                 symbol,
-    #                 lookback_period,
-    #                 msg.body["sender"],
-    #             )
-    #         self.sendMessage(
-    #             msg.body["sender"],
-    #             Message(
-    #                 {
-    #                     "msg": "QUERY_TRANSACTED_VOLUME",
-    #                     "symbol": symbol,
-    #                     "transacted_volume": self.order_books[
-    #                         symbol
-    #                     ].get_transacted_volume(lookback_period),
-    #                     "mkt_closed": True if currentTime > self.mkt_close else False,
-    #                 }
-    #             ),
-    #         )
-    #     elif msg.body["msg"] == "LIMIT_ORDER":
+    #     if msg.body["msg"] == "LIMIT_ORDER":
     #         order = msg.body["order"]
     #         log_print("{} received LIMIT_ORDER: {}", self.name, order)
     #         if order.symbol not in self.order_books:
@@ -435,173 +196,58 @@ class Exchange(metaclass=Singleton):
     #             )
     #             self.publishOrderBookData()
 
+    #     def updateSubscriptionDict(self, msg, currentTime):
+    #         # The subscription dict is a dictionary with the key = agent ID,
+    #         # value = dict (key = symbol, value = list [levels (no of levels to recieve updates for),
+    #         # frequency (min number of ns between messages), last agent update timestamp]
+    #         # e.g. {101 : {'AAPL' : [1, 10, pd.Timestamp(10:00:00)}}
+    #         if msg.body["msg"] == "MARKET_DATA_SUBSCRIPTION_REQUEST":
+    #             agent_id, symbol, levels, freq = (
+    #                 msg.body["sender"],
+    #                 msg.body["symbol"],
+    #                 msg.body["levels"],
+    #                 msg.body["freq"],
+    #             )
+    #             self.subscription_dict[agent_id] = {symbol: [levels, freq, currentTime]}
+    #         elif msg.body["msg"] == "MARKET_DATA_SUBSCRIPTION_CANCELLATION":
+    #             agent_id, symbol = msg.body["sender"], msg.body["symbol"]
+    #             del self.subscription_dict[agent_id][symbol]
 
-#     def updateSubscriptionDict(self, msg, currentTime):
-#         # The subscription dict is a dictionary with the key = agent ID,
-#         # value = dict (key = symbol, value = list [levels (no of levels to recieve updates for),
-#         # frequency (min number of ns between messages), last agent update timestamp]
-#         # e.g. {101 : {'AAPL' : [1, 10, pd.Timestamp(10:00:00)}}
-#         if msg.body["msg"] == "MARKET_DATA_SUBSCRIPTION_REQUEST":
-#             agent_id, symbol, levels, freq = (
-#                 msg.body["sender"],
-#                 msg.body["symbol"],
-#                 msg.body["levels"],
-#                 msg.body["freq"],
-#             )
-#             self.subscription_dict[agent_id] = {symbol: [levels, freq, currentTime]}
-#         elif msg.body["msg"] == "MARKET_DATA_SUBSCRIPTION_CANCELLATION":
-#             agent_id, symbol = msg.body["sender"], msg.body["symbol"]
-#             del self.subscription_dict[agent_id][symbol]
+    def publishOrderBookData(self):
+        """
+        The exchange agents sends an order book update to the agents using the subscription API if one of the following
+        conditions are met:
+        1) agent requests ALL order book updates (freq == 0)
+        2) order book update timestamp > last time agent was updated AND the orderbook update time stamp is greater than
+        the last agent update time stamp by a period more than that specified in the freq parameter.
+        """
+        for agent_id, params in self.subscription_dict.items():
+            for symbol, values in params.items():
+                levels, freq, last_agent_update = values[0], values[1], values[2]
+                orderbook_last_update = self.order_books[symbol].last_update_ts
+                if (freq == 0) or (
+                    (orderbook_last_update > last_agent_update)
+                    and ((orderbook_last_update - last_agent_update).delta >= freq)
+                ):
+                    self.sendMessage(
+                        agent_id,
+                        Message(
+                            {
+                                "msg": "MARKET_DATA",
+                                "symbol": symbol,
+                                "bids": self.order_books[symbol].getInsideBids(levels),
+                                "asks": self.order_books[symbol].getInsideAsks(levels),
+                                "last_transaction": self.order_books[symbol].last_trade,
+                                "exchange_ts": self.currentTime,
+                            }
+                        ),
+                    )
+                    self.subscription_dict[agent_id][symbol][2] = orderbook_last_update
 
-#     def publishOrderBookData(self):
-#         """
-#         The exchange agents sends an order book update to the agents using the subscription API if one of the following
-#         conditions are met:
-#         1) agent requests ALL order book updates (freq == 0)
-#         2) order book update timestamp > last time agent was updated AND the orderbook update time stamp is greater than
-#         the last agent update time stamp by a period more than that specified in the freq parameter.
-#         """
-#         for agent_id, params in self.subscription_dict.items():
-#             for symbol, values in params.items():
-#                 levels, freq, last_agent_update = values[0], values[1], values[2]
-#                 orderbook_last_update = self.order_books[symbol].last_update_ts
-#                 if (freq == 0) or (
-#                     (orderbook_last_update > last_agent_update)
-#                     and ((orderbook_last_update - last_agent_update).delta >= freq)
-#                 ):
-#                     self.sendMessage(
-#                         agent_id,
-#                         Message(
-#                             {
-#                                 "msg": "MARKET_DATA",
-#                                 "symbol": symbol,
-#                                 "bids": self.order_books[symbol].getInsideBids(levels),
-#                                 "asks": self.order_books[symbol].getInsideAsks(levels),
-#                                 "last_transaction": self.order_books[symbol].last_trade,
-#                                 "exchange_ts": self.currentTime,
-#                             }
-#                         ),
-#                     )
-#                     self.subscription_dict[agent_id][symbol][2] = orderbook_last_update
+    @classmethod
+    def register_handler(cls, message_type: MT):
+        def handler(func):
+            cls.message_handler[message_type] = func
+            return func
 
-#     def logOrderBookSnapshots(self, symbol):
-#         """
-#         Log full depth quotes (price, volume) from this order book at some pre-determined frequency. Here we are looking at
-#         the actual log for this order book (i.e. are there snapshots to export, independent of the requested frequency).
-#         """
-
-#         def get_quote_range_iterator(s):
-#             """Helper method for order book logging. Takes pandas Series and returns python range() from first to last
-#             element.
-#             """
-#             forbidden_values = [
-#                 0,
-#                 19999900,
-#             ]  # TODO: Put constant value in more sensible place!
-#             quotes = sorted(s)
-#             for val in forbidden_values:
-#                 try:
-#                     quotes.remove(val)
-#                 except ValueError:
-#                     pass
-#             return quotes
-
-#         book = self.order_books[symbol]
-
-#         if book.book_log:
-
-#             print("Logging order book to file...")
-#             dfLog = book.book_log_to_df()
-#             dfLog.set_index("QuoteTime", inplace=True)
-#             dfLog = dfLog[~dfLog.index.duplicated(keep="last")]
-#             dfLog.sort_index(inplace=True)
-
-#             if (
-#                 str(self.book_freq).isdigit() and int(self.book_freq) == 0
-#             ):  # Save all possible information
-#                 # Get the full range of quotes at the finest possible resolution.
-#                 quotes = get_quote_range_iterator(dfLog.columns.unique())
-
-#                 # Restructure the log to have multi-level rows of all possible pairs of time and quote
-#                 # with volume as the only column.
-#                 if not self.wide_book:
-#                     filledIndex = pd.MultiIndex.from_product(
-#                         [dfLog.index, quotes], names=["time", "quote"]
-#                     )
-#                     dfLog = dfLog.stack()
-#                     dfLog = dfLog.reindex(filledIndex)
-
-#                 filename = f"ORDERBOOK_{symbol}_FULL"
-
-#             else:  # Sample at frequency self.book_freq
-#                 # With multiple quotes in a nanosecond, use the last one, then resample to the requested freq.
-#                 dfLog = dfLog.resample(self.book_freq).ffill()
-#                 dfLog.sort_index(inplace=True)
-
-#                 # Create a fully populated index at the desired frequency from market open to close.
-#                 # Then project the logged data into this complete index.
-#                 time_idx = pd.date_range(
-#                     self.mkt_open, self.mkt_close, freq=self.book_freq, closed="right"
-#                 )
-#                 dfLog = dfLog.reindex(time_idx, method="ffill")
-#                 dfLog.sort_index(inplace=True)
-
-#                 if not self.wide_book:
-#                     dfLog = dfLog.stack()
-#                     dfLog.sort_index(inplace=True)
-
-#                     # Get the full range of quotes at the finest possible resolution.
-#                     quotes = get_quote_range_iterator(
-#                         dfLog.index.get_level_values(1).unique()
-#                     )
-
-#                     # Restructure the log to have multi-level rows of all possible pairs of time and quote
-#                     # with volume as the only column.
-#                     filledIndex = pd.MultiIndex.from_product(
-#                         [time_idx, quotes], names=["time", "quote"]
-#                     )
-#                     dfLog = dfLog.reindex(filledIndex)
-
-#                 filename = f"ORDERBOOK_{symbol}_FREQ_{self.book_freq}"
-
-#             # Final cleanup
-#             if not self.wide_book:
-#                 dfLog.rename("Volume")
-#                 df = pd.DataFrame(index=dfLog.index, dtype="Sparse[int]")
-#                 df["Volume"] = dfLog
-#             else:
-#                 df = dfLog
-#                 df = df.reindex(sorted(df.columns), axis=1)
-
-#             # Archive the order book snapshots directly to a file named with the symbol, rather than
-#             # to the exchange agent log.
-#             self.writeLog(df, filename=filename)
-#             print("Order book logging complete!")
-
-#     def sendMessage(self, recipientID, msg):
-#         # The ExchangeAgent automatically applies appropriate parallel processing pipeline delay
-#         # to those message types which require it.
-#         # TODO: probably organize the order types into categories once there are more, so we can
-#         # take action by category (e.g. ORDER-related messages) instead of enumerating all message
-#         # types to be affected.
-#         if msg.body["msg"] in ["ORDER_ACCEPTED", "ORDER_CANCELLED", "ORDER_EXECUTED"]:
-#             # Messages that require order book modification (not simple queries) incur the additional
-#             # parallel processing delay as configured.
-#             super().sendMessage(recipientID, msg, delay=self.pipeline_delay)
-#             if self.log_orders:
-#                 self.logEvent(msg.body["msg"], msg.body["order"].to_dict())
-#         else:
-#             # Other message types incur only the currently-configured computation delay for this agent.
-#             super().sendMessage(recipientID, msg)
-
-#     # Simple accessor methods for the market open and close times.
-#     def getMarketOpen(self):
-#         return self.__mkt_open
-
-#     def getMarketClose(self):
-#         return self.__mkt_close
-
-
-exchanges = {
-    "Exchange": Exchange,
-}
+        return handler

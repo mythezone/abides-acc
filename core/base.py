@@ -79,3 +79,22 @@ class RandomState(metaclass=Singleton):
     def reset(self):
         self.state = np.random.RandomState(self.seed)
         return self.state
+
+
+class Handler:
+    _handlers = {}
+
+    @classmethod
+    def register_handler(cls, type_):
+        def wrapper(handler):
+            cls._handlers[type_] = handler
+            return handler
+
+        return wrapper
+
+    def get_handler(self, type_):
+        handler = self._handlers.get(type_)
+        if handler:
+            return handler
+        else:
+            raise ValueError(f"No handler registered for type {type_}.")
