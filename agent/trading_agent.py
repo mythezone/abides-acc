@@ -117,20 +117,24 @@ class TradingAgent(Agent):
     # # Simulation participation messages.
 
     def wakeup(self):
+        for msg in self.inbox:
+            self.message_handler(msg)
 
-        if self.mkt_open is None:
-            # Ask our exchange when it opens and closes.
-            self.sendMessage(
-                self.exchangeID, Message({"msg": "WHEN_MKT_OPEN", "sender": self.id})
-            )
-            self.sendMessage(
-                self.exchangeID, Message({"msg": "WHEN_MKT_CLOSE", "sender": self.id})
-            )
+        self.set_next_wakeup()
 
-        # For the sake of subclasses, TradingAgent now returns a boolean
-        # indicating whether the agent is "ready to trade" -- has it received
-        # the market open and closed times, and is the market not already closed.
-        return (self.mkt_open and self.mkt_close) and not self.mkt_closed
+        # if self.mkt_open is None:
+        #     # Ask our exchange when it opens and closes.
+        #     self.sendMessage(
+        #         self.exchangeID, Message({"msg": "WHEN_MKT_OPEN", "sender": self.id})
+        #     )
+        #     self.sendMessage(
+        #         self.exchangeID, Message({"msg": "WHEN_MKT_CLOSE", "sender": self.id})
+        #     )
+
+        # # For the sake of subclasses, TradingAgent now returns a boolean
+        # # indicating whether the agent is "ready to trade" -- has it received
+        # # the market open and closed times, and is the market not already closed.
+        # return (self.mkt_open and self.mkt_close) and not self.mkt_closed
 
     def request_data_subscription(self, symbol, levels, freq):
         recive_time = self.kernel.now()

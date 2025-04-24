@@ -243,8 +243,8 @@ agents.extend(
                 seed=np.random.randint(low=0, high=2**32, dtype="uint64")
             ),
             log_orders=log_orders,
-            symbol=symbol,
-            starting_cash=starting_cash,
+            symbol_name=symbol,
+            cash=starting_cash,
             wakeup_time=mkt_open + np.random.rand() * (mkt_close - mkt_open),
         )
         for j in range(agent_count, agent_count + num_noise)

@@ -1,4 +1,4 @@
-import unittest 
+import unittest
 from core.symbol import Symbol
 
 
@@ -23,8 +23,23 @@ class TestSymbol(unittest.TestCase):
         self.assertIsNot(self.symbol1, self.symbol3)
         self.assertIs(self.symbol2, Symbol.get_symbol_by_name("GOOGL"))
         self.assertIs(self.symbol3, Symbol.get_symbol_by_name("MS"))
-        self.assertIs(self.symbol1,Symbol["AAPL"])
+        self.assertIs(self.symbol1, Symbol["AAPL"])
 
+    def test_symbol_len(self):
+        self.assertEqual(Symbol.size(), 3)
+        Symbol("TSLA", 0.01)
+        self.assertEqual(Symbol.size(), 4)
 
+    def test_symbol_iter(self):
+        # for v in Symbol:
+        #     self.assertIn(v, [self.symbol1, self.symbol2, self.symbol3])
+        self.assertEqual(self.symbol1.name, "AAPL")
+        self.assertEqual(self.symbol1.r_bar, 0.02)
+        # for v in Symbol:
+        #     self.assertIn(v, [self.symbol1, self.symbol2, self.symbol3])
+        for v in Symbol:
+            self.assertIn(v, [self.symbol1, self.symbol2, self.symbol3])
 
-
+    def test_random_symbol(self):
+        random_symbol = Symbol.get_random_symbol()
+        self.assertIn(random_symbol, [self.symbol1, self.symbol2, self.symbol3])

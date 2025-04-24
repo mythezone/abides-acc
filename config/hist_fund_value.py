@@ -139,8 +139,8 @@ agents.extend(
             id=j,
             name="NoiseAgent {}".format(j),
             type="NoiseAgent",
-            symbol=symbol,
-            starting_cash=starting_cash,
+            symbol_name=symbol,
+            cash=starting_cash,
             wakeup_time=util.get_wake_time(mkt_open, mkt_close),
             log_orders=log_orders,
             random_state=np.random.RandomState(

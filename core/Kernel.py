@@ -19,6 +19,7 @@ from core.symbol import Symbol
 from agent import Agent, agents
 from core import exchange
 from core.message import MessageBox, MessageType, Message
+from core.orderbook import OrderBook
 
 # from core.exchange import exchanges
 
@@ -52,6 +53,10 @@ class Kernel(metaclass=Singleton):
         self.symbol_config = self.cm.symbols
         for symbol_arg in self.symbol_config:
             Symbol(**symbol_arg)
+
+        # 初始化orderbook
+        for symbol_name in Symbol._symbol_dict.keys():
+            OrderBook(symbol_name)
 
         # 初始化Agent
         self.agent_config = self.cm.agents
@@ -105,6 +110,8 @@ class Kernel(metaclass=Singleton):
 
             else:
                 pass
+
+        self.logger.save_log_to_file()
 
     def now(self):
         return self.clock.now()

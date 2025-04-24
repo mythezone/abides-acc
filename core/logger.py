@@ -2,6 +2,27 @@ import logging
 from core.base import Singleton
 import pandas as pd
 from core.message import Message
+from io import StringIO
+
+
+class MemoryHandler(logging.Handler):
+    def __init__(self):
+        super().__init__()
+        self.memory_log = StringIO()
+
+    def emit(self, record: logging.LogRecord):
+        """
+        将日志信息写入内存。
+        """
+        log_entry = self.format(record)
+        self.memory_log.write(log_entry + "\n")
+
+    def get_logs(self):
+        return self.memory_log.getvalue()
+
+    def clear_logs(self):
+        self.memory_log.close()
+        self.memory_log = StringIO()
 
 
 class FileHandler(logging.Handler):
@@ -41,6 +62,7 @@ class Logger(metaclass=Singleton):
     """
 
     def __init__(self, filename: str):
+        self.filename = filename
         self.loggers = {
             "exchange": logging.getLogger("Exchange"),
             "order": logging.getLogger("Order"),
@@ -48,28 +70,46 @@ class Logger(metaclass=Singleton):
             "kernel": logging.getLogger("Kernel"),
             "agent": logging.getLogger("Agent"),
         }
-
+        self.memory_handler = MemoryHandler()
         # 使用自定义的同步文件 Handler
-        exchange_handler = FileHandler(filename)
-        exchange_handler.setFormatter(
-            logging.Formatter("%(kernel_time)s - %(name)s - %(type_)s - %(message)s")
-        )
-        self.loggers["exchange"].addHandler(exchange_handler)
-        self.loggers["exchange"].setLevel(logging.INFO)
 
-        # 设置kernel的handler
-        kernel_handler = FileHandler(filename)
-        kernel_handler.setFormatter(
-            logging.Formatter(
-                "%(recive_time)s - %(mtype_name)s - Agent %(sender_id)s - %(msg)s"
-            )
-        )
-        self.loggers["kernel"].addHandler(kernel_handler)
-        self.loggers["kernel"].setLevel(logging.INFO)
+        for logger_name, logger in self.loggers.items():
+            if logger_name == "exchange":
+                formatter = logging.Formatter(
+                    "%(kernel_time)s - %(name)s - %(type_)s - %(message)s"
+                )
+            elif logger_name == "kernel":
+                formatter = logging.Formatter(
+                    "%(recive_time)s - %(mtype_name)s - Agent %(sender_id)s - %(msg)s"
+                )
+            else:
+                formatter = logging.Formatter(
+                    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+                )
+            self.memory_handler.setFormatter(formatter)
+            logger.addHandler(self.memory_handler)
+            logger.setLevel(logging.INFO)
 
-        agent_handler = FileHandler(filename)
-        self.loggers["agent"].addHandler(agent_handler)
-        self.loggers["agent"].setLevel(logging.INFO)
+        # exchange_handler = FileHandler(filename)
+        # exchange_handler.setFormatter(
+        #     logging.Formatter("%(kernel_time)s - %(name)s - %(type_)s - %(message)s")
+        # )
+        # self.loggers["exchange"].addHandler(exchange_handler)
+        # self.loggers["exchange"].setLevel(logging.INFO)
+
+        # # 设置kernel的handler
+        # kernel_handler = FileHandler(filename)
+        # kernel_handler.setFormatter(
+        #     logging.Formatter(
+        #         "%(recive_time)s - %(mtype_name)s - Agent %(sender_id)s - %(msg)s"
+        #     )
+        # )
+        # self.loggers["kernel"].addHandler(kernel_handler)
+        # self.loggers["kernel"].setLevel(logging.INFO)
+
+        # agent_handler = FileHandler(filename)
+        # self.loggers["agent"].addHandler(agent_handler)
+        # self.loggers["agent"].setLevel(logging.INFO)
         self.agent_log = self.kernel_log
 
     def exchange_log(
@@ -107,3 +147,11 @@ class Logger(metaclass=Singleton):
             return time.strftime("%Y-%m-%dT%H:%M:%S.%f")
         else:
             return time
+
+    def save_log_to_file(self):
+        """
+        将内存中的日志保存到文件。
+        """
+        with open(self.filename, "a") as file:
+            file.write(self.memory_handler.get_logs())
+            self.memory_handler.clear_logs()

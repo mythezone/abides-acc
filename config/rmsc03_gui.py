@@ -227,8 +227,8 @@ def build_simulation(args):
                 id=j,
                 name="NoiseAgent {}".format(j),
                 type="NoiseAgent",
-                symbol=symbol,
-                starting_cash=starting_cash,
+                symbol_name=symbol,
+                cash=starting_cash,
                 wakeup_time=util.get_wake_time(noise_mkt_open, noise_mkt_close),
                 log_orders=log_orders,
                 random_state=np.random.RandomState(

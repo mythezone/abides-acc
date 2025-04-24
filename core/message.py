@@ -14,10 +14,11 @@ class MessageType(Enum):
     WAKEUP = 3
 
     # Order related messages
-    LIMIT_ORDER = 10
-    MARKET_ORDER = 11
+    LMT_ORDER = 10
+    MKT_ORDER = 11
     CANCEL_ORDER = 12
     MODIFY_ORDER = 13
+
     ORDER_ACCEPTED = 14
     ORDER_CANCELLED = 15
     ORDER_EXECUTED = 16
@@ -74,6 +75,14 @@ class Message(Trackable):
     def __str__(self):
         # Make a printable representation of this message.
         return f"{self.content}"
+
+    def make_market_order(self, symbol_name: str, quantity: int, is_buy_order: bool):
+        content = {
+            "symbol_name": symbol_name,
+            "quantity": quantity,
+            "is_buy_order": is_buy_order,
+        }
+        self.content = content
 
 
 class MessageBox:

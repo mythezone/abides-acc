@@ -5,36 +5,22 @@ from math import sqrt
 import numpy as np
 import pandas as pd
 
+from typing import TYPE_CHECKING, Dict
+
+if TYPE_CHECKING:
+    from core.kernel import Kernel
+
 
 class NoiseAgent(TradingAgent):
 
-    def __init__(
-        self,
-        id,
-        name,
-        type,
-        symbol="IBM",
-        starting_cash=100000,
-        log_orders=False,
-        log_to_file=True,
-        random_state=None,
-        wakeup_time=None,
-    ):
+    def __init__(self, cash: int = 100000, kernel: "Kernel" = None, **kwargs):
 
         # Base class init.
-        super().__init__(
-            id,
-            name,
-            type,
-            starting_cash=starting_cash,
-            log_orders=log_orders,
-            log_to_file=log_to_file,
-            random_state=random_state,
-        )
+        super().__init__(id, cash=cash, kernel=kernel, **kwargs)
 
-        self.wakeup_time = (wakeup_time,)
+        # self.wakeup_time = (wakeup_time,)
 
-        self.symbol = symbol  # symbol to trade
+        # self.symbol = symbol_name  # symbol to trade
 
         # The agent uses this to track whether it has begun its strategy or is still
         # handling pre-market tasks.
@@ -42,7 +28,7 @@ class NoiseAgent(TradingAgent):
 
         # The agent begins in its "complete" state, not waiting for
         # any special event or condition.
-        self.state = "AWAITING_WAKEUP"
+        # self.state = "AWAITING_WAKEUP"
 
         # The agent must track its previous wake time, so it knows how many time
         # units have passed.
@@ -96,32 +82,9 @@ class NoiseAgent(TradingAgent):
 
         print("Final relative surplus", self.name, surplus)
 
-    def wakeup(self, currentTime):
-        # Parent class handles discovery of exchange times and market_open wakeup call.
-        super().wakeup(currentTime)
+    def wakeup(self):
 
         self.state = "INACTIVE"
-
-        if not self.mkt_open or not self.mkt_close:
-            # TradingAgent handles discovery of exchange times.
-            return
-        else:
-            if not self.trading:
-                self.trading = True
-
-                # Time to start trading!
-                log_print("{} is ready to start trading now.", self.name)
-
-        # Steady state wakeup behavior starts here.
-
-        # If we've been told the market has closed for the day, we will only request
-        # final price information, then stop.
-        if self.mkt_closed and (self.symbol in self.daily_close_price):
-            # Market is closed and we already got the daily close price.
-            return
-
-        if self.wakeup_time[0] > currentTime:
-            self.setWakeup(self.wakeup_time[0])
 
         if self.mkt_closed and (not self.symbol in self.daily_close_price):
             self.getCurrentSpread(self.symbol)

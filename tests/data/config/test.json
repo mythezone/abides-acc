@@ -6,7 +6,7 @@
     },
     "log": {
         "dir": "result/test_kernel",
-        "file": "test_kernel.log",
+        "file": "test_kernel_memory.log",
         "book_freq": "3s",
         "book_depth": 5
     },

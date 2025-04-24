@@ -19,6 +19,7 @@ from tqdm import tqdm
 
 from order.base import Order, Transaction
 from order.limit_order import LimitOrder, OrderHeap
+from core.symbol import Symbol
 
 
 class OrderBook:
@@ -27,12 +28,11 @@ class OrderBook:
     # An OrderBook requires an owning agent object, which it will use to send messages
     # outbound via the simulator Kernel (notifications of order creation, rejection,
     # cancellation, execution, etc).
-    def __init__(self, symbol: str):
+    def __init__(self, symbol_name: str):
         # self.owner = owner
-        if symbol in OrderBook._order_books:
+        if symbol_name in OrderBook._order_books:
             return
-        self.symbol = symbol
-        OrderBook._order_books[symbol] = self
+        self.symbol = Symbol[symbol_name]
 
         self.bid_side = OrderHeap()
         self.ask_side = OrderHeap()
@@ -45,6 +45,7 @@ class OrderBook:
 
         # Last timestamp the orderbook for that symbol was updated
         self.last_update_ts = None
+        OrderBook._order_books[symbol_name] = self
 
     def handle_limit_order(self, order: LimitOrder):
         # 获取己方订单簿信息
@@ -155,6 +156,9 @@ class OrderBook:
 
         order.modify(modifier)
 
+    def get_current_spread(self, depth=1):
+        pass
+
     def book_log_to_df(self):
         """Returns a pandas DataFrame constructed from the order book log, to be consumed by
             agent.ExchangeAgent.logOrderbookSnapshots.
@@ -211,12 +215,12 @@ class OrderBook:
     #     log_print(book)
 
     @classmethod
-    def get(cls, symbol: str):
-        orderbook = cls._order_books.get(symbol, None)
+    def get(cls, symbol_name: str):
+        orderbook = cls._order_books.get(symbol_name, None)
         if not orderbook:
-            orderbook = OrderBook(symbol)
+            orderbook = OrderBook(symbol_name)
         return orderbook
 
     @classmethod
-    def __class_getitem__(cls, symbol: str):
-        return cls.get(symbol)
+    def __class_getitem__(cls, symbol_name: str):
+        return cls.get(symbol_name)

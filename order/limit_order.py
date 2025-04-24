@@ -9,7 +9,7 @@ from agent.base import Agent
 from functools import total_ordering
 from typing import Dict, List, TYPE_CHECKING
 from heapdict import heapdict
-from sortedcontainers import SortedList
+from sortedcontainers import SortedList, SortedDict
 
 
 import sys
@@ -53,12 +53,19 @@ class LimitOrder(Order):
 
 
 class OrderHeap:
-    def __init__(self):
+    def __init__(self, side="ask"):
+        self.side = -1.0 if side == "ask" else 1.0
         self.heap = heapdict()
+        self.levels = SortedDict()
+
+        # elements in self.levels are tuples of (price, volume)
+        self.levels.key = lambda price_volume: price_volume[0] * self.side
 
     def put(self, order: LimitOrder):
         # 将 id 作为 key，order 作为 value，优先级由 order 本身定义
         self.heap[order.id] = order
+        price = order.limit_price
+        volume = order.quantity
 
     def get(self) -> LimitOrder:
         # 弹出最小优先级的 order

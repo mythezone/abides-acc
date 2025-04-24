@@ -1,5 +1,6 @@
 import numpy as np
 from typing import List
+import random
 
 
 class Symbol:
@@ -46,6 +47,18 @@ class Symbol:
     @classmethod
     def __class_getitem__(cls, name):
         return cls.get_symbol_by_name(name)
+
+    @classmethod
+    def size(cls):
+        return len(cls._symbol_dict)
+
+    @classmethod
+    def __iter__(cls):
+        return iter(Symbol._symbol_dict.values())
+
+    @staticmethod
+    def get_random_symbol():
+        return random.choice(Symbol._symbol_dict.values())
 
 
 class EFT:
