@@ -99,7 +99,7 @@ class POVMarketMakerAgent(TradingAgent):
         """Agent wakeup is determined by self.wake_up_freq"""
         can_trade = super().wakeup(currentTime)
         if self.subscribe and not self.subscription_requested:
-            super().requestDataSubscription(
+            super().request_data_subscription(
                 self.symbol,
                 levels=self.subscribe_num_levels,
                 freq=pd.Timedelta(self.subscribe_freq, unit="ns"),
@@ -113,7 +113,7 @@ class POVMarketMakerAgent(TradingAgent):
             self.get_transacted_volume(self.symbol, lookback_period=self.wake_up_freq)
             self.initialiseState()
 
-    def receiveMessage(self, currentTime, msg):
+    def message_handler(self, currentTime, msg):
         """Processes message from exchange. Main function is to update orders in orderbook relative to mid-price.
 
         :param simulation current time
@@ -125,7 +125,7 @@ class POVMarketMakerAgent(TradingAgent):
         :return:
         """
 
-        super().receiveMessage(currentTime, msg)
+        super().message_handler(currentTime, msg)
 
         if self.last_mid is not None:
             mid = self.last_mid

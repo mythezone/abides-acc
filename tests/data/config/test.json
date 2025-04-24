@@ -2,7 +2,7 @@
     "kernel": {
         "name": "test_kernel",
         "start_datetime": "2023-10-01T09:30:00.000000",
-        "end_datetime": "2023-10-01T11:30:00.000000"
+        "end_datetime": "2023-10-01T09:30:00.001000"
     },
     "log": {
         "dir": "result/test_kernel",
@@ -10,26 +10,25 @@
         "book_freq": "3s",
         "book_depth": 5
     },
-    "agent_args": [
+    "agents": [
         {
-            "name": "zero_intelligence",
-            "num": 1000,
-            "sigma_n": 1e6
+            "name": "base",
+            "num": 5,
+            "args": {}
         },
         {
-            "name": "impace",
-            "num": 1,
-            "trade": true
-        },
-        {
-            "name": "market",
-            "num": 1,
-            "starting_cash": 1e6,
-            "min_size": 500,
-            "max_size": 1000
+            "name": "trading",
+            "num": 5,
+            "args": {
+                "cash": 1e6,
+                "portfolio": {
+                    "SYM1": 1000,
+                    "SYM2": 1000
+                }
+            }
         }
     ],
-    "symbol_args": [
+    "symbols": [
         {
             "name": "SYM1",
             "r_bar": 1e5,
@@ -44,10 +43,13 @@
         }
     ],
     "exchange": {
-        "mkt_open": "09:30:00",
-        "mkt_close": "11:30:00",
-        "pipeline_delay": 0,
-        "computation_delay": 0,
-        "network_delay": 0
+        "name": "Exchange",
+        "args": {
+            "mkt_open": "09:30:00",
+            "mkt_close": "11:30:00",
+            "pipeline_delay": 0,
+            "computation_delay": 0,
+            "network_delay": 0
+        }
     }
 }

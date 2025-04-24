@@ -63,6 +63,13 @@ class Trackable:
     def __class_getitem__(cls, id_: int):
         return cls.get_instance_by_id(id_)
 
+    @staticmethod
+    def size(cls):
+        """
+        Returns the number of instances of this class.
+        """
+        return len(Trackable._subclass_instances.get(cls, []))
+
 
 class RandomState(metaclass=Singleton):
     def __init__(self, seed: int = 1234):

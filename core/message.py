@@ -1,5 +1,4 @@
 from enum import Enum, unique
-from agent.base import Agent
 import pandas as pd
 
 from core.base import Trackable
@@ -10,7 +9,9 @@ from queue import PriorityQueue
 @unique
 class MessageType(Enum):
     MESSAGE = 0
-    WAKEUP = 1
+    SIMULATION_START = 1
+    SIMULATION_END = 2
+    WAKEUP = 3
 
     # Order related messages
     LIMIT_ORDER = 10
@@ -24,19 +25,19 @@ class MessageType(Enum):
     ORDER_MODIFIED = 18
 
     # Market related messages
-    MARKET_OPEN = 20
-    MARKET_CLOSE = 21
-    MARKET_DATA = 22
+    MKT_OPEN = 20
+    MKT_CLOSE = 21
+    MKT_DATA = 22
 
     # Information related messages
-    WHEN_MARKET_OPEN = 30
-    WHEN_MARKET_CLOSE = 31
+    # WHEN_MKT_OPEN = 30
+    # WHEN_MKT_CLOSE = 31
     QUERY_LAST_TRADE = 32
     QUERY_SPERAD = 33
     QUERY_ORDER_STREAM = 34
     QUERY_TRANSACTED_VOLUME = 35
-    MARKET_DATA_SUBSCRIPTION_REQUEST = 36
-    MARKET_DATA_SUBSCRIPTION_CANCELLATION = 37
+    MKT_DATA_SUBSCRIPTION_REQUEST = 36
+    MKT_DATA_SUBSCRIPTION_CANCELLATION = 37
 
     def __lt__(self, other):
         return self.value < other.value
@@ -47,8 +48,8 @@ class Message(Trackable):
 
     def __init__(
         self,
-        mtype: MessageType,
-        sender_id: int,
+        mtype: MessageType = MessageType.MESSAGE,
+        sender_id: int = None,
         recipient_id: int = None,
         send_time: pd.Timestamp = None,
         recive_time: pd.Timestamp = None,
@@ -72,14 +73,18 @@ class Message(Trackable):
 
     def __str__(self):
         # Make a printable representation of this message.
-        return f"{self.message_type} from {self.sender_id} to {self.recipient_id} at {self.send_time}: {self.content}"
+        return f"{self.content}"
 
 
 class MessageBox:
-    def __init__(self):
+    def __init__(self, recive_delay=0):
         self.messages = PriorityQueue()
+        self.recive_delay = recive_delay
 
-    def put(self, message: Message):
+    def put(self, message: Message, recive_delay=None):
+        if not recive_delay:
+            recive_delay = self.recive_delay
+        message.recive_time = message.recive_time + pd.Timedelta(recive_delay)
         self.messages.put(message)
 
     def get(self) -> Message:

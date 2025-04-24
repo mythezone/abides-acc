@@ -51,16 +51,16 @@ class MomentumAgent(TradingAgent):
         """Agent wakeup is determined by self.wake_up_freq"""
         can_trade = super().wakeup(currentTime)
         if self.subscribe and not self.subscription_requested:
-            super().requestDataSubscription(self.symbol, levels=1, freq=10e9)
+            super().request_data_subscription(self.symbol, levels=1, freq=10e9)
             self.subscription_requested = True
             self.state = "AWAITING_MARKET_DATA"
         elif can_trade and not self.subscribe:
             self.getCurrentSpread(self.symbol)
             self.state = "AWAITING_SPREAD"
 
-    def receiveMessage(self, currentTime, msg):
+    def message_handler(self, currentTime, msg):
         """Momentum agent actions are determined after obtaining the best bid and ask in the LOB"""
-        super().receiveMessage(currentTime, msg)
+        super().message_handler(currentTime, msg)
         if (
             not self.subscribe
             and self.state == "AWAITING_SPREAD"

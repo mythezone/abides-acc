@@ -48,14 +48,14 @@ class SubscriptionAgent(TradingAgent):
     def wakeup(self, currentTime):
         super().wakeup(currentTime)
         if self.subscribe and not self.subscription_requested:
-            super().requestDataSubscription(
+            super().request_data_subscription(
                 self.symbol, levels=self.levels, freq=self.freq
             )
             self.subscription_requested = True
             self.last_update_ts = currentTime
 
-    def receiveMessage(self, currentTime, msg):
-        super().receiveMessage(currentTime, msg)
+    def message_handler(self, currentTime, msg):
+        super().message_handler(currentTime, msg)
         if (
             self.subscribe
             and self.state == "AWAITING_MARKET_DATA"

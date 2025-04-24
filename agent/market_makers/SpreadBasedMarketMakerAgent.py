@@ -91,7 +91,7 @@ class SpreadBasedMarketMakerAgent(TradingAgent):
         """Agent wakeup is determined by self.wake_up_freq"""
         can_trade = super().wakeup(currentTime)
         if self.subscribe and not self.subscription_requested:
-            super().requestDataSubscription(
+            super().request_data_subscription(
                 self.symbol, levels=self.subscribe_num_levels, freq=self.subscribe_freq
             )
             self.subscription_requested = True
@@ -100,7 +100,7 @@ class SpreadBasedMarketMakerAgent(TradingAgent):
             self.getCurrentSpread(self.symbol, depth=self.subscribe_num_levels)
             self.state = "AWAITING_SPREAD"
 
-    def receiveMessage(self, currentTime, msg):
+    def message_handler(self, currentTime, msg):
         """Processes message from exchange. Main function is to update orders in orderbook relative to mid-price.
 
         :param simulation current time
@@ -112,7 +112,7 @@ class SpreadBasedMarketMakerAgent(TradingAgent):
         :return:
         """
 
-        super().receiveMessage(currentTime, msg)
+        super().message_handler(currentTime, msg)
 
         if self.last_mid is not None:
             mid = self.last_mid

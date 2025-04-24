@@ -271,9 +271,9 @@ class ValueAgent(TradingAgent):
         # Place the order
         self.placeLimitOrder(self.symbol, self.size, buy, p)
 
-    def receiveMessage(self, currentTime, msg):
+    def message_handler(self, currentTime, msg):
         # Parent class schedules market open wakeup call once market open/close times are known.
-        super().receiveMessage(currentTime, msg)
+        super().message_handler(currentTime, msg)
 
         # We have been awakened by something other than our scheduled wakeup.
         # If our internal state indicates we were waiting for a particular event,

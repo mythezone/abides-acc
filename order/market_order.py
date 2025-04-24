@@ -1,6 +1,4 @@
 from order.base import Order
-from core.kernel import Kernel
-from old.agent.FinancialAgent import dollarize
 from copy import deepcopy
 
 import sys
@@ -36,7 +34,7 @@ class MarketOrder(Order):
 
         return "(Agent {} @ {}) : MKT Order {} {} {}".format(
             self.agent_id,
-            Kernel.fmtTime(self.time_placed),
+            # Kernel.fmtTime(self.time_placed),
             "BUY" if self.is_buy_order else "SELL",
             self.quantity,
             self.symbol,

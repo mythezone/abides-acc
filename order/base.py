@@ -40,6 +40,9 @@ class Transaction(Trackable):
 
 
 class Order(Trackable):
+    _order_id = 0
+    _all_orders = []
+
     def __init__(
         self,
         agent_id: int,
@@ -50,6 +53,10 @@ class Order(Trackable):
         tag: Dict = {},
     ):
         super().__init__()
+
+        self.order_id = Order._order_id
+        Order._order_id += 1
+        Order._all_orders.append(self)
 
         self.agent_id = agent_id
         self.time_placed = time_placed
@@ -88,3 +95,18 @@ class Order(Trackable):
     # 结算
     def finish(self):
         pass  # TODO
+
+    @classmethod
+    def get_instance_by_id(cls, id_):
+        if id_ < len(cls._all_orders):
+            return cls._all_orders[id_]
+        else:
+            raise ValueError(f"Order ID {id_} not found.")
+
+    @classmethod
+    def __class_getitem__(cls, id_):
+        return cls.get_instance_by_id(id_)
+
+    @staticmethod
+    def size():
+        return len(Order._all_orders)

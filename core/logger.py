@@ -1,6 +1,7 @@
 import logging
 from core.base import Singleton
 import pandas as pd
+from core.message import Message
 
 
 class FileHandler(logging.Handler):
@@ -45,6 +46,7 @@ class Logger(metaclass=Singleton):
             "order": logging.getLogger("Order"),
             "msg": logging.getLogger("Msg"),
             "kernel": logging.getLogger("Kernel"),
+            "agent": logging.getLogger("Agent"),
         }
 
         # 使用自定义的同步文件 Handler
@@ -58,10 +60,17 @@ class Logger(metaclass=Singleton):
         # 设置kernel的handler
         kernel_handler = FileHandler(filename)
         kernel_handler.setFormatter(
-            logging.Formatter("%(kernel_time)s - %(name)s - %(type_)s - %(message)s")
+            logging.Formatter(
+                "%(recive_time)s - %(mtype_name)s - Agent %(sender_id)s - %(msg)s"
+            )
         )
         self.loggers["kernel"].addHandler(kernel_handler)
         self.loggers["kernel"].setLevel(logging.INFO)
+
+        agent_handler = FileHandler(filename)
+        self.loggers["agent"].addHandler(agent_handler)
+        self.loggers["agent"].setLevel(logging.INFO)
+        self.agent_log = self.kernel_log
 
     def exchange_log(
         self, message: str, kernel_time: str | pd.Timestamp, type_: str = "INIT"
@@ -75,15 +84,18 @@ class Logger(metaclass=Singleton):
             extra={"kernel_time": self.iso_time_format(kernel_time), "type_": type_},
         )
 
-    def kernel_log(
-        self, message: str, kernel_time: str | pd.Timestamp, type_: str = "INIT"
-    ):
+    def kernel_log(self, message: Message):
         """
         记录内核日志。
         """
+        msg = str(message.content)
         self.loggers["kernel"].info(
-            message,
-            extra={"kernel_time": self.iso_time_format(kernel_time), "type_": type_},
+            msg,
+            extra={
+                "recive_time": self.iso_time_format(message.recive_time),
+                "mtype_name": message.message_type.name,
+                "sender_id": message.sender_id,
+            },
         )
 
     @staticmethod
@@ -92,6 +104,6 @@ class Logger(metaclass=Singleton):
         格式化时间戳为 ISO 格式。
         """
         if isinstance(time, pd.Timestamp):
-            return time.isoformat()
+            return time.strftime("%Y-%m-%dT%H:%M:%S.%f")
         else:
-            return pd.Timestamp(time).isoformat()
+            return time

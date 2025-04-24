@@ -81,8 +81,8 @@ class POVExecutionAgent(TradingAgent):
     def getWakeFrequency(self):
         return pd.Timedelta(self.freq)
 
-    def receiveMessage(self, currentTime, msg):
-        super().receiveMessage(currentTime, msg)
+    def message_handler(self, currentTime, msg):
+        super().message_handler(currentTime, msg)
         if msg.body["msg"] == "ORDER_EXECUTED":
             self.handleOrderExecution(currentTime, msg)
         elif msg.body["msg"] == "ORDER_ACCEPTED":

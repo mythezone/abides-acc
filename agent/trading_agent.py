@@ -1,13 +1,14 @@
 from agent.base import Agent
 from core.exchange import Exchange
 from core.message import Message
+from core.message import MessageType as MT
 from order.limit_order import LimitOrder
 from order.market_order import MarketOrder
-from util.util import log_print
+from typing import TYPE_CHECKING, Dict
 
-import pandas as pd
+if TYPE_CHECKING:
+    from core.kernel import Kernel
 
-from copy import deepcopy
 import sys
 
 
@@ -20,43 +21,28 @@ class TradingAgent(Agent):
 
     def __init__(
         self,
-        current_time: pd.Timestamp,
-        starting_cash: int = 100000,
-        log_orders: bool = False,
-        log_to_file: bool = True,
+        *args,
+        cash: int = 100000,
+        portfolio: Dict = {},
+        kernel: "Kernel" = None,
+        **kwargs
     ):
         # Base class init.
-        super().__init__(current_time)
-
-        # We don't yet know when the exchange opens or closes.
-        self.mkt_open = None
-        self.mkt_close = None
-
-        # Log order activity?
-        self.log_orders = log_orders
-        self.log_to_file = log_to_file
-
-        # Log all activity to file?
-        if log_orders is None:
-            self.log_orders = False
-            self.log_to_file = False
+        super().__init__(*args, kernel=kernel, **kwargs)
 
         # Store starting_cash in case we want to refer to it for performance stats.
         # It should NOT be modified.  Use the 'CASH' key in self.holdings.
         # 'CASH' is always in cents!  Note that agents are limited by their starting
         # cash, currently without leverage.  Taking short positions is permitted,
         # but does NOT increase the amount of at-risk capital allowed.
-        self.starting_cash = starting_cash
-
-        # TradingAgent has constants to support simulated market orders.
-        self.MKT_BUY = sys.maxsize
-        self.MKT_SELL = 0
+        self.cash = cash
+        self.portfolio = portfolio
 
         # The base TradingAgent will track its holdings and outstanding orders.
         # Holdings is a dictionary of symbol -> shares.  CASH is a special symbol
         # worth one cent per share.  Orders is a dictionary of active, open orders
         # (not cancelled, not fully executed) keyed by order_id.
-        self.holdings = {"CASH": starting_cash}
+
         self.orders = {}
 
         # The base TradingAgent also tracks last known prices for every symbol
@@ -94,81 +80,43 @@ class TradingAgent(Agent):
         # Each agent can choose to log the orders executed
         self.executed_orders = []
 
-        # For special logging at the first moment the simulator kernel begins
-        # running (which is well after agent init), it is useful to keep a simple
-        # boolean flag.
-        self.first_wake = True
-
         # Remember whether we have already passed the exchange close time, as far
         # as we know.
         self.mkt_closed = False
 
-        # This is probably a transient feature, but for now we permit the exchange
-        # to return the entire order book sometimes, for development and debugging.
-        # It is very expensive to pass this around, and breaks "simulation physics",
-        # but can really help understand why agents are making certain decisions.
-        # Subclasses should NOT rely on this feature as part of their strategy,
-        # as it will go away.
-        self.book = ""
+    # def kernelStopping(self):
+    #     # Always call parent method to be safe.
+    #     super().kernelStopping()
 
-    # Simulation lifecycle messages.
+    #     # Print end of day holdings.
+    #     self.logEvent("FINAL_HOLDINGS", self.fmtHoldings(self.holdings))
+    #     self.logEvent("FINAL_CASH_POSITION", self.holdings["CASH"], True)
 
-    def kernelStarting(self, startTime):
-        # self.kernel is set in Agent.kernelInitializing()
-        self.logEvent("STARTING_CASH", self.starting_cash, True)
+    #     # Mark to market.
+    #     cash = self.markToMarket(self.holdings)
 
-        # Find an exchange with which we can place orders.  It is guaranteed
-        # to exist by now (if there is one).
-        self.exchangeID = self.kernel.findAgentByType(Exchange)
+    #     self.logEvent("ENDING_CASH", cash, True)
+    #     print(
+    #         "Final holdings for {}: {}.  Marked to market: {}".format(
+    #             self.name, self.fmtHoldings(self.holdings), cash
+    #         )
+    #     )
 
-        log_print(
-            "Agent {} requested agent of type Agent.ExchangeAgent.  Given Agent ID: {}",
-            self.id,
-            self.exchangeID,
-        )
+    #     # Record final results for presentation/debugging.  This is an ugly way
+    #     # to do this, but it is useful for now.
+    #     mytype = self.type
+    #     gain = cash - self.starting_cash
 
-        # Request a wake-up call as in the base Agent.
-        super().kernelStarting(startTime)
+    #     if mytype in self.kernel.mean_result_by_agent_type:
+    #         self.kernel.mean_result_by_agent_type[mytype] += gain
+    #         self.kernel.agent_count_by_type[mytype] += 1
+    #     else:
+    #         self.kernel.mean_result_by_agent_type[mytype] = gain
+    #         self.kernel.agent_count_by_type[mytype] = 1
 
-    def kernelStopping(self):
-        # Always call parent method to be safe.
-        super().kernelStopping()
+    # # Simulation participation messages.
 
-        # Print end of day holdings.
-        self.logEvent("FINAL_HOLDINGS", self.fmtHoldings(self.holdings))
-        self.logEvent("FINAL_CASH_POSITION", self.holdings["CASH"], True)
-
-        # Mark to market.
-        cash = self.markToMarket(self.holdings)
-
-        self.logEvent("ENDING_CASH", cash, True)
-        print(
-            "Final holdings for {}: {}.  Marked to market: {}".format(
-                self.name, self.fmtHoldings(self.holdings), cash
-            )
-        )
-
-        # Record final results for presentation/debugging.  This is an ugly way
-        # to do this, but it is useful for now.
-        mytype = self.type
-        gain = cash - self.starting_cash
-
-        if mytype in self.kernel.mean_result_by_agent_type:
-            self.kernel.mean_result_by_agent_type[mytype] += gain
-            self.kernel.agent_count_by_type[mytype] += 1
-        else:
-            self.kernel.mean_result_by_agent_type[mytype] = gain
-            self.kernel.agent_count_by_type[mytype] = 1
-
-    # Simulation participation messages.
-
-    def wakeup(self, currentTime):
-        super().wakeup(currentTime)
-
-        if self.first_wake:
-            # Log initial holdings.
-            self.logEvent("HOLDINGS_UPDATED", self.holdings)
-            self.first_wake = False
+    def wakeup(self):
 
         if self.mkt_open is None:
             # Ask our exchange when it opens and closes.
@@ -184,55 +132,43 @@ class TradingAgent(Agent):
         # the market open and closed times, and is the market not already closed.
         return (self.mkt_open and self.mkt_close) and not self.mkt_closed
 
-    def requestDataSubscription(self, symbol, levels, freq):
-        self.sendMessage(
-            recipientID=self.exchangeID,
+    def request_data_subscription(self, symbol, levels, freq):
+        recive_time = self.kernel.now()
+        self.send(
             msg=Message(
-                {
-                    "msg": "MARKET_DATA_SUBSCRIPTION_REQUEST",
-                    "sender": self.id,
-                    "symbol": symbol,
-                    "levels": levels,
-                    "freq": freq,
-                }
+                mtype=MT.MKT_DATA_SUBSCRIPTION_REQUEST,
+                sender_id=self.agent_id,
+                send_time=self.kernel.now(),
+                recive_time=recive_time,
+                content={"symbol": symbol, "levels": levels, "freq": freq},
             ),
+            recive_delay=0,
         )
 
-    # Used by any Trading Agent subclass to cancel subscription to market data from the Exchange Agent
-    def cancelDataSubscription(self, symbol):
-        self.sendMessage(
-            recipientID=self.exchangeID,
-            msg=Message(
-                {
-                    "msg": "MARKET_DATA_SUBSCRIPTION_CANCELLATION",
-                    "sender": self.id,
-                    "symbol": symbol,
-                }
-            ),
-        )
+    # # Used by any Trading Agent subclass to cancel subscription to market data from the Exchange Agent
+    # def cancelDataSubscription(self, symbol):
+    #     self.sendMessage(
+    #         recipientID=self.exchangeID,
+    #         msg=Message(
+    #             {
+    #                 "msg": "MARKET_DATA_SUBSCRIPTION_CANCELLATION",
+    #                 "sender": self.id,
+    #                 "symbol": symbol,
+    #             }
+    #         ),
+    #     )
 
-    def receiveMessage(self, currentTime, msg):
-        super().receiveMessage(currentTime, msg)
+    def message_handler(self, msg: Message):
 
-        # Do we know the market hours?
-        had_mkt_hours = self.mkt_open is not None and self.mkt_close is not None
+        # # Do we know the market hours?
+        # had_mkt_hours = self.mkt_open is not None and self.mkt_close is not None
 
         # Record market open or close times.
-        if msg.body["msg"] == "WHEN_MKT_OPEN":
-            self.mkt_open = msg.body["data"]
-
-            log_print("Recorded market open: {}", self.kernel.fmtTime(self.mkt_open))
-
-        elif msg.body["msg"] == "WHEN_MKT_CLOSE":
-            self.mkt_close = msg.body["data"]
-
-            log_print("Recorded market close: {}", self.kernel.fmtTime(self.mkt_close))
-
-        elif msg.body["msg"] == "ORDER_EXECUTED":
+        if msg.message_type == MT.ORDER_EXECUTED:
             # Call the orderExecuted method, which subclasses should extend.  This parent
             # class could implement default "portfolio tracking" or "returns tracking"
             # behavior.
-            order = msg.body["order"]
+            transaction = msg.content["transaction"]
 
             self.orderExecuted(order)
 
@@ -346,10 +282,9 @@ class TradingAgent(Agent):
 
     def get_transacted_volume(self, symbol, lookback_period="10min"):
         """Used by any trading agent subclass to query the total transacted volume in a given lookback period"""
-        self.sendMessage(
-            self.exchangeID,
+        self.send(
             Message(
-                {
+                **{
                     "msg": "QUERY_TRANSACTED_VOLUME",
                     "sender": self.id,
                     "symbol": symbol,
@@ -373,7 +308,6 @@ class TradingAgent(Agent):
         tag=None,
     ):
         order = LimitOrder(
-            self.id,
             self.agent_current_time,
             symbol,
             quantity,

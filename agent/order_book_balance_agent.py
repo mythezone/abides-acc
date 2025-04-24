@@ -65,11 +65,13 @@ class OrderBookImbalanceAgent(TradingAgent):
 
     def wakeup(self, currentTime):
         super().wakeup(currentTime)
-        super().requestDataSubscription(self.symbol, levels=self.levels, freq=self.freq)
+        super().request_data_subscription(
+            self.symbol, levels=self.levels, freq=self.freq
+        )
         self.setComputationDelay(1)
 
-    def receiveMessage(self, currentTime, msg):
-        super().receiveMessage(currentTime, msg)
+    def message_handler(self, currentTime, msg):
+        super().message_handler(currentTime, msg)
         if msg.body["msg"] == "MARKET_DATA":
             self.cancelOrders()
 

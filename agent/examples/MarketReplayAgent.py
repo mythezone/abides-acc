@@ -66,8 +66,8 @@ class MarketReplayAgent(TradingAgent):
                 f"Market Replay Agent submitted all orders - last order @ {currentTime}"
             )
 
-    def receiveMessage(self, currentTime, msg):
-        super().receiveMessage(currentTime, msg)
+    def message_handler(self, currentTime, msg):
+        super().message_handler(currentTime, msg)
         if msg.body["msg"] == "ORDER_EXECUTED":
             order = msg.body["order"]
             self.executed_trades[currentTime] = [order.fill_price, order.quantity]

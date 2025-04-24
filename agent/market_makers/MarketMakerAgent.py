@@ -81,7 +81,7 @@ class MarketMakerAgent(TradingAgent):
         """Agent wakeup is determined by self.wake_up_freq"""
         can_trade = super().wakeup(currentTime)
         if self.subscribe and not self.subscription_requested:
-            super().requestDataSubscription(
+            super().request_data_subscription(
                 self.symbol, levels=self.subscribe_num_levels, freq=self.subscribe_freq
             )
             self.subscription_requested = True
@@ -91,9 +91,9 @@ class MarketMakerAgent(TradingAgent):
             self.getCurrentSpread(self.symbol, depth=self.subscribe_num_levels)
             self.state = "AWAITING_SPREAD"
 
-    def receiveMessage(self, currentTime, msg):
+    def message_handler(self, currentTime, msg):
         """Market Maker actions are determined after obtaining the bids and asks in the LOB"""
-        super().receiveMessage(currentTime, msg)
+        super().message_handler(currentTime, msg)
         if (
             not self.subscribe
             and self.state == "AWAITING_SPREAD"

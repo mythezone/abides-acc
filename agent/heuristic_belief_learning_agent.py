@@ -201,14 +201,14 @@ class HeuristicBeliefLearningAgent(ZeroIntelligenceAgent):
             # log_print ("Numpy: no desirable order for {}, acting as ZI", self.name)
             # super().placeOrder()
 
-    def receiveMessage(self, currentTime, msg):
+    def message_handler(self, currentTime, msg):
 
         # We have been awakened by something other than our scheduled wakeup.
         # If our internal state indicates we were waiting for a particular event,
         # check if we can transition to a new state.
 
         # Allow parent class to handle state + message combinations it understands.
-        super().receiveMessage(currentTime, msg)
+        super().message_handler(currentTime, msg)
 
         # Do our special stuff.
         if self.state == "AWAITING_STREAM":

@@ -3,6 +3,7 @@ from core.base import Singleton
 import os
 import json
 from typing import Dict
+import shutil
 
 
 class ConfigManager(metaclass=Singleton):
@@ -22,9 +23,9 @@ class ConfigManager(metaclass=Singleton):
 
     def _update_attributes(self, config_data: Dict, prefix: str = ""):
         for key, value in config_data.items():
-            if key.endswith("_args"):
+            if key == "args" or key.endswith("args"):
                 attribute_name = prefix + key
-                self._set_nested_attribute(key, value)
+                self._set_nested_attribute(attribute_name, value)
                 continue
             if isinstance(value, dict):
                 self._update_attributes(value, prefix + key + ".")

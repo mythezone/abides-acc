@@ -70,9 +70,9 @@ class SimpleAgent(TradingAgent):
                     self.symbol, quantity=order_size, is_buy_order=False, limit_price=0
                 )
 
-    def receiveMessage(self, currentTime, msg):
+    def message_handler(self, currentTime, msg):
         """Momentum agent actions are determined after obtaining the best bid and ask in the LOB"""
-        super().receiveMessage(currentTime, msg)
+        super().message_handler(currentTime, msg)
         if self.state == "AWAITING_SPREAD" and msg.body["msg"] == "QUERY_SPREAD":
             dt = (self.mkt_close - currentTime) / np.timedelta64(1, "m")
             if dt < 25:

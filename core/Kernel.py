@@ -1,11 +1,13 @@
+from turtle import delay
 import numpy as np
 import pandas as pd
 
 import os
 import queue
-from core.message import MessageType
-from agent.base import Agent
 from typing import List, Dict
+import importlib
+
+from scipy.special.tests.test_boxcox import inv_boxcox
 
 from util.util import log_print
 from core.base import Singleton
@@ -14,7 +16,11 @@ from core.clock import Clock
 from core.logger import Logger
 from core.config import ConfigManager as CM
 from core.symbol import Symbol
-from agent import Agent 
+from agent import Agent, agents
+from core import exchange
+from core.message import MessageBox, MessageType, Message
+
+# from core.exchange import exchanges
 
 
 class Kernel(metaclass=Singleton):
@@ -23,7 +29,7 @@ class Kernel(metaclass=Singleton):
         # kernel_name is for human readers only.
         self.cm = CM(config_path)
         self.random_state = RandomState().state
-        self.messages = queue.PriorityQueue()
+        self.inbox = MessageBox()
 
         # 从配置文件中获取配置：
         self.name = self.cm.kernel.name
@@ -40,18 +46,27 @@ class Kernel(metaclass=Singleton):
         # 初始化时钟
         self.clock = Clock(initial_time=self.cm.kernel.start_datetime)
         self.kernel_wall_clock_start = Clock.real_time()
+        self.end_timestamp = pd.Timestamp(self.cm.kernel.end_datetime)
 
         # 初始化symbol
-        self.symbol_args = self.cm.symbol_args
-        for symbol_arg in self.symbol_args:
+        self.symbol_config = self.cm.symbols
+        for symbol_arg in self.symbol_config:
             Symbol(**symbol_arg)
 
         # 初始化Agent
-        self.agent_args = self.cm.agent_args
-        for agent_arg in self.agent_args:
-            
+        self.agent_config = self.cm.agents
+        for agent_arg in self.agent_config:
+            agent_class = agents[agent_arg["name"]]
+            agent_num = agent_arg["num"]
+            args = getattr(agent_arg, "args", {})
+            for _ in range(agent_num):
+                agent_class(kernel=self, **args)
+
         # 初始化 Exchange
-        self.exchange_args = self.cm.exchange
+        self.exchange_config = self.cm.exchange
+        self.exchange_class = getattr(exchange, self.exchange_config.name)
+        exchange_args = self.exchange_config.args
+        self.exchange = self.exchange_class(**exchange_args)
 
         # # TODO: This is financial, and so probably should not be here...
         # self.mean_result_by_agent_type = {}
@@ -67,6 +82,32 @@ class Kernel(metaclass=Singleton):
         # 初始化配置：
 
         # log_print("Kernel initialized: {}", self.name)
+
+    def start(self):
+        while not self.inbox.empty():
+            msg = self.inbox.get()
+            self.clock.tick_to(msg.recive_time)
+            if self.clock.now() > self.end_timestamp:
+                msg = Message(
+                    mtype=MessageType.SIMULATION_END,
+                    recive_time=self.clock.now(),
+                    content="Simulation End",
+                )
+                self.logger.kernel_log(msg)
+                break
+
+            if msg.message_type == MessageType.MESSAGE:
+                self.logger.kernel_log(msg)
+            elif msg.message_type == MessageType.WAKEUP:
+                self.logger.kernel_log(msg)
+                agent = Agent[msg.sender_id]
+                agent.wakeup()
+
+            else:
+                pass
+
+    def now(self):
+        return self.clock.now()
 
     # This is called to actually start the simulation, once all agent
     # configuration is done.

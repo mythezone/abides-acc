@@ -19,7 +19,6 @@ from tqdm import tqdm
 
 from order.base import Order, Transaction
 from order.limit_order import LimitOrder, OrderHeap
-from core.kernel import Kernel
 
 
 class OrderBook:
@@ -34,8 +33,6 @@ class OrderBook:
             return
         self.symbol = symbol
         OrderBook._order_books[symbol] = self
-
-        self.owner = Kernel()
 
         self.bid_side = OrderHeap()
         self.ask_side = OrderHeap()
