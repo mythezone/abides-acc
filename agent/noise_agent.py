@@ -1,5 +1,13 @@
 from agent.trading_agent import TradingAgent
+from core import message
+from core.exchange import OrderBook
+from order.limit_order import LimitOrder
 from util.util import log_print
+import random
+from core.message import Message, MessageType as MT
+from core.const import EXCHANGE_ID
+from core.symbol import Symbol
+from core.base import RandomState
 
 from math import sqrt
 import numpy as np
@@ -13,18 +21,20 @@ if TYPE_CHECKING:
 
 class NoiseAgent(TradingAgent):
 
-    def __init__(self, cash: int = 100000, kernel: "Kernel" = None, **kwargs):
+    def __init__(
+        self,
+        cash: int = 100000,
+        kernel: "Kernel" = None,
+        probability: float = 0.8,
+        min_quantity: int = 10,
+        max_quantity: int = 20,
+        **kwargs
+    ):
 
         # Base class init.
         super().__init__(id, cash=cash, kernel=kernel, **kwargs)
 
-        # self.wakeup_time = (wakeup_time,)
-
-        # self.symbol = symbol_name  # symbol to trade
-
-        # The agent uses this to track whether it has begun its strategy or is still
-        # handling pre-market tasks.
-        self.trading = False
+        self.probability = probability
 
         # The agent begins in its "complete" state, not waiting for
         # any special event or condition.
@@ -33,8 +43,9 @@ class NoiseAgent(TradingAgent):
         # The agent must track its previous wake time, so it knows how many time
         # units have passed.
         self.prev_wake_time = None
-
-        self.size = np.random.randint(20, 50)
+        self.random_state = RandomState().state
+        self.min_quantity = min_quantity
+        self.max_quantity = max_quantity
 
     def kernelStarting(self, startTime):
         # self.kernel is set in Agent.kernelInitializing()
@@ -97,16 +108,29 @@ class NoiseAgent(TradingAgent):
         else:
             self.state = "ACTIVE"
 
-    def placeOrder(self):
+    def place_order(self):
         # place order in random direction at a mid
-        buy_indicator = np.random.randint(0, 1 + 1)
+        delay = 0
 
-        bid, bid_vol, ask, ask_vol = self.getKnownBidAsk(self.symbol)
+        for symbol_name in Symbol._symbol_dict.keys():
+            delay += self.order_delay()
+            quantity = self.random_state.randint(self.min_quantity, self.max_quantity)
+            is_buy_order = self.random_state.choice([True, False])
+            msg = Message(
+                message_type=MT.MKT_ORDER,
+                sender_id=self.agent_id,
+                recipient_id=EXCHANGE_ID,
+                send_time=self.kernel.clock.now(),
+                recive_time=self.kernel.clock.future(nanoseconds=delay),
+            )
+            if is_buy_order:
+                best_price = OrderBook[symbol_name].get_best_price(side="bid")
+            else:
+                best_price = OrderBook[symbol_name].get_best_price(side="ask")
 
-        if buy_indicator and ask:
-            self.placeLimitOrder(self.symbol, self.size, buy_indicator, ask)
-        elif not buy_indicator and bid:
-            self.placeLimitOrder(self.symbol, self.size, buy_indicator, bid)
+            if best_price is not None:
+                msg.set_limit_order(symbol_name, quantity, is_buy_order, best_price[0])
+                self.send(msg, recive_delay=self.distance_delay())
 
     def message_handler(self, currentTime, msg):
         # Parent class schedules market open wakeup call once market open/close times are known.

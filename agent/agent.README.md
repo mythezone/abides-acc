@@ -64,4 +64,17 @@ FinancialAgent相比Agent基类，仅多提供了一条`dollize`方法，将整�
 
     - 添加
 
+## 重写`NoiseAgent`类
+- 总体修改
+    - 根据其父类`TradingAgent`改写了相关的构造方法
+    - 删除了不必要的属性和方法
+    - 不再指定其symbol，`NoiseAgent`现在可以对所有`symbol`下单。
+    - 改写了旧的`wakeup`逻辑
+
+- 方法修改
+    - `placeOrder`方法： 改为`place_order`
+        - 
+
+
+
     

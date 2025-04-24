@@ -40,6 +40,11 @@ class MessageType(Enum):
     MKT_DATA_SUBSCRIPTION_REQUEST = 36
     MKT_DATA_SUBSCRIPTION_CANCELLATION = 37
 
+    # Log information
+    LOG_LOB = 40
+    LOG_OHLC = 41
+    LOG_TICK = 42
+
     def __lt__(self, other):
         return self.value < other.value
 
@@ -49,7 +54,7 @@ class Message(Trackable):
 
     def __init__(
         self,
-        mtype: MessageType = MessageType.MESSAGE,
+        message_type: MessageType = MessageType.MESSAGE,
         sender_id: int = None,
         recipient_id: int = None,
         send_time: pd.Timestamp = None,
@@ -58,7 +63,7 @@ class Message(Trackable):
     ):
         super().__init__()
 
-        self.message_type = mtype
+        self.message_type = message_type
         self.sender_id = sender_id
         self.recipient_id = recipient_id
         self.send_time = send_time
@@ -76,13 +81,29 @@ class Message(Trackable):
         # Make a printable representation of this message.
         return f"{self.content}"
 
-    def make_market_order(self, symbol_name: str, quantity: int, is_buy_order: bool):
+    def set_market_order(self, symbol_name: str, quantity: int, is_buy_order: bool):
         content = {
             "symbol_name": symbol_name,
             "quantity": quantity,
             "is_buy_order": is_buy_order,
         }
         self.content = content
+
+    def set_limit_order(
+        self, symbol_name: str, quantity: int, is_buy_order: bool, limit_price: int
+    ):
+        self.message_type = MessageType.LMT_ORDER
+        content = {
+            "symbol_name": symbol_name,
+            "quantity": quantity,
+            "is_buy_order": is_buy_order,
+            "limit_price": limit_price,
+        }
+        self.content = content
+
+    def set_cancel_order(self, order_id):
+        self.message_type = MessageType.CANCEL_ORDER
+        self.content = {"order_id": order_id}
 
 
 class MessageBox:

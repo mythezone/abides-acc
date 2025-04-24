@@ -46,7 +46,7 @@ class Agent(Trackable):
 
     def initiate(self):
         msg = Message(
-            mtype=MessageType.MESSAGE,
+            message_type=MessageType.MESSAGE,
             sender_id=self.agent_id,
             send_time=self.kernel.now(),
             recive_time=self.kernel.now(),
@@ -59,7 +59,7 @@ class Agent(Trackable):
         time_delta = self.wakeup_delay()
         wakeup_time = self.clock.future(nanoseconds=time_delta)
         msg = Message(
-            mtype=MessageType.WAKEUP,
+            message_type=MessageType.WAKEUP,
             sender_id=self.agent_id,
             send_time=self.clock.now(),
             recive_time=wakeup_time,
@@ -97,3 +97,13 @@ class Agent(Trackable):
     @classmethod
     def __class_getitem__(cls, id_: int):
         return cls.get_instance_by_id(id_)
+
+    # Delays
+    def computation_delay(self, low=100, high=300):
+        return self.random_state.randint(low, high)
+
+    def order_delay(self, low=100, high=200):
+        return self.random_state.randint(low, high)
+
+    def distance_delay(self, low=1, high=100):
+        return self.random_state.randint(low, high)

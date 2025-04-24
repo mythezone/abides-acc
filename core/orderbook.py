@@ -34,14 +34,21 @@ class OrderBook:
             return
         self.symbol = Symbol[symbol_name]
 
-        self.bid_side = OrderHeap()
-        self.ask_side = OrderHeap()
+        self.bid_side = OrderHeap(side="bid")
+        self.ask_side = OrderHeap(side="ask")
 
         self.last_trade = None
 
         # Create an empty list of dictionaries to log the full order book depth (price and volume) each time it changes.
         self.book_log = []
         self.quotes_seen = set()
+        self.ohlc = {
+            "open": None,
+            "high": None,
+            "low": None,
+            "close": None,
+            "volume": 0,
+        }
 
         # Last timestamp the orderbook for that symbol was updated
         self.last_update_ts = None
@@ -156,8 +163,14 @@ class OrderBook:
 
         order.modify(modifier)
 
-    def get_current_spread(self, depth=1):
-        pass
+    def get_current_spread(self, level=1):
+        ask_side_level = self.ask_side.get_price_level(level)
+        bid_side_level = self.bid_side.get_price_level(level)
+        min_len = min(len(ask_side_level), len(bid_side_level))
+        ask_side_level = ask_side_level[:min_len]
+        bid_side_level = bid_side_level[:min_len]
+        result = [a - b for a, b in zip(ask_side_level, bid_side_level)]
+        return result
 
     def book_log_to_df(self):
         """Returns a pandas DataFrame constructed from the order book log, to be consumed by
@@ -175,6 +188,36 @@ class OrderBook:
         :return:
         """
         pass
+
+    def reset_ohlc(self):
+        """Resets the OHLC data for the order book."""
+        self.ohlc = {
+            "open": self.ohlc["close"],
+            "high": self.ohlc["close"],
+            "low": self.ohlc["close"],
+            "close": self.ohlc["close"],
+            "volume": 0,
+        }
+
+    def report_lob(self, level: int = 5):
+        # Get the bid and ask prices and volumes
+        bid_book = self.bid_side.get_book(level)
+        ask_book = self.ask_side.get_book(level)
+
+        # Create a DataFrame with the bid and ask prices and volumes
+        res = ""
+        for i in range(level):
+            res += f"{ask_book[i][0]},"
+        for i in range(level):
+            res += f"{ask_book[i][1]},"
+        for i in range(level):
+            res += f"{bid_book[i][0]},"
+        for i in range(level):
+            if i == level - 1:
+                res += f"{bid_book[i][1]}"
+            else:
+                res += f"{bid_book[i][1]},"
+        return res
 
     # Print a nicely-formatted view of the current order book.
     # def prettyPrint(self, silent=False):
@@ -224,3 +267,9 @@ class OrderBook:
     @classmethod
     def __class_getitem__(cls, symbol_name: str):
         return cls.get(symbol_name)
+
+    def get_best_price(self, side: str = "ask"):
+        if side == "ask":
+            return self.ask_side.get_price_level(1)
+        else:
+            return self.bid_side.get_price_level(1)

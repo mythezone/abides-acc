@@ -4,23 +4,6 @@
 # the levels of order stream history to maintain per symbol (maintains all orders that led to the last N trades),
 # whether to log all order activity to the agent log, and a random state object (already seeded) to use
 # for stochasticity.
-# from old.agent.FinancialAgent import FinancialAgent
-# from core.message import Message
-# from order.order_book import OrderBook
-# from util.util import log_print
-
-# import datetime as dt
-
-# import warnings
-
-# warnings.simplefilter(action="ignore", category=FutureWarning)
-# warnings.simplefilter(action="ignore", category=UserWarning)
-
-# import pandas as pd
-
-# pd.set_option("display.max_rows", 500)
-
-# from copy import deepcopy
 
 from core.base import Singleton
 from core.symbol import Symbol
@@ -28,6 +11,8 @@ from typing import TYPE_CHECKING
 import pandas as pd
 from core.orderbook import OrderBook
 from core.message import Message, MessageType as MT
+from core.symbol import Symbol
+from core.logger import Logger
 
 if TYPE_CHECKING:
     from core.kernel import Kernel
@@ -47,18 +32,22 @@ class Exchange(metaclass=Singleton):
     ):
 
         self.kernel = kernel
-
         # Store this exchange's open and close times.
-        self.mkt_open = mkt_open
         self.mkt_close = mkt_close
+        self.mkt_open = mkt_open
 
         # Right now, only the exchange agent has a parallel processing pipeline delay.  This is an additional
         # delay added only to order activity (placing orders, etc) and not simple inquiries (market operating
         # hours, etc).
         self.pipeline_delay = pipeline_delay
-
-        # Computation delay is applied on every wakeup call or message received.
         self.computation_delay = computation_delay
+
+        self.args = args
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+        self.logger = Logger()
+        # Computation delay is applied on every wakeup call or message received.
 
         # The exchange maintains an order stream of all orders leading to the last L trades
         # to support certain agents from the auction literature (GD, HBL, etc).
@@ -79,10 +68,6 @@ class Exchange(metaclass=Singleton):
         # value = dict (key = symbol, value = list [levels (no of levels to recieve updates for),
         # frequency (min number of ns between messages), last agent update timestamp]
         # e.g. {101 : {'AAPL' : [1, 10, pd.Timestamp(10:00:00)}}
-        self.subscription_dict = {}
-        self.args = args
-        for key, value in kwargs.items():
-            setattr(self, key, value)
 
     # The exchange agent overrides this to obtain a reference to an oracle.
     # This is needed to establish a "last trade price" at open (i.e. an opening
@@ -127,6 +112,46 @@ class Exchange(metaclass=Singleton):
 
     def LIMIT_ORDER(self, msg: Message):
         pass
+
+    def LOG_LOB(self, msg: Message):
+        level = msg.content["level"]
+        for symbol_name in Symbol._symbol_name_list:
+            order_book = OrderBook[symbol_name]
+            lob = order_book.report_lob(level=level)
+            self.logger.log_log(
+                symbol_name=symbol_name, kernel_time=self.kernel.now(), lob=lob
+            )
+        msg.recive_time = self.next_log_time()
+        msg.send_time = self.kernel.now()
+
+        self.send(msg, recive_delay=0)
+
+    def LOG_OHLC(self, msg: Message):
+        for symbol_name in Symbol._symbol_name_list:
+            order_book = OrderBook[symbol_name]
+            ohlc = order_book.ohlc
+
+            self.logger.ohlc_log(
+                symbol_name=symbol_name,
+                kernel_time=self.kernel.now(),
+                open_=ohlc[symbol_name]["open"],
+                high=ohlc[symbol_name]["high"],
+                low=ohlc[symbol_name]["low"],
+                close=ohlc[symbol_name]["close"],
+                volume=ohlc[symbol_name]["volume"],
+            )
+            order_book.reset_ohlc()
+
+        msg.recive_time = self.next_log_time()
+        msg.send_time = self.kernel.now()
+
+        self.send(msg, recive_delay=0)
+
+    def next_log_time(self):
+        return self.kernel.now() + pd.Timedelta(self.book_freq)
+
+    def send(self, msg: Message, recive_delay=0):
+        self.kernel.inbox.put(msg, recive_delay=recive_delay)
 
     # def receiveMessage(self, currentTime, msg):
 

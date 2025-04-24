@@ -56,7 +56,7 @@ class OrderHeap:
     def __init__(self, side="ask"):
         self.side = -1.0 if side == "ask" else 1.0
         self.heap = heapdict()
-        self.levels = SortedDict()
+        self.levels = SortedDict(self._key)
 
         # elements in self.levels are tuples of (price, volume)
         self.levels.key = lambda price_volume: price_volume[0] * self.side
@@ -66,10 +66,20 @@ class OrderHeap:
         self.heap[order.id] = order
         price = order.limit_price
         volume = order.quantity
+        if price in self.levels:
+            self.levels[price] += volume
+        else:
+            self.levels[price] = volume
 
     def get(self) -> LimitOrder:
         # 弹出最小优先级的 order
         _, order = self.heap.popitem()
+        price = order.limit_price
+        volume = order.quantity
+
+        self.levels[price] -= volume
+        if self.levels[price] == 0:
+            del self.levels[price]
         return order
 
     def get_by_id(self, order_id: int) -> LimitOrder:
@@ -86,8 +96,32 @@ class OrderHeap:
             return order
         return None
 
+    def get_book(self, level=1):
+        result = []
+        if len(self.levels) < level:
+            count = len(self.levels)
+        else:
+            count = level
+
+        for price, volume in self.levels.items():
+            if count == 0:
+                break
+            result.append((price, volume))
+            count -= 1
+        while len(result) < level:
+            result.append((None, None))
+        return result
+
+    def get_price_level(self, level=1):
+        if len(self.levels) < level:
+            level = len(self.levels)
+        return self.levels._list[:level]
+
     def empty(self):
         return len(self.heap) == 0
 
     def __len__(self):
         return len(self.heap)
+
+    def _key(self, k: int):
+        return k * self.side

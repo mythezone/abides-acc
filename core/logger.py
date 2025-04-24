@@ -1,8 +1,11 @@
 import logging
+
+from joblib import Memory
 from core.base import Singleton
 import pandas as pd
 from core.message import Message
 from io import StringIO
+import os
 
 
 class MemoryHandler(logging.Handler):
@@ -61,14 +64,25 @@ class Logger(metaclass=Singleton):
     同步 Logger 类，所有记录会通过同步日志写入文件。
     """
 
-    def __init__(self, filename: str):
-        self.filename = filename
+    def __init__(self, log_folder: str, level=5):
+        self.log_folder = log_folder
+        os.makedirs(self.log_folder, exist_ok=True)
+        self.lob_file = os.path.join(self.log_folder, "lob.csv")
+        self.log_file = os.path.join(self.log_folder, "log.csv")
+        self.ohlc_file = os.path.join(self.log_folder, "ohlc.csv")
+
+        with open(self.log_file, "w") as file:
+            file.write("kernel_time,type_,message\n")
+        with open(self.ohlc_file, "w") as file:
+            file.write("symbol_name,kernel_time,open,high,low,close,volume\n")
+        with open(self.lob_file, "w") as file:
+            file.write(self.format_lob_header(level))
+
         self.loggers = {
             "exchange": logging.getLogger("Exchange"),
-            "order": logging.getLogger("Order"),
-            "msg": logging.getLogger("Msg"),
+            "lob": logging.getLogger("LOB"),
             "kernel": logging.getLogger("Kernel"),
-            "agent": logging.getLogger("Agent"),
+            "ohlc": logging.getLogger("OHLC"),
         }
         self.memory_handler = MemoryHandler()
         # 使用自定义的同步文件 Handler
@@ -82,6 +96,19 @@ class Logger(metaclass=Singleton):
                 formatter = logging.Formatter(
                     "%(recive_time)s - %(mtype_name)s - Agent %(sender_id)s - %(msg)s"
                 )
+            elif logger_name == "ohlc":
+                self.ohlc_handler = MemoryHandler()
+                formatter = logging.Formatter(
+                    "%(symbol_name)s,%(kernel_time)s,%(open)s,%(high)s,%(low)s,%(close)s,%(volume)s"
+                )
+                self.ohlc_handler.setFormatter(formatter)
+                logger.addHandler(self.ohlc_handler)
+                logger.setLevel(logging.INFO)
+
+            elif logger_name == "lob":
+                self.lob_handler = MemoryHandler()
+                formatter = logging.Formatter("%(symbol_name)s,%(kernel_time)s,%(lob)s")
+
             else:
                 formatter = logging.Formatter(
                     "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -90,27 +117,31 @@ class Logger(metaclass=Singleton):
             logger.addHandler(self.memory_handler)
             logger.setLevel(logging.INFO)
 
-        # exchange_handler = FileHandler(filename)
-        # exchange_handler.setFormatter(
-        #     logging.Formatter("%(kernel_time)s - %(name)s - %(type_)s - %(message)s")
-        # )
-        # self.loggers["exchange"].addHandler(exchange_handler)
-        # self.loggers["exchange"].setLevel(logging.INFO)
-
-        # # 设置kernel的handler
-        # kernel_handler = FileHandler(filename)
-        # kernel_handler.setFormatter(
-        #     logging.Formatter(
-        #         "%(recive_time)s - %(mtype_name)s - Agent %(sender_id)s - %(msg)s"
-        #     )
-        # )
-        # self.loggers["kernel"].addHandler(kernel_handler)
-        # self.loggers["kernel"].setLevel(logging.INFO)
-
-        # agent_handler = FileHandler(filename)
-        # self.loggers["agent"].addHandler(agent_handler)
-        # self.loggers["agent"].setLevel(logging.INFO)
-        self.agent_log = self.kernel_log
+    def ohlc_log(
+        self,
+        symbol_name: str,
+        kernel_time: str | pd.Timestamp,
+        open_: float,
+        high: float,
+        low: float,
+        close: float,
+        volume: float,
+    ):
+        """
+        记录 OrderBook 日志。
+        """
+        self.loggers["orderbook"].info(
+            "",
+            extra={
+                "symbol_name": symbol_name,
+                "kernel_time": self.iso_time_format(kernel_time),
+                "open": open_,
+                "high": high,
+                "low": low,
+                "close": close,
+                "volume": volume,
+            },
+        )
 
     def exchange_log(
         self, message: str, kernel_time: str | pd.Timestamp, type_: str = "INIT"
@@ -138,6 +169,19 @@ class Logger(metaclass=Singleton):
             },
         )
 
+    def lob_log(self, symbol_name: str, kernel_time: str | pd.Timestamp, lob: str):
+        """
+        记录 LOB 日志。
+        """
+        self.loggers["lob"].info(
+            "",
+            extra={
+                "symbol_name": symbol_name,
+                "kernel_time": self.iso_time_format(kernel_time),
+                "lob": lob,
+            },
+        )
+
     @staticmethod
     def iso_time_format(time: str | pd.Timestamp) -> str:
         """
@@ -152,6 +196,31 @@ class Logger(metaclass=Singleton):
         """
         将内存中的日志保存到文件。
         """
-        with open(self.filename, "a") as file:
+        # save log to file.
+        with open(self.log_file, "a") as file:
             file.write(self.memory_handler.get_logs())
             self.memory_handler.clear_logs()
+
+        with open(self.ohlc_file, "a") as file:
+            file.write(self.ohlc_handler.get_logs())
+            self.ohlc_handler.clear_logs()
+
+        with open(self.lob_file, "a") as file:
+            file.write(self.lob_handler.get_logs())
+            self.lob_handler.clear_logs()
+
+    @staticmethod
+    def format_lob_header(level: int = 5):
+        lob_header = "symbol_name,kernel_time,"
+        for i in range(level):
+            lob_header += f"AskPrice{i},"
+        for i in range(level):
+            lob_header += f"AskVolume{i},"
+        for i in range(level):
+            lob_header += f"BidPrice{i},"
+        for i in range(level):
+            if i == level - 1:
+                lob_header += f"BidVolume{i}\n"
+            else:
+                lob_header += f"BidVolume{i},"
+        return lob_header

@@ -5,6 +5,7 @@ import random
 
 class Symbol:
     _symbol_dict = {}
+    _symbol_name_list = []
 
     def __init__(
         self,
@@ -30,6 +31,7 @@ class Symbol:
         self.megashock_var = megashock_var
 
         Symbol._symbol_dict[name] = self
+        Symbol._symbol_name_list.append(name)
 
     def __str__(self):
         return f"{self.name}: r_bar={self.r_bar}, kappa={self.kappa}, sigma_s={self.sigma_s}, fund_vol={self.fund_vol}, megashock_lambda_a={self.megashock_lambda_a}, megashock_mean={self.megashock_mean}, megashock_var={self.megashock_var}"
@@ -52,13 +54,13 @@ class Symbol:
     def size(cls):
         return len(cls._symbol_dict)
 
-    @classmethod
-    def __iter__(cls):
-        return iter(Symbol._symbol_dict.values())
-
     @staticmethod
     def get_random_symbol():
         return random.choice(Symbol._symbol_dict.values())
+
+    @staticmethod
+    def __len__():
+        return len(Symbol._symbol_dict)
 
 
 class EFT:

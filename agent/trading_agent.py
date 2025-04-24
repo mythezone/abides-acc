@@ -140,7 +140,7 @@ class TradingAgent(Agent):
         recive_time = self.kernel.now()
         self.send(
             msg=Message(
-                mtype=MT.MKT_DATA_SUBSCRIPTION_REQUEST,
+                message_type=MT.MKT_DATA_SUBSCRIPTION_REQUEST,
                 sender_id=self.agent_id,
                 send_time=self.kernel.now(),
                 recive_time=recive_time,
@@ -727,3 +727,8 @@ class TradingAgent(Agent):
         return h
 
     pass
+
+    # Orders Related
+    def cancel_order(self, order_id):
+        
+

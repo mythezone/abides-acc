@@ -47,9 +47,10 @@
         "args": {
             "mkt_open": "09:30:00",
             "mkt_close": "11:30:00",
-            "pipeline_delay": 0,
-            "computation_delay": 0,
-            "network_delay": 0
+            "pipeline_delay": 40000,
+            "computation_delay": 1,
+            "network_delay": 0,
+            "book_freq": "3s"
         }
     }
 }

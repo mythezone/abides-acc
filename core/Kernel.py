@@ -94,7 +94,7 @@ class Kernel(metaclass=Singleton):
             self.clock.tick_to(msg.recive_time)
             if self.clock.now() > self.end_timestamp:
                 msg = Message(
-                    mtype=MessageType.SIMULATION_END,
+                    message_type=MessageType.SIMULATION_END,
                     recive_time=self.clock.now(),
                     content="Simulation End",
                 )
