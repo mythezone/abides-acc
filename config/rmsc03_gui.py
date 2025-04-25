@@ -13,12 +13,12 @@ import sys
 import datetime as dt
 from dateutil.parser import parse
 
-from core.Kernel import Kernel
+from core.kernel import Kernel
 from util import util
-from util.order import LimitOrder
+from order.limit_order import LimitOrder
 from util.oracle.SparseMeanRevertingOracle import SparseMeanRevertingOracle
 
-from core.Exchange import ExchangeAgent
+from core.exchange import Exchange
 from agent.noise_agent import NoiseAgent
 from agent.value_agent import ValueAgent
 from agent.market_makers.AdaptiveMarketMakerAgent import AdaptiveMarketMakerAgent
@@ -192,7 +192,7 @@ def build_simulation(args):
 
     agents.extend(
         [
-            ExchangeAgent(
+            Exchange(
                 id=0,
                 name="EXCHANGE_AGENT",
                 type="ExchangeAgent",

@@ -5,14 +5,14 @@ import sys
 import datetime as dt
 from dateutil.parser import parse
 
-from core.Kernel import Kernel
+from core.kernel import Kernel
 from util import util
-from util.order import LimitOrder
+from order.limit_order import LimitOrder
 from util.oracle.SparseMeanRevertingOracle import SparseMeanRevertingOracle
 from util.oracle.ExternalFileOracle import ExternalFileOracle
 from model.latency import LatencyModel
 
-from core.Exchange import ExchangeAgent
+from core.exchange import Exchange
 from agent.noise_agent import NoiseAgent
 from agent.value_agent import ValueAgent
 from agent.market_makers.AdaptiveMarketMakerAgent import AdaptiveMarketMakerAgent
@@ -141,7 +141,7 @@ r_bar = oracle.fundamentals[symbol].values[0]
 stream_history_length = 25000
 agents.extend(
     [
-        ExchangeAgent(
+        Exchange(
             id=0,
             name="ExchangeAgent",
             type="ExchangeAgent",
