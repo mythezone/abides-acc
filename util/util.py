@@ -3,7 +3,7 @@ import pandas as pd
 from contextlib import contextmanager
 import warnings
 from scipy.spatial.distance import pdist, squareform
-from util.logger import Logger
+from core.logger import Logger
 import heapq
 
 from typing import List, Dict, TYPE_CHECKING

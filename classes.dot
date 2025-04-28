@@ -1,5 +1,0 @@
-digraph "classes" {
-rankdir=BT
-charset="utf-8"
-"agent.NoiseAgent.NoiseAgent" [color="black", fontcolor="black", label=<{NoiseAgent|oracle<br ALIGN="LEFT"/>prev_wake_time : NoneType<br ALIGN="LEFT"/>size : ndarray<br ALIGN="LEFT"/>state : str<br ALIGN="LEFT"/>symbol : str<br ALIGN="LEFT"/>trading : bool<br ALIGN="LEFT"/>wakeup_time : tuple<br ALIGN="LEFT"/>|cancelOrders()<br ALIGN="LEFT"/>getWakeFrequency()<br ALIGN="LEFT"/>kernelStarting(startTime)<br ALIGN="LEFT"/>kernelStopping()<br ALIGN="LEFT"/>placeOrder()<br ALIGN="LEFT"/>receiveMessage(currentTime, msg)<br ALIGN="LEFT"/>wakeup(currentTime)<br ALIGN="LEFT"/>}>, shape="record", style="solid"];
-}
