@@ -18,6 +18,7 @@ abides-acc.wiki
 paper
 .DS_Store
 
+
 playground
 docs/source
 docs/make.bat
@@ -28,3 +29,4 @@ rubbish
 old
 .pytest_cache
 result
+playground

@@ -10,12 +10,13 @@ from core.base import Singleton, Handler
 
 from core.const import EXCHANGE_ID
 from core.symbol import Symbol
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Tuple
 import pandas as pd
 from core.orderbook import OrderBook
 from core.message import Message, MessageType as MT
 from core.symbol import Symbol
 from core.logger import Logger
+
 
 if TYPE_CHECKING:
     from core.kernel import Kernel
@@ -35,6 +36,7 @@ class Exchange(Handler, metaclass=Singleton):
         log_lob=True,
         log_lob_level=5,
         log_freq="3s",
+        location: Tuple[int | str, int | str] = None,
         **kwargs,
     ):
 
@@ -49,6 +51,10 @@ class Exchange(Handler, metaclass=Singleton):
         self.log_lob = log_lob
         self.log_lob_level = log_lob_level
         self.log_freq = log_freq
+        if not location:
+            self.location = location
+        else:
+            self.location = (0, 0)
 
         self.args = args
         for key, value in kwargs.items():

@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 from core.base import Trackable, RandomState
 from core.message import Message, MessageType
@@ -20,7 +20,13 @@ class Agent(Trackable):
     _agent_id = 0
     _all_agents = []
 
-    def __init__(self, *args, kernel: "Kernel" = None, **kwargs):
+    def __init__(
+        self,
+        *args,
+        kernel: "Kernel" = None,
+        location=Tuple[int | str, int | str],
+        **kwargs,
+    ):
         self.agent_id = Agent._agent_id
         Agent._agent_id += 1
         Agent._all_agents.append(self)
@@ -41,6 +47,11 @@ class Agent(Trackable):
             setattr(self, key, value)
 
         self.clock = Clock()
+
+        if not location:
+            self.location = location
+        else:
+            self.location = self.random_state.rand(2) * 360
 
         self.initiate()
 

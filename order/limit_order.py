@@ -2,8 +2,6 @@
 # Orders that typically go in an Exchange's OrderBook.
 
 from order.base import Order
-from old.agent.FinancialAgent import dollarize
-from copy import deepcopy
 import pandas as pd
 from agent.base import Agent
 from functools import total_ordering
