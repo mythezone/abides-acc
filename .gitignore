@@ -30,3 +30,19 @@ old
 .pytest_cache
 result
 playground
+
+frontend/node_modules/
+frontend/*node_modules/*
+frontend/*npm-debug.log
+frontend/*temp/
+frontend/*temp/*
+frontend/*coverage/
+frontend/build
+frontend/doc 
+
+
+# Editors
+/.vscode/*
+!/.vscode/extensions.json
+frontend/**.bak
+frontend/*.project
