@@ -46,3 +46,5 @@ frontend/doc
 !/.vscode/extensions.json
 frontend/**.bak
 frontend/*.project
+
+.venv 
