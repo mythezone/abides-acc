@@ -48,3 +48,8 @@ frontend/**.bak
 frontend/*.project
 
 .venv 
+
+database/logs
+database/redis_data
+history
+paper 
