@@ -1,10 +1,3 @@
-# The ExchangeAgent expects a numeric agent id, printable name, agent type, timestamp to open and close trading,
-# a list of equity symbols for which it should create order books, a frequency at which to archive snapshots
-# of its order books, a pipeline delay (in ns) for order activity, the exchange computation delay (in ns),
-# the levels of order stream history to maintain per symbol (maintains all orders that led to the last N trades),
-# whether to log all order activity to the agent log, and a random state object (already seeded) to use
-# for stochasticity.
-
 from math import log
 from core.base import Singleton, Handler
 

@@ -29,10 +29,9 @@ class Kernel(metaclass=Singleton):
     def __init__(self, config_path: str = "./config/test.json"):
         # kernel_name is for human readers only.
         self.cm = CM(config_path)
-        self.random_state = RandomState().state
+        seed = self.cm.kernel.seed
+        self.random_state = RandomState(seed).state
         self.inbox = MessageBox()
-
-        # 从配置文件中获取配置：
         self.name = self.cm.kernel.name
 
         # 初始化Logger

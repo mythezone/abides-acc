@@ -1,0 +1,38 @@
+{
+    "kernel": {
+        "name": "test_simulation",
+        "seed": 1234,
+        "type": "default",
+        "params": {
+            "log_level": "info",
+            "max_agents": 100
+        },
+        "logger": {
+            
+        }
+    },
+    "exchanges": [
+        {
+            "id": 1,
+            "type": "stock_exchange",
+            "params": {
+                "name": "NYSE",
+                "trading_hours": {
+                    "start": "09:30",
+                    "end": "16:00"
+                },
+                "tick_size": 0.01
+            }
+        }
+    ],
+    "agents": [
+        {
+            "id": 1,
+            "type": "trader",
+            "params": {
+                "initial_capital": 100000,
+                "strategy": "mean_reversion"
+            }
+        }
+    ]
+}
