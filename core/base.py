@@ -41,7 +41,7 @@ class Trackable:
     def reset_all_instances(cls):
         cls._subclass_instances.clear()
 
-    def __lt__(self, other: Trackable) -> bool:
+    def __lt__(self, other) -> bool:
         if not type(self) is type(other):
             raise TypeError("Cannot compare instances of different classes.")
         return self.id < other.id

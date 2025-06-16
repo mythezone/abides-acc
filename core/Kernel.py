@@ -3,13 +3,9 @@ import numpy as np
 import pandas as pd
 
 import os
-import queue
 from typing import List, Dict
 import importlib
 
-from scipy.special.tests.test_boxcox import inv_boxcox
-
-from util.util import log_print
 from core.base import Singleton
 from core.base import RandomState
 from core.clock import Clock
@@ -20,6 +16,7 @@ from agent import Agent, agents
 from core import exchange
 from core.message import MessageBox, MessageType, Message
 from core.orderbook import OrderBook
+from util.seed import seed_everything
 
 # from core.exchange import exchanges
 
@@ -27,47 +24,47 @@ from core.orderbook import OrderBook
 class Kernel(metaclass=Singleton):
 
     def __init__(self, config_path: str = "./config/test.json"):
-        # kernel_name is for human readers only.
+        # kernel_name is for human readers only.)
         self.cm = CM(config_path)
         seed = self.cm.kernel.seed
-        self.random_state = RandomState(seed).state
+        seed_everything(seed)
         self.inbox = MessageBox()
         self.name = self.cm.kernel.name
 
-        # 初始化Logger
-        self.log_dir = self.cm.log.dir
-        self.log_level = self.cm.log.lob_level
-        self.log_freq = self.cm.log.lob_freq
-        self.logger = Logger(log_folder=self.log_dir, level=self.log_level)
+        # # 初始化Logger
+        # self.log_dir = self.cm.log.dir
+        # self.log_level = self.cm.log.lob_level
+        # self.log_freq = self.cm.log.lob_freq
+        # self.logger = Logger(log_folder=self.log_dir, level=self.log_level)
 
         # 初始化时钟
         self.clock = Clock(initial_time=self.cm.kernel.start_datetime)
         self.kernel_wall_clock_start = Clock.real_time()
         self.end_timestamp = pd.Timestamp(self.cm.kernel.end_datetime)
 
-        # 初始化symbol
-        self.symbol_config = self.cm.symbols
-        for symbol_arg in self.symbol_config:
-            Symbol(**symbol_arg)
+        # # 初始化symbol
+        # self.symbol_config = self.cm.symbols
+        # for symbol_arg in self.symbol_config:
+        #     Symbol(**symbol_arg)
 
-        # 初始化orderbook
-        for symbol_name in Symbol._symbol_dict.keys():
-            OrderBook(symbol_name)
+        # # 初始化orderbook
+        # for symbol_name in Symbol._symbol_dict.keys():
+        #     OrderBook(symbol_name)
 
-        # 初始化Agent
-        self.agent_config = self.cm.agents
-        for agent_arg in self.agent_config:
-            agent_class = agents[agent_arg["name"]]
-            agent_num = agent_arg["num"]
-            args = getattr(agent_arg, "args", {})
-            for _ in range(agent_num):
-                agent_class(kernel=self, **args)
+        # # 初始化Agent
+        # self.agent_config = self.cm.agents
+        # for agent_arg in self.agent_config:
+        #     agent_class = agents[agent_arg["name"]]
+        #     agent_num = agent_arg["num"]
+        #     args = getattr(agent_arg, "args", {})
+        #     for _ in range(agent_num):
+        #         agent_class(kernel=self, **args)
 
-        # 初始化 Exchange
-        self.exchange_config = self.cm.exchange
-        self.exchange_class = getattr(exchange, self.exchange_config.name)
-        exchange_args = self.exchange_config.args
-        self.exchange = self.exchange_class(**exchange_args)
+        # # 初始化 Exchange
+        # self.exchange_config = self.cm.exchange
+        # self.exchange_class = getattr(exchange, self.exchange_config.name)
+        # exchange_args = self.exchange_config.args
+        # self.exchange = self.exchange_class(**exchange_args)
 
         # # TODO: This is financial, and so probably should not be here...
         # self.mean_result_by_agent_type = {}
@@ -84,33 +81,33 @@ class Kernel(metaclass=Singleton):
 
         # log_print("Kernel initialized: {}", self.name)
 
-    def start(self):
-        while not self.inbox.empty():
-            msg = self.inbox.get()
-            self.clock.tick_to(msg.recive_time)
-            if self.clock.now() > self.end_timestamp:
-                msg = Message(
-                    message_type=MessageType.SIMULATION_END,
-                    recive_time=self.clock.now(),
-                    content="Simulation End",
-                )
-                self.logger.kernel_log(msg)
-                break
+    # def start(self):
+    #     while not self.inbox.empty():
+    #         msg = self.inbox.get()
+    #         self.clock.tick_to(msg.recive_time)
+    #         if self.clock.now() > self.end_timestamp:
+    #             msg = Message(
+    #                 message_type=MessageType.SIMULATION_END,
+    #                 recive_time=self.clock.now(),
+    #                 content="Simulation End",
+    #             )
+    #             self.logger.kernel_log(msg)
+    #             break
 
-            if msg.message_type == MessageType.MESSAGE:
-                self.logger.kernel_log(msg)
-            elif msg.message_type == MessageType.WAKEUP:
-                self.logger.kernel_log(msg)
-                agent = Agent[msg.sender_id]
-                agent.wakeup()
+    #         if msg.message_type == MessageType.MESSAGE:
+    #             self.logger.kernel_log(msg)
+    #         elif msg.message_type == MessageType.WAKEUP:
+    #             self.logger.kernel_log(msg)
+    #             agent = Agent[msg.sender_id]
+    #             agent.wakeup()
 
-            else:
-                pass
+    #         else:
+    #             pass
 
-        self.logger.save_log_to_file()
+    #     self.logger.save_log_to_file()
 
-    def now(self):
-        return self.clock.now()
+    # def now(self):
+    #     return self.clock.now()
 
     # This is called to actually start the simulation, once all agent
     # configuration is done.

@@ -3,6 +3,8 @@
         "name": "test_simulation",
         "seed": 1234,
         "type": "default",
+        "start_datetime": "2023-01-05T09:30:00",
+        "end_datetime": "2023-01-08T16:00:00",
         "params": {
             "log_level": "info",
             "max_agents": 100
