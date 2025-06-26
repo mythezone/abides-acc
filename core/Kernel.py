@@ -1,35 +1,55 @@
-from turtle import delay
+from math import e
 import numpy as np
 import pandas as pd
 
 import os
 from typing import List, Dict
-import importlib
+from rich.layout import Layout
+from rich.progress import Progress
+from rich.panel import Panel
+from gui.component.agent_panel import AgentPanel
+import time
 
-from core.base import Singleton
-from core.base import RandomState
-from core.clock import Clock
-from core.logger import Logger
-from core.config import ConfigManager as CM
-from core.symbol import Symbol
-from agent import Agent, agents
-from core import exchange
 from core.message import MessageBox, MessageType, Message
-from core.orderbook import OrderBook
-from util.seed import seed_everything
 
-# from core.exchange import exchanges
+from core.agent import agents
 
 
-class Kernel(metaclass=Singleton):
+class Kernel:
+    def __init__(self, config: Dict = {}):
+        self.config = config
+        self.agents = {}
 
-    def __init__(self, config_path: str = "./config/test.json"):
-        # kernel_name is for human readers only.)
-        self.cm = CM(config_path)
-        seed = self.cm.kernel.seed
-        seed_everything(seed)
+    def initialize(self):
         self.inbox = MessageBox()
-        self.name = self.cm.kernel.name
+        self.name = self.config["name"]
+
+    def init_agent(
+        self,
+        agent_config: List,
+        agent_panel: AgentPanel = None,
+        progress: Progress = None,
+        task=None,
+    ):
+        for config in agent_config:
+
+            agent_type = config["type"]
+            agent_class = agents[agent_type]
+            agent_num = config["num"]
+            args: Dict = config["params"]
+            for id in range(agent_num):
+                if progress and task:
+                    progress.update(task, advance=1)
+                # Here we would create an agent instance, e.g.:
+                # Agent(id=id, type=agent_type, **args)
+                agent_id = f"{agent_type}_{id}"
+                self.agents[agent_id] = agent_class(id=agent_id, **args)
+                if agent_panel:
+                    agent_panel.update_agent(
+                        {"agent_id": self.agents[agent_id].id, "status": "sleep"}
+                    )
+                    agent_panel.render()
+                    time.sleep(0.01)
 
         # # 初始化Logger
         # self.log_dir = self.cm.log.dir
@@ -38,12 +58,12 @@ class Kernel(metaclass=Singleton):
         # self.logger = Logger(log_folder=self.log_dir, level=self.log_level)
 
         # 初始化时钟
-        self.clock = Clock(initial_time=self.cm.kernel.start_datetime)
-        self.kernel_wall_clock_start = Clock.real_time()
-        self.end_timestamp = pd.Timestamp(self.cm.kernel.end_datetime)
+        # self.clock = Clock(initial_time=self.config.start_datetime)
+        # self.kernel_wall_clock_start = Clock.real_time()
+        # self.end_timestamp = pd.Timestamp(self.config.end_datetime)
 
         # # 初始化symbol
-        # self.symbol_config = self.cm.symbols
+        # self.symbol_config = self.config.symbols
         # for symbol_arg in self.symbol_config:
         #     Symbol(**symbol_arg)
 
@@ -721,3 +741,6 @@ class Kernel(metaclass=Singleton):
     #     if "agent_state" not in self.custom_state:
     #         self.custom_state["agent_state"] = {}
     #     self.custom_state["agent_state"][agent_id] = state
+
+    def send_message(self, msg: Message, delay=0):
+        self.inbox.put(msg, delay=delay)

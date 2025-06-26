@@ -3,6 +3,7 @@
 # Specific order types will inherit from this (like LimitOrder).
 
 from copy import deepcopy
+import enum
 from agent.base import Agent
 
 import pandas as pd
@@ -12,31 +13,37 @@ from dataclasses import dataclass
 
 from typing import Dict, List, TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from order.base import Order
-
 from core.base import Trackable
 
 
 # 类型包括： partial_deal | canceled | modified | finished
+class OrderType(enum.Enum):
+    """
+    Enum for different types of orders.
+    """
+
+    TRADE = "trade"  # 普通交易
+    PARTIAL_DEAL = "partial_deal"
+    CANCELED = "canceled"
+    MODIFIED = "modified"
+    FINISHED = "finished"
+
+
 @dataclass
-class Transaction(Trackable):
-    def __init__(
-        self,
-        time: pd.Timestamp,
-        price: int,
-        quantity: int,
-        bid_order_id: int = None,
-        ask_order_id: int = None,
-        type_: str = "trade",
-    ):
-        super().__init__()
-        self.type_ = type_
-        self.time = time
-        self.price = price
-        self.quantity = quantity
-        self.bid_order_id = bid_order_id
-        self.ask_order_id = ask_order_id
+class Transaction:
+    id: int  # 交易ID
+    time: pd.Timestamp
+
+    symbol: str  # 股票代码
+    price: int  # 价格单位为分
+    quantity: int  # 数量单位为股
+
+    bid_order_id: int = None  # 买单ID
+    ask_order_id: int = None  # 卖单ID
+
+    bid_agent_id: int = None  # 买方代理ID
+    ask_agent_id: int = None  # 卖方代理ID
+    trade: OrderType = OrderType.TRADE  # 交易类型，默认为 trade
 
 
 class Order(Trackable):

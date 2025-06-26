@@ -51,6 +51,13 @@ class MessageType(Enum):
 
 @total_ordering
 class Message(Trackable):
+    """
+    content["requests"]: List of dicts with possible types:
+      - {"type": "limit_order", "symbol": str, "agent_id": str, "timestamp": str, "side": "buy"/"sell", "quantity": int, "price": float}
+      - {"type": "market_order", "symbol": str, "agent_id": str, "timestamp": str, "side": "buy"/"sell", "quantity": int}
+      - {"type": "cancel_order", "symbol": str, "order_id": int}
+      - {"type": "query_kline", "symbol": str, "start": str, "end": str}
+    """
 
     def __init__(
         self,
