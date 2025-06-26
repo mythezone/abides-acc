@@ -51,7 +51,7 @@ frontend/*.project
 
 database/logs
 database/redis_data
-history
+history/sample
 paper 
 
 cli/back
