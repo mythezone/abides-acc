@@ -1,8 +1,10 @@
 import heapq
 from collections import defaultdict
-from core.order import LimitOrder, MarketOrder
+from core.order import LimitOrder, MarketOrder, Order
 from rich.table import Table
 from rich.panel import Panel
+import typing
+from typing import List, Dict, Any, Optional, TYPE_CHECKING
 
 
 class LimitOrderBook:
@@ -10,15 +12,10 @@ class LimitOrderBook:
         self.symbol = symbol
         self.buy_heap = []  # max-heap: use -price
         self.sell_heap = []  # min-heap
-        self.order_id_counter = 0
         self.order_map = {}
         self.history_log = []
 
-    def _generate_order_id(self):
-        self.order_id_counter += 1
-        return self.order_id_counter
-
-    def add_order(self, order):
+    def add_order(self, order: "Order"):
         trades = []
 
         if order.side == "buy":
@@ -32,19 +29,18 @@ class LimitOrderBook:
         self.history_log.extend(trades)
         return trades
 
-    def _insert_limit_order(self, order):
-        order_id = self._generate_order_id()
+    def _insert_limit_order(self, order: "LimitOrder"):
         order_entry = (
             order.price if order.side == "sell" else -order.price,
             order.timestamp,
-            order_id,
+            order.id,
             order,
         )
         if order.side == "buy":
             heapq.heappush(self.buy_heap, order_entry)
         else:
             heapq.heappush(self.sell_heap, order_entry)
-        self.order_map[order_id] = order
+        self.order_map[order.id] = order
 
     def _match_order(self, order, heap, opposing_side):
         trades = []
