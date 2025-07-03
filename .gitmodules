@@ -1,3 +1,6 @@
 [submodule "wiki"]
 	path = wiki
 	url = https://github.com/mythezone/abides-acc.wiki.git
+[submodule "paper/aaai"]
+	path = paper/aaai
+	url = https://github.com/mythezone/calibreax.git
