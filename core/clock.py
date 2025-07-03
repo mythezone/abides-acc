@@ -1,92 +1,5 @@
 import pandas as pd
-from core.base import Singleton
 import numpy as np
-
-
-class Clock(metaclass=Singleton):
-    def __init__(self, initial_time: str = "now"):
-        self.initial_time = initial_time
-        if initial_time == "now":
-            self.current_time = pd.Timestamp.now()
-            self.init_time = self.current_time.isoformat()
-        else:
-            try:
-                self.current_time = pd.Timestamp(initial_time)
-            except Exception:
-                # 若解析失败，设为当前时间
-                self.current_time = pd.Timestamp.now()
-                self.init_time = self.current_time.isoformat()
-
-    def now(self):
-        """获取当前时间"""
-        return self.current_time
-
-    def tick(
-        self,
-        hours: int = 0,
-        minutes: int = 0,
-        seconds: int = 0,
-        milliseconds: int = 0,
-        microseconds: int = 0,
-        nanoseconds: int = 0,
-    ):
-        """时间前进指定时间"""
-        self.current_time += pd.Timedelta(
-            hours=hours,
-            minutes=minutes,
-            seconds=seconds,
-            milliseconds=milliseconds,
-            microseconds=microseconds,
-            nanoseconds=nanoseconds,
-        )
-
-    def future(
-        self,
-        hours: int = 0,
-        minutes: int = 0,
-        seconds: int = 0,
-        milliseconds: int = 0,
-        microseconds: int = 0,
-        nanoseconds: int = 0,
-    ):
-        """获取前进指定时间的时间戳"""
-        return self.current_time + pd.Timedelta(
-            hours=hours,
-            minutes=minutes,
-            seconds=seconds,
-            milliseconds=milliseconds,
-            microseconds=microseconds,
-            nanoseconds=nanoseconds,
-        )
-
-    def tick_to(self, target_time: str):
-        """时间跳转到指定时间"""
-        try:
-            self.current_time = pd.Timestamp(target_time)
-        except Exception:
-            # 若解析失败，设为当前时间
-            raise ValueError(f"Invalid target time format: {target_time}")
-
-    def reset(self):
-        """重置当前时间为初始时间"""
-        if self.initial_time == "":
-            self.current_time = pd.Timestamp.now()
-        else:
-            try:
-                self.current_time = pd.Timestamp(self.initial_time)
-            except Exception:
-                # 若解析失败，设为当前时间
-                self.current_time = pd.Timestamp.now()
-
-    def __str__(self):
-        """返回时间戳的ISO 8601格式"""
-        return self.current_time.isoformat()
-
-    @staticmethod
-    def real_time():
-        """获取当前墙钟时间"""
-        return pd.Timestamp.now()
-
 
 EXCHANGE_SESSIONS = {
     "SSE": [
@@ -103,6 +16,63 @@ EXCHANGE_SESSIONS = {
     ],
     "NYSE": [(pd.Timestamp("09:30").time(), pd.Timestamp("16:00").time())],
 }
+
+
+class KernelClock:
+    def __init__(self, initial_time: str = "now", trading_days=None, exchange="SZSE"):
+        self.real_start_time = pd.Timestamp.now()
+        self.initial_time = initial_time
+        self.exchange = exchange
+        self.sessions = EXCHANGE_SESSIONS[exchange]
+        self.trading_days = [
+            pd.to_datetime(day).date() if isinstance(day, str) else day
+            for day in (trading_days or [])
+        ]
+        self.day_index = 0
+        if initial_time == "now":
+            self.simulate_time = self.real_start_time
+        else:
+            try:
+                self.simulate_time = pd.Timestamp(initial_time)
+            except Exception:
+                self.simulate_time = pd.Timestamp.now()
+
+    def now(self):
+        return self.simulate_time
+
+    def tick(self, **kwargs):
+        self.simulate_time += pd.Timedelta(**kwargs)
+
+    def skip_break(self):
+        if not self.trading_days:
+            return
+        current_date = self.simulate_time.date()
+        time_only = self.simulate_time.time()
+        for start, end in self.sessions:
+            if time_only < start:
+                self.simulate_time = pd.Timestamp.combine(current_date, start)
+                return
+            elif start <= time_only < end:
+                return
+        self.next_trading_day()
+
+    def next_trading_day(self):
+        self.day_index += 1
+        if self.day_index < len(self.trading_days):
+            next_date = self.trading_days[self.day_index]
+            self.simulate_time = pd.Timestamp.combine(next_date, self.sessions[0][0])
+
+    def is_break_time(self):
+        time_only = self.simulate_time.time()
+        in_session = False
+        for start, end in self.sessions:
+            if start <= time_only < end:
+                in_session = True
+                break
+        return not in_session
+
+    def is_market_closed(self):
+        return self.simulate_time.date() not in self.trading_days
 
 
 class MarketClock:

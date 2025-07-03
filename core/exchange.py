@@ -14,11 +14,10 @@ class Exchange:
 
     def handle_message(self, message: Message):
         response_messages = []
-        for req in message.content.get("requests", []):
-            msg_type = req.get("type")
-            symbol = req.get("symbol")
 
-            if msg_type in ("limit_order", "market_order"):
+        if message.message_type in (MessageType.LMT_ORDER, MessageType.MKT_ORDER):
+            for req in message.content.get("requests", []):
+                symbol = req.get("symbol")
                 order = Order.from_dict(req)
                 trades = self.lob_dict[symbol].add_order(order)
                 response_messages.append(
@@ -30,7 +29,9 @@ class Exchange:
                         content={"trades": trades},
                     )
                 )
-            elif msg_type == "cancel_order":
+        elif message.message_type == MessageType.CANCEL_ORDER:
+            for req in message.content.get("requests", []):
+                symbol = req.get("symbol")
                 order_id = req.get("order_id")
                 self.lob_dict[symbol].cancel_order(order_id)
                 response_messages.append(
@@ -42,7 +43,9 @@ class Exchange:
                         content={"order_id": order_id, "symbol": symbol},
                     )
                 )
-            elif msg_type == "query_kline":
+        elif message.message_type == MessageType.MKT_DATA:
+            for req in message.content.get("requests", []):
+                symbol = req.get("symbol")
                 start_date = pd.to_datetime(req["start"])
                 end_date = pd.to_datetime(req["end"])
                 df = self.symbols[symbol].get_kline(start_date, end_date)

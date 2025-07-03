@@ -1,28 +1,39 @@
-from math import e
 import numpy as np
 import pandas as pd
 
 import os
+import time
 from typing import List, Dict
 from rich.layout import Layout
 from rich.progress import Progress
 from rich.panel import Panel
-from gui.component.agent_panel import AgentPanel
-import time
 
-from core.message import MessageBox, MessageType, Message
 
+from core.message import MessageBox, MessageType, Message, MessageQueue
 from core.agent import agents
+from core.clock import KernelClock
+
+from gui.component.agent_panel import AgentPanel
 
 
 class Kernel:
-    def __init__(self, config: Dict = {}):
+    def __init__(self, config: Dict = {}, message_queue=None):
         self.config = config
         self.agents = {}
+        self.message_queue = message_queue
+        # Local priority inbox for ordered event processing
+        self.in_box = MessageBox()
 
     def initialize(self):
-        self.inbox = MessageBox()
         self.name = self.config["name"]
+        self.message_queue = MessageQueue()
+        self.in_box = MessageBox()
+
+        self.clock = KernelClock(
+            initial_time=self.config.get("start_date", "now"),
+            trading_days=self.config.get("trading_days", []),
+            exchange=self.config.get("exchange_type", "SZSE"),
+        )
 
     def init_agent(
         self,
@@ -43,7 +54,9 @@ class Kernel:
                 # Here we would create an agent instance, e.g.:
                 # Agent(id=id, type=agent_type, **args)
                 agent_id = f"{agent_type}_{id}"
-                self.agents[agent_id] = agent_class(id=agent_id, **args)
+                self.agents[agent_id] = agent_class(
+                    id=agent_id, message_queue=self.message_queue, **args
+                )
                 if agent_panel:
                     agent_panel.update_agent(
                         {"agent_id": self.agents[agent_id].id, "status": "sleep"}
@@ -742,5 +755,20 @@ class Kernel:
     #         self.custom_state["agent_state"] = {}
     #     self.custom_state["agent_state"][agent_id] = state
 
-    def send_message(self, msg: Message, delay=0):
-        self.inbox.put(msg, delay=delay)
+    # Kernel now receives messages via self.message_queue from agents.
+
+    def process_messages(self):
+        # Move all messages from cross-process queue into local priority inbox
+        while (
+            self.message_queue is not None
+            and hasattr(self.message_queue, "empty_raw")
+            and not self.message_queue.empty_raw()
+        ):
+            msg = self.message_queue.get_raw()
+            self.in_box.put(msg)
+
+        # Process messages from inbox in receive_time order
+        while not self.in_box.empty():
+            msg = self.in_box.get()
+            # TODO: dispatch or handle message as needed
+            print(f"Processing message: {msg}")

@@ -19,6 +19,7 @@ dependencies = [
     "nodegraphqt>=0.6.38",
     "numpy>=2.2.6",
     "pandas>=2.2.3",
+    "plotly>=6.2.0",
     "pprofile>=2.2.0",
     "psutil>=7.0.0",
     "pymongo>=4.13.1",

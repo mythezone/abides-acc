@@ -25,9 +25,11 @@ import numpy as np
 from core.symbol import Symbol
 from core.kernel import Kernel
 from core.clock import MarketClock
+from core.message import Message, MessageType, MessageQueue
 
 from gui.component.market_table import MarketKTable
 from gui.component.agent_panel import AgentPanel
+
 
 from util.time import get_trading_days, make_progress_calculator, test_time_process
 
@@ -141,7 +143,10 @@ class Simulator:
                 "Initiate Agents", total=all_agents_num, start=True
             )
 
-            self.kernel = Kernel(config=self.config["kernel"])
+            self.msg_queue = MessageQueue()
+            self.kernel = Kernel(
+                config=self.config["kernel"], message_queue=self.msg_queue
+            )
             self.kernel.initialize()
             self.kernel.init_agent(
                 agent_config, self.agent_panel, progress, task=initiate_agents
@@ -182,7 +187,7 @@ class Simulator:
                 if percent >= 100.0:
                     break
 
-    def update_market_view(self, date):
+    def update_market_view(self, date: pd.Timestamp):
         self.market_table.clear_data()
         self.market_table.set_date(date.strftime("%Y-%m-%d"))
         for symbol, s in self.symbols.items():

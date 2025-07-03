@@ -1,9 +1,14 @@
+from multiprocessing import Queue
 from enum import Enum, unique
 import pandas as pd
-
-from core.base import Trackable
 from functools import total_ordering
+from dataclasses import dataclass, field
 from queue import PriorityQueue
+from typing import List, Dict, Any
+
+
+def worker_put_message(queue, msg, delay):
+    queue.put(msg, recive_delay=delay)
 
 
 @unique
@@ -18,21 +23,19 @@ class MessageType(Enum):
     MKT_ORDER = 11
     CANCEL_ORDER = 12
     MODIFY_ORDER = 13
+    SUBMIT_ORDER = 14
 
-    ORDER_ACCEPTED = 14
-    ORDER_CANCELLED = 15
-    ORDER_EXECUTED = 16
-    ORDER_SUBMITTED = 17
-    ORDER_MODIFIED = 18
+    ORDER_ACCEPTED = 15
+    ORDER_CANCELLED = 16
+    ORDER_EXECUTED = 17
+    ORDER_SUBMITTED = 18
+    ORDER_MODIFIED = 19
 
     # Market related messages
     MKT_OPEN = 20
     MKT_CLOSE = 21
     MKT_DATA = 22
 
-    # Information related messages
-    # WHEN_MKT_OPEN = 30
-    # WHEN_MKT_CLOSE = 31
     QUERY_LAST_TRADE = 32
     QUERY_SPERAD = 33
     QUERY_ORDER_STREAM = 34
@@ -40,77 +43,32 @@ class MessageType(Enum):
     MKT_DATA_SUBSCRIPTION_REQUEST = 36
     MKT_DATA_SUBSCRIPTION_CANCELLATION = 37
 
-    # Log information
     LOG_LOB = 40
     LOG_OHLC = 41
     LOG_TICK = 42
 
-    def __lt__(self, other):
-        return self.value < other.value
-
 
 @total_ordering
-class Message(Trackable):
-    """
-    content["requests"]: List of dicts with possible types:
-      - {"type": "limit_order", "symbol": str, "agent_id": str, "timestamp": str, "side": "buy"/"sell", "quantity": int, "price": float}
-      - {"type": "market_order", "symbol": str, "agent_id": str, "timestamp": str, "side": "buy"/"sell", "quantity": int}
-      - {"type": "cancel_order", "symbol": str, "order_id": int}
-      - {"type": "query_kline", "symbol": str, "start": str, "end": str}
-    """
+@dataclass
+class Message:
+    id: str
+    message_type: MessageType
+    sender_id: str
+    recipient_id: str
+    send_time: pd.Timestamp
+    recive_time: pd.Timestamp
+    content: Dict[str, Any] = field(default_factory=dict)
 
-    def __init__(
-        self,
-        message_type: MessageType = MessageType.MESSAGE,
-        sender_id: int = None,
-        recipient_id: int = None,
-        send_time: pd.Timestamp = None,
-        recive_time: pd.Timestamp = None,
-        content: dict = {},
-    ):
-        super().__init__()
-
-        self.message_type = message_type
-        self.sender_id = sender_id
-        self.recipient_id = recipient_id
-        self.send_time = send_time
-        self.recive_time = recive_time
-
-        self.content = content
-
-    def __lt__(self, other):
+    def __lt__(self, other: "Message"):
         return self.recive_time < other.recive_time
 
-    def __eq__(self, other):
+    def __eq__(self, other: "Message"):
         return self.id == other.id
 
     def __str__(self):
-        # Make a printable representation of this message.
-        return f"{self.content}"
-
-    def set_market_order(self, symbol_name: str, quantity: int, is_buy_order: bool):
-        content = {
-            "symbol_name": symbol_name,
-            "quantity": quantity,
-            "is_buy_order": is_buy_order,
-        }
-        self.content = content
-
-    def set_limit_order(
-        self, symbol_name: str, quantity: int, is_buy_order: bool, limit_price: int
-    ):
-        self.message_type = MessageType.LMT_ORDER
-        content = {
-            "symbol_name": symbol_name,
-            "quantity": quantity,
-            "is_buy_order": is_buy_order,
-            "limit_price": limit_price,
-        }
-        self.content = content
-
-    def set_cancel_order(self, order_id):
-        self.message_type = MessageType.CANCEL_ORDER
-        self.content = {"order_id": order_id}
+        return (
+            f"Message(id={self.id}, type={self.message_type}, content={self.content})"
+        )
 
 
 class MessageBox:
@@ -119,10 +77,19 @@ class MessageBox:
         self.recive_delay = recive_delay
 
     def put(self, message: Message, recive_delay=None):
-        if not recive_delay:
+        if recive_delay is None:
             recive_delay = self.recive_delay
-        message.recive_time = message.recive_time + pd.Timedelta(recive_delay)
-        self.messages.put(message)
+        adjusted_time = message.recive_time + pd.Timedelta(milliseconds=recive_delay)
+        adjusted_message = Message(
+            id=message.id,
+            message_type=message.message_type,
+            sender_id=message.sender_id,
+            recipient_id=message.recipient_id,
+            send_time=message.send_time,
+            recive_time=adjusted_time,
+            content=message.content.copy(),
+        )
+        self.messages.put(adjusted_message)
 
     def get(self) -> Message:
         if not self.messages.empty():
@@ -139,3 +106,28 @@ class MessageBox:
 
     def __len__(self):
         return self.messages.qsize()
+
+
+class MessageQueue:
+    def __init__(self):
+        self.mp_queue = Queue()
+
+    def put(self, message: Message, recive_delay=0):
+        adjusted_time = message.recive_time + pd.Timedelta(milliseconds=recive_delay)
+        adjusted_message = Message(
+            id=message.id,
+            message_type=message.message_type,
+            sender_id=message.sender_id,
+            recipient_id=message.recipient_id,
+            send_time=message.send_time,
+            recive_time=adjusted_time,
+            content=message.content.copy(),
+        )
+        self.mp_queue.put(adjusted_message)
+
+    def get_raw(self):
+        # Directly retrieve from raw multiprocessing queue
+        return self.mp_queue.get()
+
+    def empty_raw(self):
+        return self.mp_queue.empty()

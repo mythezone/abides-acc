@@ -1,4 +1,4 @@
-from agent.base import Agent
+from agent.base import BaseAgent
 
 # from agent.trading_agent import TradingAgent
 # from agent.noise_agent import NoiseAgent
@@ -9,7 +9,7 @@ from agent.base import Agent
 
 
 agents = {
-    "base": Agent,
+    "base": BaseAgent,
     # "trading": TradingAgent,
     # "noise": NoiseAgent,
     # "value": ValueAgent,

@@ -2,25 +2,26 @@ import pandas as pd
 import numpy as np
 
 from typing import List, TYPE_CHECKING
-from core.message import Message, MessageType
+from core.message import Message, MessageType, MessageQueue
 
 if TYPE_CHECKING:
     from core.kernel import Kernel
 
 
-class Agent:
+class BaseAgent:
     def __init__(
         self,
         id,
         *args,
-        kernel: "Kernel" = None,
+        message_queue: MessageQueue = None,
         location: List[float] = None,
         **kwargs,
     ):
         self.id = id
-        self.kernel = kernel
+        self.message_queue = message_queue
         self.inbox = []
         self.args = args
+        self.current_time = None
 
         if location:
             self.location = location
@@ -31,58 +32,38 @@ class Agent:
             setattr(self, key, value)
 
     def send(self, message: Message, delay=0):
-        self.kernel.send_message(message, delay=delay)
+        self.message_queue.put((message, delay))
 
     def wakeup_delay(self):
         return np.random.randint(1000, 5000)
 
-    def set_next_wakeup(self):
-        delay_ms = self.wakeup_delay()
-        wakeup_time = self.kernel.clock.current_time + pd.Timedelta(
-            milliseconds=delay_ms
-        )
+    def set_next_wakeup(self, current_time, intelver: int = -1):
+        if intelver < 0:
+            intelver = self.wakeup_delay()
+
+        wakeup_time = current_time + pd.Timedelta(milliseconds=intelver)
         msg = Message(
             message_type=MessageType.WAKEUP,
             sender_id=self.id,
             recipient_id=self.id,
-            send_time=self.kernel.clock.current_time,
+            send_time=current_time,
             receive_time=wakeup_time,
             content=None,
         )
         self.send(msg)
 
-    def wakeup(self):
-        self.set_next_wakeup()
+    def process_inbox(self):
+        pass
+
+    def action(self):
+        pass
+
+    def wakeup(self, current_time):
+        self.current_time = current_time
+        self.set_next_wakeup(current_time)
+        self.process_inbox()
+        self.action()
+        return
 
     def receive(self, message: Message):
         self.inbox.append(message)
-
-
-class ZeroIntelligenceAgent(Agent):
-    def wakeup(self):
-        side = np.random.choice(["buy", "sell"])
-        quantity = np.random.randint(1, 100)
-        price = round(np.random.uniform(10, 100), 2)
-        symbol = np.random.choice(list(self.kernel.symbols.keys()))
-        order_type = np.random.choice(["limit_order", "market_order"])
-
-        order = {
-            "type": order_type,
-            "symbol": symbol,
-            "agent_id": self.id,
-            "timestamp": str(self.kernel.clock.current_time),
-            "side": side,
-            "quantity": quantity,
-        }
-        if order_type == "limit_order":
-            order["price"] = price
-
-        msg = Message(
-            message_type=MessageType.ORDER_SUBMIT,
-            sender_id=self.id,
-            recipient_id="Exchange",
-            send_time=self.kernel.clock.current_time,
-            content={"requests": [order]},
-        )
-        self.send(msg)
-        self.set_next_wakeup()

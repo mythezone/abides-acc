@@ -15,10 +15,9 @@ venv/
 abides-acc.wiki
 .env
 .gradio
-paper
 .DS_Store
-
-
+**/**/.DS_Store
+paper/acm
 playground
 docs/source
 docs/make.bat
@@ -52,6 +51,7 @@ frontend/*.project
 database/logs
 database/redis_data
 history/sample
-paper 
+
+
 
 cli/back
