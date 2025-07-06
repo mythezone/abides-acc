@@ -52,3 +52,30 @@ class MarketOrder(Order):
             quantity=data["quantity"],
             id=data.get("id", next(_order_id_gen)),
         )
+
+
+# --- Random order generator ---
+import random
+import time
+
+
+def generate_random_order(symbol: str) -> Order:
+    order_type = random.choice(["limit", "market"])
+    side = random.choice(["buy", "sell"])
+    quantity = random.randint(1, 1000)
+    price = round(random.uniform(10, 500), 2)
+    timestamp = str(time.time())
+    agent_id = f"agent_{random.randint(1, 100)}"
+
+    if order_type == "limit":
+        return LimitOrder(
+            agent_id=agent_id,
+            timestamp=timestamp,
+            side=side,
+            quantity=quantity,
+            price=price,
+        )
+    else:
+        return MarketOrder(
+            agent_id=agent_id, timestamp=timestamp, side=side, quantity=quantity
+        )

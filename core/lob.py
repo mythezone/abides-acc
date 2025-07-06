@@ -1,3 +1,4 @@
+from tqdm import tqdm
 import heapq
 from collections import defaultdict
 from core.order import LimitOrder, MarketOrder, Order
@@ -117,3 +118,34 @@ class LimitOrderBook:
             table.add_row(f"{buy[0]}", f"{buy[1]}", f"{sell[0]}", f"{sell[1]}")
 
         return Panel(table, title=f"{self.symbol} 限价订单簿")
+
+
+# --- LOB performance test ---
+import tracemalloc
+import time
+from core.order import generate_random_order
+
+
+def test_lob_performance():
+    lob = LimitOrderBook(symbol="TEST")
+    tracemalloc.start()
+    start_time = time.time()
+
+    # for _ in tqdm(range(3000_000), desc="Processing Orders"):
+    for _ in range(300_000):
+        order = generate_random_order("TEST")
+        lob.add_order(order)
+        lob.render_lob()
+
+    end_time = time.time()
+    current, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+
+    print(f"Processed 300,000 orders in {end_time - start_time:.2f} seconds")
+    print(
+        f"Current memory usage: {current / 1024 / 1024:.2f} MB; Peak: {peak / 1024 / 1024:.2f} MB"
+    )
+
+
+if __name__ == "__main__":
+    test_lob_performance()
