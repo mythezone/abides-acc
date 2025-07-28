@@ -18,6 +18,7 @@ abides-acc.wiki
 .DS_Store
 **/**/.DS_Store
 paper/acm
+paper/instruction
 playground
 docs/source
 docs/make.bat
