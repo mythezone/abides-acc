@@ -54,7 +54,7 @@ class SimulatorApp(App):
 
     async def on_mount(self) -> None:
         self.query_one("#operation", OperationPanel).operation_text = (
-            "正在加载股票数据..."
+            "Loading Stock data..."
         )
 
 

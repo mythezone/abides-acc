@@ -36,12 +36,12 @@ def generate_mock_market_table():
         volume = random.randint(1000, 100000)
         amount = round(volume * close_price, 2)
         data[symbol] = {
-            "开盘": open_price,
-            "最高": high_price,
-            "最低": low_price,
-            "收盘": close_price,
-            "成交量": volume,
-            "成交额": amount,
+            "open": open_price,
+            "high": high_price,
+            "low": low_price,
+            "close": close_price,
+            "volume": volume,
+            "turnover": amount,
         }
     r.hset("market_table", mapping={k: json.dumps(v) for k, v in data.items()})
 
@@ -61,7 +61,7 @@ def generate_mock_agent_status():
 
 def generate_mock_trades_and_time(step):
     """每次对每个symbol随机生成成交列表，并记录模拟时间"""
-    agent_count = 50
+    agent_count = 200
     now = SIM_START + timedelta(milliseconds=step * 800)  # 速度可以调
     now_ts = int(now.timestamp() * 1000)
     r.set("current_time", now_ts)
@@ -91,7 +91,7 @@ def generate_mock_trades_and_time(step):
 
 
 def generate_mock_operation_and_progress(step: int):
-    operation = f"正在执行仿真步骤 {step}"
+    operation = f"Executing simulation step {step}"
     progress = round(min(1.0, step / 100), 2)
     r.set("current_operation", operation)
     r.set("simulation_progress", progress)
@@ -115,7 +115,7 @@ def run_mock_simulation():
         generate_mock_lob_snapshot()
         generate_mock_trades_and_time(step)
 
-        print(f"[Mock] Step {step} - 数据已刷新")
+        print(f"[Mock] Step {step} - Data refreshed")
         step += 1
         time.sleep(1)  # 每秒刷新一次
 

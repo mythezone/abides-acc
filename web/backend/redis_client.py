@@ -1,12 +1,11 @@
 import redis
 import logging
-from core.const import REDIS_HOST, REDIS_PORT, REDIS_DB
 
 
 class RedisClient:
     _instance = None
 
-    def __new__(cls, host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB):
+    def __new__(cls, host="localhost", port=6379, db=0):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             try:
@@ -19,12 +18,3 @@ class RedisClient:
 
     def get_client(self):
         return self._client
-
-    def update_data(self, key, value):
-        self._client.set(key, value)
-
-    def get_data(self, key):
-        value = self._client.get(key)
-        if value is not None:
-            return value.decode("utf-8")
-        return None

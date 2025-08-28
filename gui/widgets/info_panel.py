@@ -37,7 +37,7 @@ class InfoPanel(Static):
             color = gradient_colors[i % len(gradient_colors)]
             logo_text.append(line + "\n", style=Style(color=color, bold=True))
         # Create welcome and version text
-        welcome = Text("欢迎使用 CALIBRAEX 仿真系统", style="bold yellow")
+        welcome = Text("Welcome to CALIBRAEX Simulation System", style="bold yellow")
         version = Text("Version: 0.2", style="bold green")
         # Group them vertically
         group = Group(
@@ -45,11 +45,11 @@ class InfoPanel(Static):
             Align.center(welcome),
             Align.center(version),
         )
-        return Panel(group, title="系统信息", border_style="bright_cyan")
+        return Panel(group, title="System Info", border_style="bright_cyan")
 
 
 class OperationPanel(Static):
-    operation_text = reactive("无操作数据 (No operation data)")
+    operation_text = reactive("No Operation Data")
     current_time_str = reactive("--")
 
     def __init__(self, *args, **kwargs):
@@ -95,4 +95,4 @@ class OperationPanel(Static):
             Align.center(op_text),
             Align.center(time_text),
         )
-        return Panel(group, title="当前操作", border_style="blue")
+        return Panel(group, title="Current Operation", border_style="blue")

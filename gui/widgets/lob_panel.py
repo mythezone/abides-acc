@@ -22,16 +22,16 @@ class LOBTable(Static):
 
     def _update_table(self):
         table = Table(show_header=True, header_style="bold magenta")
-        table.add_column("买价", justify="right", style="green")
-        table.add_column("买量", justify="right", style="green")
-        table.add_column("卖价", justify="right", style="red")
-        table.add_column("卖量", justify="right", style="red")
+        table.add_column("Buy Price", justify="right", style="green")
+        table.add_column("Buy Volume", justify="right", style="green")
+        table.add_column("Sell Price", justify="right", style="red")
+        table.add_column("Sell Volume", justify="right", style="red")
         for i in range(max(len(self.bids), len(self.asks))):
             bid_p, bid_v = self.bids[i] if i < len(self.bids) else ("", "")
             ask_p, ask_v = self.asks[i] if i < len(self.asks) else ("", "")
             table.add_row(str(bid_p), str(bid_v), str(ask_p), str(ask_v))
         self.update(
-            Panel(table, title=f"LOB 快照: {self.symbol}", border_style="green")
+            Panel(table, title=f"LOB Snapshot: {self.symbol}", border_style="green")
         )
 
     def update_data(self, bids, asks):
@@ -134,12 +134,16 @@ class TransactionLogPanel(Static):
         logs = transactions.get_logs(symbol)
         text = Text()
         if not logs:
-            text.append("-- 无成交记录 --", style="dim")
+            text.append("-- No Transaction Records --", style="dim")
         else:
             for line in logs:
                 text.append(Text.from_markup(line))
                 text.append("\n")
-        self.update(Panel(text, title=f"交易记录: {self.symbol}", border_style="blue"))
+        self.update(
+            Panel(
+                text, title=f"Transaction Records: {self.symbol}", border_style="blue"
+            )
+        )
 
 
 class LOBPanel(Static):
@@ -155,7 +159,7 @@ class LOBPanel(Static):
         keys = self.r.keys("lob_snapshot:*") or []
         self.symbols = [key.decode().split(":")[1] for key in keys]
         if not self.symbols:
-            self.symbols = ["(无数据)"]
+            self.symbols = ["(No Data)"]
 
         with TabbedContent(*self.symbols):
             for symbol in self.symbols:
@@ -180,7 +184,7 @@ class LOBPanel(Static):
         active_id = tabbed.active or f"sym_{self.symbols[0]}"
         symbol = active_id.removeprefix("sym_")
 
-        if symbol == "(无数据)":
+        if symbol == "(No Data)":
             return
 
         try:

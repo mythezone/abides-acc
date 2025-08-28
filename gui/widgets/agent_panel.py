@@ -41,12 +41,12 @@ class Agent:
     def tooltip_render(self):
         # 构建格式化多行文本，带 rich markup
         lines = []
-        lines.append("[b magenta]持仓:[/b magenta]")
+        lines.append("[b magenta]Holdings:[/b magenta]")
         holdings = self.portfolio.get("holdings", {})
         for sym, qty in holdings.items():
             lines.append(f"[cyan]{sym}[/cyan]: {qty}")
         lines.append(
-            f"[b yellow]现金:[/b yellow] {self.portfolio.get('cash', 0.0):.2f}"
+            f"[b yellow]Cash:[/b yellow] {self.portfolio.get('cash', 0.0):.2f}"
         )
         pnl_value = self.pnl
         pnl_color = "red" if pnl_value >= 0 else "green"
@@ -119,5 +119,5 @@ class AgentPanel(Static):
                 widget.remove()
 
         except Exception:
-            self.update(Text("无法读取 Agent 数据", style="italic"))
+            self.update(Text("Unable to read Agent data", style="italic"))
             return

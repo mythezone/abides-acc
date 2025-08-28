@@ -22,6 +22,27 @@ import { ref, computed } from 'vue'
 import AgentSideBar from '../components/AgentSideBar.vue'
 import AgentPanel from '../components/AgentPanel.vue'
 
+// 定义Agent数据类型
+interface AgentData {
+  strategy: {
+    type: string
+    paramA: number
+    paramB: number
+  }
+  pnl: number
+  cash: number
+  positions: Array<{
+    symbol: string
+    vol: number
+    cost: number
+  }>
+  orders: Array<{
+    id: string
+    symbol: string
+    price: number
+    status: string
+  }>
+}
 
 // 模拟数据：10个Agent
 const agentList = [
@@ -37,9 +58,9 @@ const agentList = [
   { id: 'A10', name: 'Policy Kappa' }
 ]
 
-// 10个Agent的详细模拟数据, All in English
+// 10个Agent的详细模拟数据
 
-const agentDataMap = {
+const agentDataMap: Record<string, AgentData> = {
   'A1': { strategy: { type: 'Moving Average Breakout', paramA: 10, paramB: 20 }, pnl: 1000, cash: 100000, positions: [{ symbol: '000001', vol: 200, cost: 10 }], orders: [{ id: 'O1', symbol: '000001', price: 10.2, status: 'Deal' }] },
   'A2': { strategy: { type: 'Momentum', paramA: 15, paramB: 30 }, pnl: 1500, cash: 98000, positions: [{ symbol: '000002', vol: 300, cost: 20 }], orders: [{ id: 'O2', symbol: '000002', price: 20.3, status: 'Pending' }] },
   'A3': { strategy: { type: 'High-Frequency Market Making', paramA: 5, paramB: 12 }, pnl: -800, cash: 102000, positions: [{ symbol: '000063', vol: 120, cost: 40 }], orders: [{ id: 'O3', symbol: '000063', price: 40.8, status: 'Deal' }] },

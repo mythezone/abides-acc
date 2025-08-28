@@ -6,7 +6,7 @@ import random
 
 
 class AgentPanel:
-    def __init__(self, title="Agent 状态面板", parent: Layout = None):
+    def __init__(self, title="Agent Status Panel", parent: Layout = None):
         self.title = title
         self.parent = parent
         self.agents = {}

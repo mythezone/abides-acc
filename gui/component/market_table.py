@@ -6,24 +6,24 @@ from collections import OrderedDict
 
 
 class MarketKTable:
-    def __init__(self, title="日K行情表", date="", mode="simple"):
+    def __init__(self, title="Daily K Market Table", date="", mode="simple"):
         self.console = Console()
         self.title = title
         self.date = date
         self.mode = mode
         self.table = Table(box=box.SIMPLE_HEAVY)
-        self.table.add_column("代码", justify="center")
-        self.table.add_column("开盘", justify="right")
-        self.table.add_column("最高", justify="right")
-        self.table.add_column("最低", justify="right")
-        self.table.add_column("收盘", justify="right")
-        self.table.add_column("成交量", justify="right")
+        self.table.add_column("Code", justify="center")
+        self.table.add_column("Open", justify="right")
+        self.table.add_column("High", justify="right")
+        self.table.add_column("Low", justify="right")
+        self.table.add_column("Close", justify="right")
+        self.table.add_column("Volume", justify="right")
         if self.mode == "detailed":
-            self.table.add_column("成交额", justify="right")
-            self.table.add_column("振幅", justify="right")
-            self.table.add_column("涨跌幅", justify="right")
-            self.table.add_column("涨跌额", justify="right")
-            self.table.add_column("换手率", justify="right")
+            self.table.add_column("Turnover", justify="right")
+            self.table.add_column("Amplitude", justify="right")
+            self.table.add_column("Change%", justify="right")
+            self.table.add_column("Change", justify="right")
+            self.table.add_column("Turnover Rate", justify="right")
         self.data = OrderedDict()
 
     def set_date(self, date_str):
@@ -42,8 +42,8 @@ class MarketKTable:
         def safe_amount(item):
             try:
                 return (
-                    float(item[1].get("成交额", 0))
-                    if item[1].get("成交额", 0) is not None
+                    float(item[1].get("turnover", 0))
+                    if item[1].get("turnover", 0) is not None
                     else 0
                 )
             except (ValueError, TypeError):
@@ -59,36 +59,36 @@ class MarketKTable:
 
     def render(self):
         table = Table(box=box.SIMPLE_HEAVY)
-        table.add_column("代码", justify="center")
-        table.add_column("开盘", justify="right")
-        table.add_column("最高", justify="right")
-        table.add_column("最低", justify="right")
-        table.add_column("收盘", justify="right")
-        table.add_column("成交量", justify="right")
+        table.add_column("code", justify="center")
+        table.add_column("open", justify="right")
+        table.add_column("high", justify="right")
+        table.add_column("low", justify="right")
+        table.add_column("close", justify="right")
+        table.add_column("volume", justify="right")
         if self.mode == "detailed":
-            table.add_column("成交额", justify="right")
-            table.add_column("振幅", justify="right")
-            table.add_column("涨跌幅", justify="right")
-            table.add_column("涨跌额", justify="right")
-            table.add_column("换手率", justify="right")
+            table.add_column("turnover", justify="right")
+            table.add_column("amplitude", justify="right")
+            table.add_column("change_percent", justify="right")
+            table.add_column("change_amount", justify="right")
+            table.add_column("turnover_rate", justify="right")
 
         for code, info in list(self.data.items())[:5]:
             row = [
                 code,
-                f"{float(info.get('开盘', 0)):.2f}",
-                f"{float(info.get('最高', 0)):.2f}",
-                f"{float(info.get('最低', 0)):.2f}",
-                f"{float(info.get('收盘', 0)):.2f}",
-                f"{int(info.get('成交量', 0)):,}"[:7],
+                f"{float(info.get('open', 0)):.2f}",
+                f"{float(info.get('high', 0)):.2f}",
+                f"{float(info.get('low', 0)):.2f}",
+                f"{float(info.get('close', 0)):.2f}",
+                f"{int(info.get('volume', 0)):,}"[:7],
             ]
             if self.mode == "detailed":
                 row.extend(
                     [
-                        f"{info.get('成交额', 'N/A')}",
-                        f"{info.get('振幅', 'N/A')}",
-                        f"{info.get('涨跌幅', 'N/A')}",
-                        f"{info.get('涨跌额', 'N/A')}",
-                        f"{info.get('换手率', 'N/A')}",
+                        f"{info.get('turnover', 'N/A')}",
+                        f"{info.get('amplitude', 'N/A')}",
+                        f"{info.get('change_percent', 'N/A')}",
+                        f"{info.get('change_amount', 'N/A')}",
+                        f"{info.get('turnover_rate', 'N/A')}",
                     ]
                 )
             table.add_row(*row)
