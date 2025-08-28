@@ -1,0 +1,66 @@
+%\tikzset{every picture/.style={line width=0.85pt}}
+% Detailed sequence diagram for data and message flows.
+% This TikZ picture illustrates typical interaction sequences
+% between the main components of the simulator: user/API, agents,
+% kernel, market environment, data management, and calibration system.
+
+\begin{tikzpicture}[>=latex, thick]
+
+  % Define participant (lifeline) style
+  \tikzstyle{lifeline}=[rectangle, rounded corners=2mm, draw=black, fill=blue!10,
+    minimum width=2.5cm, minimum height=0.6cm, align=center]
+
+  % Place participants along the top row
+  \node[lifeline] (p1) at (0,0) {用户/接口\\User/API};
+  \node[lifeline] (p2) at (3,0) {代理\\Agent};
+  \node[lifeline] (p3) at (6,0) {内核\\Kernel};
+  \node[lifeline] (p4) at (9,0) {市场环境\\Market};
+  \node[lifeline] (p5) at (12,0) {数据管理\\Data Mgmt};
+  \node[lifeline] (p6) at (15,0) {校准系统\\Calibration};
+
+  % Draw lifelines (dashed vertical lines)
+  \foreach \x in {p1,p2,p3,p4,p5,p6} {
+    \draw[dashed, gray] (\x.south) -- ++(0,-5);
+  }
+
+  % Define y-shifts for different interaction steps
+  \def\yA{-0.8cm}   % Agent -> Kernel: submit order
+  \def\yB{-1.2cm}   % Kernel -> Market: send order
+  \def\yC{-1.6cm}   % Market -> Kernel: ack/fill
+  \def\yD{-2.0cm}   % Kernel -> Agent: execution report
+  \def\yE{-2.4cm}   % Agent -> Data: request data
+  \def\yF{-2.8cm}   % Data -> Agent: return data
+  \def\yG{-3.3cm}   % Calibration -> Data: fetch metrics
+  \def\yH{-3.7cm}   % Calibration -> Agent: adjust params
+  \def\yI{-4.2cm}   % User/API -> Agent: inject policy/strategy
+  \def\yJ{-4.6cm}   % Agent -> Kernel: execute policy
+
+  % Flow 1: Market event (order submission and execution)
+  % Agent submits order to Kernel
+  \draw[->] ([yshift=\yA] p2.south) -- ([yshift=\yA] p3.south) node[midway, above]{提交订单};
+  % Kernel forwards order to Market
+  \draw[->] ([yshift=\yB] p3.south) -- ([yshift=\yB] p4.south) node[midway, above]{提交至市场};
+  % Market responds to Kernel (ack or fill)
+  \draw[->] ([yshift=\yC] p4.south) -- ([yshift=\yC] p3.south) node[midway, above]{市场响应};
+  % Kernel sends execution report back to Agent
+  \draw[->] ([yshift=\yD] p3.south) -- ([yshift=\yD] p2.south) node[midway, above]{执行报告};
+
+  % Flow 2: Data request from Agent
+  % Agent requests market data
+  \draw[->] ([yshift=\yE] p2.south) -- ([yshift=\yE] p5.south) node[midway, above]{请求行情数据};
+  % Data manager returns data to Agent
+  \draw[->] ([yshift=\yF] p5.south) -- ([yshift=\yF] p2.south) node[midway, above]{返回行情};
+
+  % Flow 3: Calibration and monitoring
+  % Calibration fetches market metrics from Data Management (or Monitor)
+  \draw[->] ([yshift=\yG] p6.south) -- ([yshift=\yG] p5.south) node[midway, above]{采集指标};
+  % Calibration adjusts agent parameters
+  \draw[->] ([yshift=\yH] p6.south) -- ([yshift=\yH] p2.south) node[midway, above]{参数调整};
+
+  % Flow 4: User/API interactions
+  % User injects policy or strategy to Agent through API
+  \draw[->] ([yshift=\yI] p1.south) -- ([yshift=\yI] p2.south) node[midway, above]{策略/政策注入};
+  % Agent notifies Kernel about strategy execution
+  \draw[->] ([yshift=\yJ] p2.south) -- ([yshift=\yJ] p3.south) node[midway, above]{执行策略};
+
+\end{tikzpicture}

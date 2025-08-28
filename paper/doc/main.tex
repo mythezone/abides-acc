@@ -1,0 +1,96 @@
+\documentclass[UTF8,a4paper,12pt]{ctexart}
+
+% 基本包
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+\usepackage{geometry}
+\geometry{left=2.5cm,right=2.5cm,top=3cm,bottom=3cm}
+
+% 专业页眉
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+% 左侧显示当前节标题，右侧显示页码；不强制大写
+\fancyhead[L]{\nouppercase{\leftmark}}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% 目录/编号深度
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3}
+
+\begin{document}
+
+% 自定义封面页
+\begin{titlepage}
+    \centering
+    % \includegraphics[width=4cm]{figures/logo.png}
+    \vspace*{1.5cm}
+
+    % 顶部装饰线
+    \rule{\textwidth}{1.5pt} \par
+    \vspace{0.8cm}
+
+    {\Huge\bfseries 全尺寸金融市场仿真器\\软件开发文档\par}
+    \vspace{0.5cm}
+    {\Large 模拟平台架构与实施方案\par}
+    \vspace{0.3cm}
+    {\normalsize version 0.0.1\par}
+
+    \vspace{0.8cm}
+    % 底部装饰线
+    \rule{\textwidth}{1pt} \par
+
+    \vspace{4cm}
+    % \begin{flushright}
+        \begin{tabular}{@{}rl@{}}
+        作者： & 钟慕尧 \\
+        单位： & 南方科技大学计算机科学与工程系 \\
+        日期： & \today \\
+        \end{tabular}
+    % \end{flushright}
+
+    % 信息区与底部分隔线
+    \vspace{0.8cm}
+    % \rule{\textwidth}{0.5pt}
+
+    \vfill
+\end{titlepage}
+
+% 目录页不显示页眉，避免“目录”出现在页眉上
+\tableofcontents
+\thispagestyle{empty}
+
+\newpage
+
+% 第一部分：项目背景和目标
+\input{sections/introduction.tex}
+\newpage
+
+% 第二部分：需求分析
+\input{sections/requirements.tex}
+\newpage
+
+% 第三部分：系统架构设计
+\input{sections/architecture.tex}
+\newpage
+
+% 第四部分：模块划分与设计
+\input{sections/module_design.tex}
+\newpage
+
+% 第五部分：开发计划与里程碑
+\input{sections/timeline.tex}
+\newpage
+
+% 第六部分：开发日志
+\input{sections/dev_log.tex}
+\newpage
+
+% 第七部分：结论与展望
+\input{sections/conclusion.tex}
+\newpage
+
+\end{document}

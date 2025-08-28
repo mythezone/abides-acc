@@ -1,0 +1,158 @@
+\section{开发计划与里程碑}
+
+本章结合需求分析和架构设计，制定整体的开发计划，明确各阶段任务、时间安排和关键里程碑。计划以敏捷迭代为基础，分阶段逐步实现核心功能并持续优化。
+
+\subsection{项目阶段划分}
+
+项目整体分为七个阶段，按时间顺序依次进行。每个阶段既有主要开发任务，也包括评审和迭代准备。
+
+\subsection{阶段一：调研与需求分析（约 2 周）}
+
+\paragraph{目标} 充分理解现有 ABIDES 系统和研究需求，明确新仿真器的功能目标和技术挑战。
+
+\paragraph{主要任务}
+\begin{itemize}
+  \item 深入研读 ABIDES 论文和源代码，梳理其架构、优势和局限。
+  \item 调研其他相关市场模拟器（MAXE、JAX-LOB 等），总结性能特点和技术实现。
+  \item 与利益相关者（研究人员、交易员、监管机构）沟通，收集使用场景和需求列表。
+  \item 输出需求规格说明书，明确功能需求、非功能需求、约束条件和优先级。
+\end{itemize}
+
+\paragraph{交付物}
+\begin{itemize}
+  \item 需求规格说明书
+  \item 调研报告
+\end{itemize}
+
+\subsection{阶段二：系统设计与架构确认（约 2 周）}
+
+\paragraph{目标} 基于需求完成系统架构设计，明确模块划分、接口和技术选型。
+
+\paragraph{主要任务}
+\begin{itemize}
+  \item 制定系统总体架构及分层设计，绘制组件关系图和消息流程图。
+  \item 细化每个模块的职责、类设计、接口规范和依赖关系。
+  \item 确定技术栈：语言（Python/C++）、并发框架（多线程/asyncio）、数据结构实现等。
+  \item 进行可行性评估和性能估算，讨论是否需要引入 GPU 或分布式方案。
+\end{itemize}
+
+\paragraph{交付物}
+\begin{itemize}
+  \item 系统架构设计文档（包含 UML 类图、时序图）
+  \item 技术选型报告
+\end{itemize}
+
+\subsection{阶段三：核心内核与订单簿实现（约 4–6 周）}
+
+\paragraph{目标} 实现高效的仿真内核、消息队列和订单簿匹配，引入跨资产支持。
+
+\paragraph{主要任务}
+\begin{itemize}
+  \item 开发事件调度器和消息总线，实现纳秒级时间分辨率和并发调度。
+  \item 设计并实现高性能订单簿结构（如跳表或平衡树）及撮合引擎，支持部分成交、批量撮合。
+  \item 实现交易所管理器和跨资产协调器，支持多交易所、多资产。
+  \item 编写单元测试和性能基准测试，优化 CPU 和内存消耗。
+\end{itemize}
+
+\paragraph{交付物}
+\begin{itemize}
+  \item 仿真内核代码（EventScheduler、MessageBus）
+  \item 订单簿与撮合引擎代码
+  \item 性能基准报告
+\end{itemize}
+
+\subsection{阶段四：代理框架与自校准模块开发（约 4 周）}
+
+\paragraph{目标} 构建可扩展的代理框架和自校准系统，实现基础代理和动态参数调整。
+
+\paragraph{主要任务}
+\begin{itemize}
+  \item 实现 BaseAgent、TraderAgent、MarketMaker、BackgroundAgent 等基类及内置策略。
+  \item 开发自定义代理接口，使外部用户可继承并注入策略。
+  \item 设计自校准管理器、指标监控器和参数控制器，实现 PID 控制或其他在线优化算法。
+  \item 集成代理框架与内核，确保消息格式和生命周期管理一致。
+  \item 编写示例代理和简单策略，进行交互测试。
+\end{itemize}
+
+\paragraph{交付物}
+\begin{itemize}
+  \item 代理框架库
+  \item 自校准模块代码
+  \item 示例代理和测试脚本
+\end{itemize}
+
+\subsection{阶段五：功能完善与性能优化（约 4 周）}
+
+\paragraph{目标} 完善高级功能并在大规模环境下优化性能。
+
+\paragraph{主要任务}
+\begin{itemize}
+  \item 增加集合竞价、特殊订单类型（隐藏单、止损单）等高级市场功能。
+  \item 优化多线程/异步调度策略，解决性能瓶颈。
+  \item 引入跨日模拟能力，包括隔夜持仓、开盘竞价等。
+  \item 针对千股万代理规模进行压力测试，调整内存布局和并行策略。
+  \item 修复调试过程中发现的缺陷，完善容错和异常处理机制。
+\end{itemize}
+
+\paragraph{交付物}
+\begin{itemize}
+  \item 完整的市场机制实现
+  \item 优化报告与性能调优脚本
+  \item 更新的用户和开发文档
+\end{itemize}
+
+\subsection{阶段六：交互界面与实验案例（约 3 周）}
+
+\paragraph{目标} 提供友好易用的交互方式和示例实验，便于用户上手。
+
+\paragraph{主要任务}
+\begin{itemize}
+  \item 开发程序化 API 和命令行接口，实现订单提交、状态查询、策略注入等功能。
+  \item 设计并实现 Web UI 或桌面界面，实时展示行情、订单簿、代理表现。
+  \item 撰写典型实验案例脚本，包括策略测试、政策干预、行为假设等。
+  \item 集成可视化图表和日志分析工具。
+\end{itemize}
+
+\paragraph{交付物}
+\begin{itemize}
+  \item API 文档和示例代码
+  \item 可视化界面原型
+  \item 实验案例库
+\end{itemize}
+
+\subsection{阶段七：测试、文档与发布（约 2 周）}
+
+\paragraph{目标} 完成系统的综合测试和文档编写，准备对外发布。
+
+\paragraph{主要任务}
+\begin{itemize}
+  \item 编写完整的单元测试、集成测试和端到端测试，确保各模块按预期工作。
+  \item 编写用户手册和开发者指南，包括安装部署、配置说明、二次开发指南。
+  \item 整理并生成自动化构建脚本，准备版本发布包。
+  \item 邀请一组种子用户进行试用，收集反馈并修复最后问题。
+\end{itemize}
+
+\paragraph{交付物}
+\begin{itemize}
+  \item 测试报告与覆盖率统计
+  \item 用户手册与开发文档
+  \item 发布版本及安装包
+\end{itemize}
+
+\subsection{里程碑概览}
+
+\begin{tabular}{p{2cm}p{4cm}p{7cm}}
+\hline
+\textbf{阶段} & \textbf{时间范围} & \textbf{主要里程碑} \\
+\hline
+阶段一 & 第 1–2 周 & 完成需求规格说明书，提交调研报告 \\
+阶段二 & 第 3–4 周 & 输出系统架构设计文档，确定技术栈 \\
+阶段三 & 第 5–10 周 & 核心内核和订单簿功能初步完成功能开发并通过基准测试 \\
+阶段四 & 第 11–14 周 & 代理框架和自校准模块开发完毕，示例代理可运行 \\
+阶段五 & 第 15–18 周 & 完善高级功能，完成大规模性能优化 \\
+阶段六 & 第 19–21 周 & API 与 UI 开发完成，提供示例实验库 \\
+阶段七 & 第 22–23 周 & 完成综合测试和文档，发布首个正式版本 \\
+\hline
+\end{tabular}
+
+上述时间安排为预估值，实际进度可根据团队规模和资源情况调整。每个阶段结束后应进行阶段评审，并在下一阶段开始前修订计划。

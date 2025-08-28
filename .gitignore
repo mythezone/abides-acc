@@ -53,6 +53,7 @@ database/logs
 database/redis_data
 history/sample
 
-
+**/tmp 
+**/temp
 
 cli/back
