@@ -1,0 +1,12 @@
+{
+  "orders_per_sim_sec": 300000,
+  "sim_duration_sec": 60,
+  "sample_orders": 20000,
+  "kernel_config_path": "config/test.json",
+  "ohlc_freq": "3s",
+  "lob_log_freq": "3s",
+  "symbols": [
+    "000001", "000002", "000004", "000006", "000008", "000009",
+    "000010", "000011", "000012", "000016"
+  ]
+}
