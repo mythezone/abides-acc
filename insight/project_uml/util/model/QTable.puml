@@ -1,5 +1,0 @@
-@startuml
-class QTable {
-  + __init__()
-}
-@enduml

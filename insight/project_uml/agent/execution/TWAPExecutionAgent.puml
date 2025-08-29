@@ -1,7 +1,0 @@
-@startuml
-class TWAPExecutionAgent {
-  + __init__()
-  + generate_schedule()
-}
-ExecutionAgent <|-- TWAPExecutionAgent
-@enduml

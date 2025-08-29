@@ -1,9 +1,0 @@
-@startuml
-class SumClientAgent {
-  + __init__()
-  + kernelStarting()
-  + wakeup()
-  + receiveMessage()
-}
-Agent <|-- SumClientAgent
-@enduml

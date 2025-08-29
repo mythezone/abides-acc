@@ -1,8 +1,0 @@
-@startuml
-class DataOracle {
-  + __init__()
-  + getDailyOpenPrice()
-  + getLatestTrade()
-  + observePrice()
-}
-@enduml

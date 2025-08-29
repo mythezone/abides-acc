@@ -1,8 +1,0 @@
-@startuml
-class ReturnsVolatilityCorrelation {
-  + __init__()
-  + compute()
-  + visualize()
-}
-Metric <|-- ReturnsVolatilityCorrelation
-@enduml

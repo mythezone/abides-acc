@@ -1,8 +1,0 @@
-@startuml
-class BasketOrder {
-  + __init__()
-  + __str__()
-  + __repr__()
-}
-Order <|-- BasketOrder
-@enduml

@@ -1,7 +1,0 @@
-@startuml
-class LatencyModel {
-  + __init__()
-  + get_latency()
-  + _extract()
-}
-@enduml
