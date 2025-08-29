@@ -55,7 +55,9 @@ class ZeroIntelligenceAgent(BaseAgent):
                 self.send(msg)
 
     def process_inbox(self):
-        # very simple inbox processor: pick up symbol list if provided
+        # First apply base processing (portfolio updates)
+        super().process_inbox()
+        # Then pick up symbol list if provided
         new_symbols = []
         keep = []
         for m in self.inbox:

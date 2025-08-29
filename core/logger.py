@@ -78,6 +78,7 @@ class Logger(metaclass=Singleton):
             "lob": logging.getLogger("LOB"),
             "kernel": logging.getLogger("Kernel"),
             "ohlc": logging.getLogger("OHLC"),
+            "agents": logging.getLogger("Agents"),
         }
         # keep all handlers for flushing
         self._handlers = []
@@ -227,6 +228,27 @@ class Logger(metaclass=Singleton):
                 if isinstance(h, MemoryHandler):
                     file.write(h.get_logs())
                     h.clear_logs()
+
+    def _ensure_agent_path(self, agent_id: str) -> str:
+        adir = os.path.join(self.log_folder, "agents")
+        os.makedirs(adir, exist_ok=True)
+        apath = os.path.join(adir, f"{agent_id}.csv")
+        if not os.path.exists(apath) or os.path.getsize(apath) == 0:
+            with open(apath, "w") as f:
+                f.write("time,cash,total_value,positions\n")
+        return apath
+
+    def agent_log(self, agent_id: str, kernel_time: Union[str, pd.Timestamp], cash: float, total_value: float, positions: dict):
+        apath = self._ensure_agent_path(agent_id)
+        try:
+            import json
+            pos_str = json.dumps(positions, ensure_ascii=False, separators=(",", ":"))
+        except Exception:
+            pos_str = str(positions)
+        with open(apath, "a") as f:
+            f.write(
+                f"{self.iso_time_format(kernel_time)},{cash:.2f},{total_value:.2f},{pos_str}\n"
+            )
 
     @staticmethod
     def format_lob_header(level: int = 5):

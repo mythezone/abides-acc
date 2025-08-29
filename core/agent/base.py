@@ -5,6 +5,8 @@ from typing import List, TYPE_CHECKING
 from core.message import Message, MessageType, MessageQueue, new_message
 from typing import Optional
 from core.logger import Logger
+from core.portfolio import Portfolio
+import json
 
 if TYPE_CHECKING:
     from core.kernel import Kernel
@@ -26,6 +28,8 @@ class BaseAgent:
         self.args = args
         self.current_time = None
         self.logger = logger
+        initial_cash = float(kwargs.pop("initial_cash", 1_000_000))
+        self.portfolio = Portfolio(initial_cash=initial_cash)
 
         if location:
             self.location = location
@@ -66,7 +70,33 @@ class BaseAgent:
         self.send(msg)
 
     def process_inbox(self):
-        pass
+        # default handler: update portfolio on executions
+        remaining = []
+        for m in self.inbox:
+            if m.message_type == MessageType.ORDER_EXECUTED and isinstance(m.content, dict):
+                trades = m.content.get("trades", [])
+                for t in trades:
+                    symbol = t.get("symbol")
+                    price = float(t.get("price", 0.0))
+                    qty = int(t.get("quantity", 0))
+                    # Determine if this agent is buyer or seller in this trade
+                    if t.get("buy") == self.id:
+                        self.portfolio.apply_trade(symbol, "buy", price, qty)
+                    if t.get("sell") == self.id:
+                        self.portfolio.apply_trade(symbol, "sell", price, qty)
+                # After applying, log snapshot
+                if self.logger:
+                    tv = self.portfolio.current_total_value()
+                    self.logger.agent_log(
+                        self.id,
+                        m.recive_time,
+                        cash=self.portfolio.cash,
+                        total_value=tv,
+                        positions=self.portfolio.holdings,
+                    )
+            else:
+                remaining.append(m)
+        self.inbox = remaining
 
     def action(self):
         pass

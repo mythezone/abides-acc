@@ -266,6 +266,19 @@
 \paragraph{OHLC 与 LOB 日志}
 交易所为每只股票维护基于频率的 OHLC 聚合器（默认 \verb|1s|），在发生成交或有可用中间价（mid）时更新并在切换窗口时输出开高低收；同时按指定频率（默认 \verb|3s|）记录 LOB 快照的前 \verb|N| 档（默认 \verb|N=5|）。两类日志合并写入核心日志文件，便于统一查看与解析。
 
+\paragraph{Agent 资产记录与记账策略}
+为每个代理维护独立的资产记录文件，路径为 \verb|log/<run>/agents/<agent_id>.csv|。表头包含 \verb|time,cash,total_value,positions|，其中 \verb|positions| 为 JSON 字典（symbol→持仓股数）。
+
+记账策略采用 \textbf{执行时记账}（execution-based accounting）：
+\begin{itemize}
+  \item \textbf{下单时}不改变现金与持仓（不引入冻结/预占用）；
+  \item \textbf{订单被成交}（收到 \verb|ORDER_EXECUTED|）后，根据成交明细逐条调整现金与持仓：买入扣减现金并增加持仓，卖出增加现金并减少持仓；
+  \item \textbf{市值计算}采用最近成交价（last price）作为持仓的标记价格（MTM），在每次成交后更新；
+  \item \textbf{撤单}（\verb|ORDER_CANCELLED|）不做资产变动（因未预占用）。
+\end{itemize}
+
+该策略实现简单、易于审计，避免了缺少经纪侧撮合前冻结语义带来的复杂性；未来若引入经纪/清算层，可切换为 “预占用+结算释放” 模式。
+
 消息数据结构遵循 \texttt{Message} 定义，关键字段如下：
 \begin{itemize}
   \item \texttt{id}
