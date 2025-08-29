@@ -71,7 +71,7 @@ class LimitOrderBook:
                         top_order.agent_id if order.side == "buy" else order.agent_id
                     ),
                     "quantity": traded_qty,
-                    "price": trade_price,
+                    "price": round(trade_price, 2),
                     "timestamp": order.timestamp,
                     "symbol": self.symbol,
                 }
@@ -103,6 +103,28 @@ class LimitOrderBook:
             "buy": extract_top(self.buy_heap, is_buy=True),
             "sell": extract_top(self.sell_heap, is_buy=False),
         }
+
+    def format_snapshot_csv(self, n=5):
+        snap = self.snapshot_top_n(n)
+        parts = []
+        # Ask prices then volumes (sell side descending by our snapshot ordering)
+        asks = snap["sell"]
+        for i in range(n):
+            if i < len(asks):
+                parts.append(f"{asks[i][0]:.2f}")
+            else:
+                parts.append("")
+        for i in range(n):
+            parts.append(str(asks[i][1]) if i < len(asks) else "")
+        bids = snap["buy"]
+        for i in range(n):
+            if i < len(bids):
+                parts.append(f"{bids[i][0]:.2f}")
+            else:
+                parts.append("")
+        for i in range(n):
+            parts.append(str(bids[i][1]) if i < len(bids) else "")
+        return ",".join(parts)
 
     def render_lob(self):
         snapshot = self.snapshot_top_n(5)

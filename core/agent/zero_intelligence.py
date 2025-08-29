@@ -7,9 +7,9 @@ import pandas as pd
 
 class ZeroIntelligenceAgent(BaseAgent):
 
-    def __init__(self, id, *args, message_queue: MessageQueue = None, **kwargs):
+    def __init__(self, id, *args, message_queue: MessageQueue = None, initial_symbols: List[str] = None, **kwargs):
         super().__init__(id, *args, message_queue=message_queue, **kwargs)
-        self.subscribed_symbols: List[str] = []
+        self.subscribed_symbols: List[str] = (initial_symbols or [])[:]
 
     def action(self):
         if not self.subscribed_symbols:

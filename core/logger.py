@@ -68,16 +68,10 @@ class Logger(metaclass=Singleton):
     def __init__(self, log_folder: str, level=5):
         self.log_folder = log_folder
         os.makedirs(self.log_folder, exist_ok=True)
-        self.lob_file = os.path.join(self.log_folder, "lob.csv")
         self.log_file = os.path.join(self.log_folder, "log.csv")
-        self.ohlc_file = os.path.join(self.log_folder, "ohlc.csv")
 
         with open(self.log_file, "w") as file:
-            file.write("kernel_time,type_,message\n")
-        with open(self.ohlc_file, "w") as file:
-            file.write("symbol_name,kernel_time,open,high,low,close,volume\n")
-        with open(self.lob_file, "w") as file:
-            file.write("")
+            file.write("time,stage,type,sender,recipient,content\n")
 
         self.loggers = {
             "exchange": logging.getLogger("Exchange"),
@@ -99,9 +93,9 @@ class Logger(metaclass=Singleton):
                 logger.setLevel(logging.INFO)
                 self._handlers.append(h)
             elif logger_name == "kernel":
-                # Detailed message flow log: time, stage, type, sender->recipient, content
+                # CSV formatted message flow log
                 formatter = logging.Formatter(
-                    "%(recive_time)s - %(stage)s - %(mtype_name)s - from %(sender_id)s to %(recipient_id)s - %(msg)s"
+                    "%(recive_time)s,%(stage)s,%(mtype_name)s,%(sender_id)s,%(recipient_id)s,%(msg)s"
                 )
                 h = MemoryHandler()
                 h.setFormatter(formatter)
@@ -109,24 +103,20 @@ class Logger(metaclass=Singleton):
                 logger.setLevel(logging.INFO)
                 self._handlers.append(h)
             elif logger_name == "ohlc":
-                self.ohlc_handler = MemoryHandler()
-                formatter = logging.Formatter(
-                    "%(symbol_name)s,%(kernel_time)s,%(open)s,%(high)s,%(low)s,%(close)s,%(volume)s"
-                )
-                self.ohlc_handler.setFormatter(formatter)
-                logger.addHandler(self.ohlc_handler)
+                # placeholder (we write OHLC per symbol directly)
+                h = MemoryHandler()
+                h.setFormatter(logging.Formatter("%(message)s"))
+                logger.addHandler(h)
                 logger.setLevel(logging.INFO)
-                self._handlers.append(self.ohlc_handler)
+                self._handlers.append(h)
 
             elif logger_name == "lob":
-                self.lob_handler = MemoryHandler()
-                formatter = logging.Formatter(
-                    "%(symbol_name)s,%(kernel_time)s,%(level)s,%(lob)s"
-                )
-                self.lob_handler.setFormatter(formatter)
-                logger.addHandler(self.lob_handler)
+                # placeholder (we write LOB per symbol directly)
+                h = MemoryHandler()
+                h.setFormatter(logging.Formatter("%(message)s"))
+                logger.addHandler(h)
                 logger.setLevel(logging.INFO)
-                self._handlers.append(self.lob_handler)
+                self._handlers.append(h)
             else:
                 # default
                 formatter = logging.Formatter(
@@ -138,6 +128,20 @@ class Logger(metaclass=Singleton):
                 logger.setLevel(logging.INFO)
                 self._handlers.append(h)
 
+    def _ensure_symbol_paths(self, symbol_name: str):
+        sdir = os.path.join(self.log_folder, symbol_name)
+        os.makedirs(sdir, exist_ok=True)
+        ohlc_path = os.path.join(sdir, "ohlc.csv")
+        lob_path = os.path.join(sdir, "lob.csv")
+        if not os.path.exists(ohlc_path):
+            with open(ohlc_path, "w") as f:
+                f.write("kernel_time,open,high,low,close,volume\n")
+        if not os.path.exists(lob_path):
+            with open(lob_path, "w") as f:
+                # Default header for 5 levels; caller should keep consistent
+                f.write(self.format_lob_header(level=5))
+        return ohlc_path, lob_path
+
     def ohlc_log(
         self,
         symbol_name: str,
@@ -148,21 +152,12 @@ class Logger(metaclass=Singleton):
         close: float,
         volume: float,
     ):
-        """
-        记录 OrderBook 日志。
-        """
-        self.loggers["orderbook"].info(
-            "",
-            extra={
-                "symbol_name": symbol_name,
-                "kernel_time": self.iso_time_format(kernel_time),
-                "open": open_,
-                "high": high,
-                "low": low,
-                "close": close,
-                "volume": volume,
-            },
-        )
+        ohlc_path, _ = self._ensure_symbol_paths(symbol_name)
+        with open(ohlc_path, "a") as f:
+            line = (
+                f"{self.iso_time_format(kernel_time)},{open_:.2f},{high:.2f},{low:.2f},{close:.2f},{int(volume)}\n"
+            )
+            f.write(line)
 
     def exchange_log(
         self, message: str, kernel_time: Union[str, pd.Timestamp], type_: str = "INIT"
@@ -185,7 +180,11 @@ class Logger(metaclass=Singleton):
         记录一条消息的流转日志。
         stage: SEND | RECV | PROC 等
         """
-        msg = str(message.content)
+        try:
+            import json
+            msg = json.dumps(message.content, ensure_ascii=False, separators=(",", ":"))
+        except Exception:
+            msg = str(message.content)
         self.loggers["kernel"].info(
             msg,
             extra={
@@ -200,18 +199,13 @@ class Logger(metaclass=Singleton):
     def lob_log(
         self, symbol_name: str, kernel_time: Union[str, pd.Timestamp], level: int, lob: str
     ):
-        """
-        记录 LOB 日志。
-        """
-        self.loggers["lob"].info(
-            "",
-            extra={
-                "symbol_name": symbol_name,
-                "kernel_time": self.iso_time_format(kernel_time),
-                "level": level,
-                "lob": lob,
-            },
-        )
+        _, lob_path = self._ensure_symbol_paths(symbol_name)
+        # If level differs from default header, rewrite header once (simple approach)
+        if os.path.getsize(lob_path) == 0:
+            with open(lob_path, "w") as f:
+                f.write(self.format_lob_header(level=level))
+        with open(lob_path, "a") as f:
+            f.write(f"{self.iso_time_format(kernel_time)},{lob}\n")
 
     @staticmethod
     def iso_time_format(time: Union[str, pd.Timestamp]) -> str:
@@ -227,7 +221,7 @@ class Logger(metaclass=Singleton):
         """
         将内存中的日志保存到文件。
         """
-        # save all handlers to the primary log file
+        # save all handlers to the primary log file (message flow)
         with open(self.log_file, "a") as file:
             for h in self._handlers:
                 if isinstance(h, MemoryHandler):
@@ -236,7 +230,7 @@ class Logger(metaclass=Singleton):
 
     @staticmethod
     def format_lob_header(level: int = 5):
-        lob_header = "symbol_name,kernel_time,"
+        lob_header = "kernel_time,"
         for i in range(level):
             lob_header += f"AskPrice{i},"
         for i in range(level):

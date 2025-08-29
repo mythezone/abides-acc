@@ -21,31 +21,33 @@
             
         },
         "agents": [
-        {
-            "num": 50,
-            "type": "base",
-            "params": {
-                "initial_capital": 100000,
-                "strategy": "mean_reversion"
+            {
+                "num": 2,
+                "type": "zero_intelligence",
+                "params": {"wakeup_ms_range": [50, 120]}
+            },
+            {
+                "num": 1,
+                "type": "base",
+                "params": {}
             }
-        }
-    ]
+        ]
     },
+    
     "exchanges": [
         {
             "id": 1,
             "type": "stock_exchange",
             "params": {
                 "name": "NYSE",
-                "trading_hours": {
-                    "start": "09:30",
-                    "end": "16:00"
-                },
-                "tick_size": 0.01
+                "trading_hours": {"start": "09:30", "end": "16:00"},
+                "tick_size": 0.01,
+                "log_ohlc_freq": "3s",
+                "log_lob_freq": "3s",
+                "log_lob_level": 5
             }
         }
     ],
-    
     "symbols": [
         "000001",
         "000002",

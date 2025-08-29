@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from queue import PriorityQueue
 from typing import Any, Dict, Optional
 from uuid import uuid4
+from queue import Empty
 
 
 def worker_put_message(queue, msg, delay):
@@ -132,6 +133,9 @@ class MessageQueue:
 
     def empty_raw(self):
         return self.mp_queue.empty()
+
+    def get_nowait_raw(self):
+        return self.mp_queue.get_nowait()
 
 
 def new_message(

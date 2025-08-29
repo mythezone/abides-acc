@@ -14,6 +14,8 @@ from core.agent import agents
 from core.clock import KernelClock
 from core.exchange import Exchange
 from core.logger import Logger
+import pandas as pd
+from types import SimpleNamespace
 
 from gui.component.agent_panel import AgentPanel
 
@@ -36,12 +38,20 @@ class Kernel:
             trading_days=self.config.get("trading_days", []),
             exchange=self.config.get("exchange_type", "SZSE"),
         )
-        # Minimal exchange with empty symbol universe, will grow on demand
-        self.exchange = Exchange(symbols={})
-        # Init logger
+        # Init logger early
         ts = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
         log_dir = self.config.get("log_dir", f"log/run_{ts}")
         self.logger = Logger(log_dir)
+
+        # Minimal exchange with empty symbol universe, will grow on demand
+        ex_params = self.config.get("exchange_params", {})
+        self.exchange = Exchange(
+            symbols={},
+            logger=self.logger,
+            ohlc_freq=ex_params.get("ohlc_freq", "1s"),
+            lob_log_level=ex_params.get("lob_log_level", 5),
+            lob_log_freq=ex_params.get("lob_log_freq", "3s"),
+        )
 
     def init_agent(
         self,
@@ -800,21 +810,35 @@ class Kernel:
             # Log send
             self.logger.kernel_message_log(wake, stage="SEND")
             self.message_queue.put(wake)
+            # Also seed directly into local inbox to avoid Queue semantics issues in tests
+            self.in_box.put(wake)
 
         steps = 0
         processed = 0
         current_time = start_time
 
         while steps < max_steps:
-            # Drain inter-process queue into local box
-            while not self.message_queue.empty_raw():
-                self.in_box.put(self.message_queue.get_raw())
+            # Drain inter-process queue into local box (non-blocking)
+            while True:
+                try:
+                    self.in_box.put(self.message_queue.get_nowait_raw())
+                except Exception:
+                    break
 
             if self.in_box.empty():
                 break
 
             # Pop next event by time
             msg = self.in_box.get()
+            # Apply trading session skip if needed
+            self.clock.simulate_time = msg.recive_time
+            if self.clock.is_market_closed() or self.clock.is_break_time():
+                before = self.clock.now()
+                self.clock.skip_break()
+                # shift message receive time forward to next valid time
+                msg.recive_time = self.clock.now()
+                # Log time skip as PROC stage
+                self.logger.kernel_message_log(msg, stage="PROC")
             # Log receive
             self.logger.kernel_message_log(msg, stage="RECV")
             current_time = msg.recive_time
@@ -823,11 +847,15 @@ class Kernel:
             rid = msg.recipient_id
             if rid in self.agents:
                 agent = self.agents[rid]
+                # Log processing by agent
+                self.logger.kernel_message_log(msg, stage="PROC")
                 if msg.message_type == MessageType.WAKEUP:
                     agent.wakeup(current_time)
                 else:
                     agent.receive(msg)
             elif rid == "Exchange":
+                # Log processing by exchange (handled again inside exchange, but keep here for symmetry)
+                self.logger.kernel_message_log(msg, stage="PROC")
                 responses = self.exchange.handle_message(msg)
                 for rsp in responses:
                     # Log send
@@ -850,15 +878,50 @@ class Kernel:
 
         cm = ConfigManager(config_path)
         # Derive minimal kernel config
-        start_date = getattr(getattr(cm, "simulation", {}), "start_date", "now")
-        exchange_type = getattr(getattr(cm, "simulation", {}), "exchange_type", "SZSE")
-        kname = getattr(getattr(cm, "kernel", {}), "name", "sim")
+        sim = getattr(cm, "simulation", SimpleNamespace())
+        start_date = getattr(sim, "start_date", "now")
+        end_date = getattr(sim, "end_date", start_date)
+        exchange_type = getattr(sim, "exchange_type", "SZSE")
+        kcfg = getattr(cm, "kernel", SimpleNamespace())
+        kname = getattr(kcfg, "name", "sim")
+        # Build trading days range
+        try:
+            start_dt = pd.to_datetime(start_date).date()
+            end_dt = pd.to_datetime(end_date).date()
+            days = pd.date_range(start=start_dt, end=end_dt, freq="D").date.tolist()
+        except Exception:
+            days = [start_date]
+        # Extract exchange params from config if available
+        ex_params_conf = {}
+        try:
+            ex_params_conf = getattr(kcfg, "exchange_params")
+        except Exception:
+            pass
+        if not ex_params_conf:
+            try:
+                # try first exchange in list
+                ex0 = cm.exchanges[0]
+                p = ex0.get("params", {})
+                # support both names
+                ex_params_conf = {
+                    "ohlc_freq": p.get("log_ohlc_freq", p.get("ohlc_freq")),
+                    "lob_log_freq": p.get("log_lob_freq", p.get("lob_log_freq")),
+                    "lob_log_level": p.get("log_lob_level", p.get("lob_level", 5)),
+                }
+            except Exception:
+                ex_params_conf = {}
+
         cfg = {
             "name": kname,
             "start_date": f"{start_date} 09:30:00",
-            "trading_days": [start_date],
+            "trading_days": days,
             "exchange_type": exchange_type,
             "log_dir": f"log/{kname}",
+            "exchange_params": {
+                "ohlc_freq": ex_params_conf.get("ohlc_freq", "3s"),
+                "lob_log_level": ex_params_conf.get("lob_log_level", 5),
+                "lob_log_freq": ex_params_conf.get("lob_log_freq", "3s"),
+            },
         }
         kernel = cls(config=cfg)
         kernel.initialize()
@@ -874,14 +937,18 @@ class Kernel:
         # Build agents from config
         agent_cfgs = []
         try:
+            all_symbols = getattr(cm, "symbols", [])
             for a in cm.kernel.agents:
                 atype = a.get("type") or a.get("name") or "zero_intelligence"
                 if atype not in agents:
                     atype = "zero_intelligence"
+                params = a.get("params") or a.get("args") or {}
+                if atype == "zero_intelligence" and "initial_symbols" not in params:
+                    params["initial_symbols"] = list(all_symbols)
                 agent_cfgs.append({
                     "type": atype,
                     "num": a.get("num", 1),
-                    "params": a.get("params") or a.get("args") or {},
+                    "params": params,
                 })
         except Exception:
             # Fallback: one zero intelligence agent

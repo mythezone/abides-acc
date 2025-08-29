@@ -43,7 +43,12 @@ class BaseAgent:
         self.message_queue.put(message, recive_delay=delay)
 
     def wakeup_delay(self):
-        return np.random.randint(1000, 5000)
+        rng = getattr(self, "wakeup_ms_range", None)
+        if rng and isinstance(rng, (list, tuple)) and len(rng) == 2:
+            lo, hi = int(rng[0]), int(rng[1])
+            hi = max(hi, lo + 1)
+            return int(np.random.randint(lo, hi))
+        return int(np.random.randint(1000, 5000))
 
     def set_next_wakeup(self, current_time, intelver: int = -1):
         if intelver < 0:

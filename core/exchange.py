@@ -1,20 +1,32 @@
 from core.lob import LimitOrderBook
 from core.message import MessageType, new_message, Message
+from core.ohlc import OHLCAggregator
 from core.order import Order, LimitOrder, MarketOrder
 import pandas as pd
 import numpy as np
 
 
 class Exchange:
-    def __init__(self, symbols: dict):
+    def __init__(self, symbols: dict, logger=None, ohlc_freq: str = "3s", lob_log_level: int = 5, lob_log_freq: str = "3s"):
         self.symbols = symbols
         self.lob_dict = {
             symbol_name: LimitOrderBook(symbol_name) for symbol_name in symbols
         }
+        self.logger = logger
+        self.ohlc_freq = ohlc_freq
+        self.ohlc_by_symbol: dict[str, OHLCAggregator] = {}
+        self.lob_log_level = lob_log_level
+        # support special tick mode
+        self._lob_tick_mode = (str(lob_log_freq).lower() == "tick")
+        self.lob_log_delta = None if self._lob_tick_mode else pd.Timedelta(lob_log_freq)
+        self._last_lob_log: dict[str, pd.Timestamp] = {}
 
     def handle_message(self, message: Message):
         response_messages = []
         now = message.send_time
+        # PROC log for incoming message at Exchange
+        if self.logger is not None:
+            self.logger.kernel_message_log(message, stage="PROC")
 
         if message.message_type in (MessageType.LMT_ORDER, MessageType.MKT_ORDER, MessageType.SUBMIT_ORDER):
             # Accept generic SUBMIT_ORDER and type-specific LMT/MKT
@@ -58,6 +70,33 @@ class Exchange:
                             content={"trades": trades, "symbol": symbol},
                         )
                     )
+                # Update OHLC with last trade price or mid
+                price = None
+                if trades:
+                    price = float(trades[-1]["price"])
+                else:
+                    snap = self.lob_dict[symbol].snapshot_top_n(1)
+                    if snap["buy"] and snap["sell"]:
+                        bid = float(snap["buy"][0][0])
+                        ask = float(snap["sell"][0][0])
+                        price = round((bid + ask) / 2.0, 2)
+                if price is not None and self.logger is not None:
+                    if symbol not in self.ohlc_by_symbol:
+                        self.ohlc_by_symbol[symbol] = OHLCAggregator(symbol, self.ohlc_freq, self.logger)
+                    self.ohlc_by_symbol[symbol].update(now, price, volume=float(order.quantity))
+                # Periodic LOB log
+                if self.logger is not None:
+                    last = self._last_lob_log.get(symbol)
+                    should_log = False
+                    if self._lob_tick_mode:
+                        should_log = True
+                    else:
+                        if (last is None) or (now - last >= self.lob_log_delta):
+                            should_log = True
+                    if should_log:
+                        lob_csv = self.lob_dict[symbol].format_snapshot_csv(self.lob_log_level)
+                        self.logger.lob_log(symbol_name=symbol, kernel_time=now, level=self.lob_log_level, lob=lob_csv)
+                        self._last_lob_log[symbol] = now
         elif message.message_type == MessageType.CANCEL_ORDER:
             for req in message.content.get("requests", []):
                 symbol = req.get("symbol")

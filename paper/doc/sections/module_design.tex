@@ -260,6 +260,12 @@
     使用内存缓冲（batch buffer），仿真结束或达到写入阈值时统一刷写到 \texttt{log/} 目录下的运行子目录（例如 \texttt{log/run\_2025-01-01\_001/}）。
 \end{itemize}
 
+\paragraph{时间推进与交易时段}
+内核在取出下一条事件前将当前时间推进到该事件的 \verb|recive_time|，若此时不处于交易时段（如午休、收市或非交易日），内核将调用 \verb|skip_break()| 将当前时间跳转至下一个合法交易时段起点，并将该事件的 \verb|recive_time| 同步推前，以保持事件的时间一致性。多交易日由 \verb|trading_days| 控制，来源于配置中的 \verb|simulation.start\_date| 与 \verb|end\_date| 范围。
+
+\paragraph{OHLC 与 LOB 日志}
+交易所为每只股票维护基于频率的 OHLC 聚合器（默认 \verb|1s|），在发生成交或有可用中间价（mid）时更新并在切换窗口时输出开高低收；同时按指定频率（默认 \verb|3s|）记录 LOB 快照的前 \verb|N| 档（默认 \verb|N=5|）。两类日志合并写入核心日志文件，便于统一查看与解析。
+
 消息数据结构遵循 \texttt{Message} 定义，关键字段如下：
 \begin{itemize}
   \item \texttt{id}
