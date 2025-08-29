@@ -9,21 +9,9 @@ from core.kernel import Kernel
 
 
 def main():
-    today = pd.Timestamp.now().date()
-    cfg = {
-        "name": "demo",
-        "start_date": str(pd.Timestamp.combine(today, pd.Timestamp("09:30").time())),
-        "trading_days": [str(today)],
-        "exchange_type": "SZSE",
-    }
-    kernel = Kernel(config=cfg)
-    kernel.initialize()
-    kernel.init_agent(
-        [
-            {"type": "zero_intelligence", "num": 2, "params": {}},
-        ]
-    )
-    result = kernel.run(max_steps=500)
+    cfg_path = os.environ.get("SIM_CONFIG", os.path.join(os.path.dirname(__file__), "..", "config", "test.json"))
+    kernel = Kernel.from_config(cfg_path)
+    result = kernel.run(max_steps=1000)
     print("Demo finished:", result)
 
 

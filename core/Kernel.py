@@ -13,6 +13,7 @@ from core.message import MessageBox, MessageType, Message, MessageQueue, new_mes
 from core.agent import agents
 from core.clock import KernelClock
 from core.exchange import Exchange
+from core.logger import Logger
 
 from gui.component.agent_panel import AgentPanel
 
@@ -37,6 +38,10 @@ class Kernel:
         )
         # Minimal exchange with empty symbol universe, will grow on demand
         self.exchange = Exchange(symbols={})
+        # Init logger
+        ts = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
+        log_dir = self.config.get("log_dir", f"log/run_{ts}")
+        self.logger = Logger(log_dir)
 
     def init_agent(
         self,
@@ -59,7 +64,10 @@ class Kernel:
                 # Agent(id=id, type=agent_type, **args)
                 agent_id = f"{agent_type}_{id}"
                 self.agents[agent_id] = agent_class(
-                    id=agent_id, message_queue=self.message_queue, **args
+                    id=agent_id,
+                    message_queue=self.message_queue,
+                    logger=self.logger,
+                    **args,
                 )
                 if agent_panel:
                     agent_panel.update_agent(
@@ -789,6 +797,8 @@ class Kernel:
                 recive_time=start_time,
                 content={},
             )
+            # Log send
+            self.logger.kernel_message_log(wake, stage="SEND")
             self.message_queue.put(wake)
 
         steps = 0
@@ -805,6 +815,8 @@ class Kernel:
 
             # Pop next event by time
             msg = self.in_box.get()
+            # Log receive
+            self.logger.kernel_message_log(msg, stage="RECV")
             current_time = msg.recive_time
 
             # Route to recipient
@@ -818,6 +830,8 @@ class Kernel:
             elif rid == "Exchange":
                 responses = self.exchange.handle_message(msg)
                 for rsp in responses:
+                    # Log send
+                    self.logger.kernel_message_log(rsp, stage="SEND")
                     self.message_queue.put(rsp)
             else:
                 # Unknown recipient; drop or log
@@ -826,4 +840,51 @@ class Kernel:
             processed += 1
             steps += 1
 
+        # Flush logs
+        self.logger.save_log_to_file()
         return {"processed": processed, "steps": steps, "end_time": current_time}
+
+    @classmethod
+    def from_config(cls, config_path: str):
+        from core.config import ConfigManager
+
+        cm = ConfigManager(config_path)
+        # Derive minimal kernel config
+        start_date = getattr(getattr(cm, "simulation", {}), "start_date", "now")
+        exchange_type = getattr(getattr(cm, "simulation", {}), "exchange_type", "SZSE")
+        kname = getattr(getattr(cm, "kernel", {}), "name", "sim")
+        cfg = {
+            "name": kname,
+            "start_date": f"{start_date} 09:30:00",
+            "trading_days": [start_date],
+            "exchange_type": exchange_type,
+            "log_dir": f"log/{kname}",
+        }
+        kernel = cls(config=cfg)
+        kernel.initialize()
+        # Initialize exchange symbol universe if provided
+        try:
+            symbols = getattr(cm, "symbols", [])
+            for sym in symbols:
+                if sym not in kernel.exchange.lob_dict:
+                    from core.lob import LimitOrderBook
+                    kernel.exchange.lob_dict[sym] = LimitOrderBook(sym)
+        except Exception:
+            pass
+        # Build agents from config
+        agent_cfgs = []
+        try:
+            for a in cm.kernel.agents:
+                atype = a.get("type") or a.get("name") or "zero_intelligence"
+                if atype not in agents:
+                    atype = "zero_intelligence"
+                agent_cfgs.append({
+                    "type": atype,
+                    "num": a.get("num", 1),
+                    "params": a.get("params") or a.get("args") or {},
+                })
+        except Exception:
+            # Fallback: one zero intelligence agent
+            agent_cfgs = [{"type": "zero_intelligence", "num": 1, "params": {}}]
+        kernel.init_agent(agent_cfgs)
+        return kernel

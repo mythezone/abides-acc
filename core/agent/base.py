@@ -3,6 +3,8 @@ import numpy as np
 
 from typing import List, TYPE_CHECKING
 from core.message import Message, MessageType, MessageQueue, new_message
+from typing import Optional
+from core.logger import Logger
 
 if TYPE_CHECKING:
     from core.kernel import Kernel
@@ -14,6 +16,7 @@ class BaseAgent:
         id,
         *args,
         message_queue: MessageQueue = None,
+        logger: Optional[Logger] = None,
         location: List[float] = None,
         **kwargs,
     ):
@@ -22,6 +25,7 @@ class BaseAgent:
         self.inbox = []
         self.args = args
         self.current_time = None
+        self.logger = logger
 
         if location:
             self.location = location
@@ -33,6 +37,9 @@ class BaseAgent:
 
     def send(self, message: Message, delay=0):
         # Align with MessageQueue.put(message, recive_delay=...)
+        if self.logger:
+            # Log the sending event (stage=SEND)
+            self.logger.kernel_message_log(message, stage="SEND")
         self.message_queue.put(message, recive_delay=delay)
 
     def wakeup_delay(self):

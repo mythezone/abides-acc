@@ -6,6 +6,7 @@ import pandas as pd
 from core.message import Message
 from io import StringIO
 import os
+from typing import Union
 
 
 class MemoryHandler(logging.Handler):
@@ -84,18 +85,29 @@ class Logger(metaclass=Singleton):
             "kernel": logging.getLogger("Kernel"),
             "ohlc": logging.getLogger("OHLC"),
         }
-        self.memory_handler = MemoryHandler()
-        # 使用自定义的同步文件 Handler
+        # keep all handlers for flushing
+        self._handlers = []
 
         for logger_name, logger in self.loggers.items():
             if logger_name == "exchange":
                 formatter = logging.Formatter(
                     "%(kernel_time)s - %(name)s - %(type_)s - %(message)s"
                 )
+                h = MemoryHandler()
+                h.setFormatter(formatter)
+                logger.addHandler(h)
+                logger.setLevel(logging.INFO)
+                self._handlers.append(h)
             elif logger_name == "kernel":
+                # Detailed message flow log: time, stage, type, sender->recipient, content
                 formatter = logging.Formatter(
-                    "%(recive_time)s - %(mtype_name)s - Agent %(sender_id)s - %(msg)s"
+                    "%(recive_time)s - %(stage)s - %(mtype_name)s - from %(sender_id)s to %(recipient_id)s - %(msg)s"
                 )
+                h = MemoryHandler()
+                h.setFormatter(formatter)
+                logger.addHandler(h)
+                logger.setLevel(logging.INFO)
+                self._handlers.append(h)
             elif logger_name == "ohlc":
                 self.ohlc_handler = MemoryHandler()
                 formatter = logging.Formatter(
@@ -104,25 +116,32 @@ class Logger(metaclass=Singleton):
                 self.ohlc_handler.setFormatter(formatter)
                 logger.addHandler(self.ohlc_handler)
                 logger.setLevel(logging.INFO)
+                self._handlers.append(self.ohlc_handler)
 
             elif logger_name == "lob":
                 self.lob_handler = MemoryHandler()
                 formatter = logging.Formatter(
                     "%(symbol_name)s,%(kernel_time)s,%(level)s,%(lob)s"
                 )
-
+                self.lob_handler.setFormatter(formatter)
+                logger.addHandler(self.lob_handler)
+                logger.setLevel(logging.INFO)
+                self._handlers.append(self.lob_handler)
             else:
+                # default
                 formatter = logging.Formatter(
                     "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
                 )
-            self.memory_handler.setFormatter(formatter)
-            logger.addHandler(self.memory_handler)
-            logger.setLevel(logging.INFO)
+                h = MemoryHandler()
+                h.setFormatter(formatter)
+                logger.addHandler(h)
+                logger.setLevel(logging.INFO)
+                self._handlers.append(h)
 
     def ohlc_log(
         self,
         symbol_name: str,
-        kernel_time: str | pd.Timestamp,
+        kernel_time: Union[str, pd.Timestamp],
         open_: float,
         high: float,
         low: float,
@@ -146,7 +165,7 @@ class Logger(metaclass=Singleton):
         )
 
     def exchange_log(
-        self, message: str, kernel_time: str | pd.Timestamp, type_: str = "INIT"
+        self, message: str, kernel_time: Union[str, pd.Timestamp], type_: str = "INIT"
     ):
         """
         记录交易所日志。
@@ -158,8 +177,13 @@ class Logger(metaclass=Singleton):
         )
 
     def kernel_log(self, message: Message):
+        """兼容旧接口：仅记录消息接收。"""
+        self.kernel_message_log(message, stage="RECV")
+
+    def kernel_message_log(self, message: Message, stage: str = "RECV"):
         """
-        记录内核日志。
+        记录一条消息的流转日志。
+        stage: SEND | RECV | PROC 等
         """
         msg = str(message.content)
         self.loggers["kernel"].info(
@@ -168,11 +192,13 @@ class Logger(metaclass=Singleton):
                 "recive_time": self.iso_time_format(message.recive_time),
                 "mtype_name": message.message_type.name,
                 "sender_id": message.sender_id,
+                "recipient_id": getattr(message, "recipient_id", "-"),
+                "stage": stage,
             },
         )
 
     def lob_log(
-        self, symbol_name: str, kernel_time: str | pd.Timestamp, level: int, lob: str
+        self, symbol_name: str, kernel_time: Union[str, pd.Timestamp], level: int, lob: str
     ):
         """
         记录 LOB 日志。
@@ -188,7 +214,7 @@ class Logger(metaclass=Singleton):
         )
 
     @staticmethod
-    def iso_time_format(time: str | pd.Timestamp) -> str:
+    def iso_time_format(time: Union[str, pd.Timestamp]) -> str:
         """
         格式化时间戳为 ISO 格式。
         """
@@ -201,18 +227,12 @@ class Logger(metaclass=Singleton):
         """
         将内存中的日志保存到文件。
         """
-        # save log to file.
+        # save all handlers to the primary log file
         with open(self.log_file, "a") as file:
-            file.write(self.memory_handler.get_logs())
-            self.memory_handler.clear_logs()
-
-        with open(self.ohlc_file, "a") as file:
-            file.write(self.ohlc_handler.get_logs())
-            self.ohlc_handler.clear_logs()
-
-        with open(self.lob_file, "a") as file:
-            file.write(self.lob_handler.get_logs())
-            self.lob_handler.clear_logs()
+            for h in self._handlers:
+                if isinstance(h, MemoryHandler):
+                    file.write(h.get_logs())
+                    h.clear_logs()
 
     @staticmethod
     def format_lob_header(level: int = 5):

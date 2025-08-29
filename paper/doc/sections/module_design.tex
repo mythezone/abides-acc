@@ -239,6 +239,44 @@
 自校准模块监测仿真过程中的市场统计特征，并自动调整背景代理行为以逼近预定指标。
 内核UML如图~\ref{fig:uml_calibration}所示。
 
+\subsection{MVP 日志与消息格式}
+
+为支持快速调试与可观测性，本版本实现了细粒度的消息流转日志：
+
+\begin{itemize}
+  \item \textbf{日志颗粒度：}
+    记录每一条消息的接收时间 \texttt{recive\_time}、阶段 \texttt{stage}（SEND/RECV/PROC）、类型 \texttt{message\_type}、发送方 \texttt{sender\_id}、接收方 \texttt{recipient\_id} 以及消息体摘要（摘要可以是 JSON/简短字符串或哈希）。
+  \item \textbf{输出格式：}
+    核心日志文件 \texttt{log/log.csv} 每行一条，示例如下（单独一行，便于阅读与复制）：
+\begin{verbatim}
+2025-01-01T09:30:00.000000 - RECV - SUBMIT_ORDER - from A to Exchange - {"order_id":"O123","symbol":"XYZ","side":"BUY","qty":100}
+\end{verbatim}
+  \item \textbf{接入点：}
+    \begin{itemize}
+      \item 内核在消息入队（SEND）、出队（RECV）以及交易所处理生成响应时（SEND）记录；
+      \item 代理在主动发送消息时（SEND）记录。
+    \end{itemize}
+  \item \textbf{持久化：}
+    使用内存缓冲（batch buffer），仿真结束或达到写入阈值时统一刷写到 \texttt{log/} 目录下的运行子目录（例如 \texttt{log/run\_2025-01-01\_001/}）。
+\end{itemize}
+
+消息数据结构遵循 \texttt{Message} 定义，关键字段如下：
+\begin{itemize}
+  \item \texttt{id}
+  \item \texttt{message\_type}
+  \item \texttt{sender\_id}
+  \item \texttt{recipient\_id}
+  \item \texttt{send\_time}
+  \item \texttt{recive\_time}（事件调度优先级）
+  \item \texttt{content}（订单请求、行情快照等业务负载）
+\end{itemize}
+
+为便于统一构造，提供辅助函数（示例签名）：
+\begin{verbatim}
+new_message(message_type, sender_id, recipient_id, send_time, content, recive_time=None)
+\end{verbatim}
+该函数自动生成 \texttt{id}，若未传入 \texttt{recive\_time} 则默认 \texttt{recive\_time = send\_time}。
+
 \begin{figure}[htbp]
   \centering
   \resizebox{\linewidth}{!}{\input{figures/uml/uml_calibration.tex}}
