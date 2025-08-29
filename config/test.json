@@ -22,12 +22,12 @@
         },
         "agents": [
             {
-                "num": 2,
+                "num": 20,
                 "type": "zero_intelligence",
                 "params": {"wakeup_ms_range": [50, 120]}
             },
             {
-                "num": 1,
+                "num": 10,
                 "type": "base",
                 "params": {}
             }

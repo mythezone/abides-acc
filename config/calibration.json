@@ -1,0 +1,26 @@
+{
+  "simulation": {
+    "start_date": "2005-05-09",
+    "end_date": "2005-05-09",
+    "exchange_type": "SZSE"
+  },
+  "kernel": {
+    "name": "CalibrationRun",
+    "exchange_params": {
+      "workers": 8,
+      "ohlc_freq": "3s",
+      "lob_log_freq": "3s"
+    },
+    "agents": [
+      {"type": "zero_intelligence", "num": 2, "params": {"wakeup_ms_range": [50, 120], "agent_log_freq": "3s"}}
+    ]
+  },
+  "calibration": {
+    "enabled": true,
+    "source_log_dir": "log/Testing Simulation",
+    "output_dir": "log/CalibrationRun",
+    "use_lob": true
+  },
+  "symbols": ["000001", "000002", "000004", "000006", "000008", "000009", "000010", "000011", "000012", "000016"]
+}
+

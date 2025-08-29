@@ -49,6 +49,12 @@ class MessageType(Enum):
     LOG_OHLC = 41
     LOG_TICK = 42
 
+    # Oracle related
+    ORACLE_QUERY_LOB = 50
+    ORACLE_QUERY_OHLC = 51
+    ORACLE_RESPONSE_LOB = 52
+    ORACLE_RESPONSE_OHLC = 53
+
 
 @total_ordering
 @dataclass
@@ -89,7 +95,7 @@ class MessageBox:
             recipient_id=message.recipient_id,
             send_time=message.send_time,
             recive_time=adjusted_time,
-            content=message.content.copy(),
+            content=message.content,
         )
         self.messages.put(adjusted_message)
 
@@ -116,6 +122,7 @@ class MessageQueue:
 
     def put(self, message: Message, recive_delay=0):
         adjusted_time = message.recive_time + pd.Timedelta(milliseconds=recive_delay)
+        # Avoid copying content for performance; messages should be treated as immutable
         adjusted_message = Message(
             id=message.id,
             message_type=message.message_type,
@@ -123,7 +130,7 @@ class MessageQueue:
             recipient_id=message.recipient_id,
             send_time=message.send_time,
             recive_time=adjusted_time,
-            content=message.content.copy(),
+            content=message.content,
         )
         self.mp_queue.put(adjusted_message)
 

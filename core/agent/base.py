@@ -29,7 +29,16 @@ class BaseAgent:
         self.current_time = None
         self.logger = logger
         initial_cash = float(kwargs.pop("initial_cash", 1_000_000))
+        self.agent_log_freq = kwargs.pop("agent_log_freq", "tick")
+        try:
+            self._agent_log_delta = None if str(self.agent_log_freq).lower() == "tick" else pd.Timedelta(str(self.agent_log_freq))
+        except Exception:
+            self._agent_log_delta = None
+        self._agent_log_last: Optional[pd.Timestamp] = None
         self.portfolio = Portfolio(initial_cash=initial_cash)
+        # Calibration flags
+        self.calibration_mode: bool = bool(kwargs.pop("calibration_mode", False))
+        self.oracle_id: Optional[str] = kwargs.pop("oracle_id", None)
 
         if location:
             self.location = location
@@ -86,20 +95,42 @@ class BaseAgent:
                         self.portfolio.apply_trade(symbol, "sell", price, qty)
                 # After applying, log snapshot
                 if self.logger:
-                    tv = self.portfolio.current_total_value()
-                    self.logger.agent_log(
-                        self.id,
-                        m.recive_time,
-                        cash=self.portfolio.cash,
-                        total_value=tv,
-                        positions=self.portfolio.holdings,
-                    )
+                    should_log = False
+                    if self._agent_log_delta is None:
+                        should_log = True
+                    else:
+                        if self._agent_log_last is None or (m.recive_time - self._agent_log_last) >= self._agent_log_delta:
+                            should_log = True
+                    if should_log:
+                        tv = self.portfolio.current_total_value()
+                        self.logger.agent_log(
+                            self.id,
+                            m.recive_time,
+                            cash=self.portfolio.cash,
+                            total_value=tv,
+                            positions=self.portfolio.holdings,
+                        )
+                        self._agent_log_last = m.recive_time
             else:
                 remaining.append(m)
         self.inbox = remaining
 
     def action(self):
         pass
+
+    def request_oracle(self, symbol: str, kind: str = "lob"):
+        if not self.calibration_mode or not self.oracle_id:
+            return
+        mtype = MessageType.ORACLE_QUERY_LOB if kind == "lob" else MessageType.ORACLE_QUERY_OHLC
+        msg = new_message(
+            message_type=mtype,
+            sender_id=self.id,
+            recipient_id=self.oracle_id,
+            send_time=self.current_time,
+            recive_time=self.current_time,
+            content={"symbol": symbol, "time": str(self.current_time)},
+        )
+        self.send(msg)
 
     def wakeup(self, current_time):
         self.current_time = current_time

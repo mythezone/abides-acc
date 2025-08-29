@@ -239,6 +239,25 @@
 自校准模块监测仿真过程中的市场统计特征，并自动调整背景代理行为以逼近预定指标。
 内核UML如图~\ref{fig:uml_calibration}所示。
 
+\paragraph{Oracle Agent（权威信息源）}
+OracleAgent 负责读取上一轮仿真生成的历史日志（\verb|log/<run>/<SYMBOL>/{ohlc.csv,lob.csv}|），在校准模式下应答来自其它代理的查询请求，从而提供“已知未来”的参考路径。消息接口：
+\begin{itemize}
+  \item \verb|ORACLE_QUERY_LOB|/\verb|ORACLE_QUERY_OHLC|：请求给定 \verb|symbol| 在 \verb|time|（或其后最近时间）处的 LOB/OHLC 快照。
+  \item \verb|ORACLE_RESPONSE_LOB|/\verb|ORACLE_RESPONSE_OHLC|：返回查询结果。
+\end{itemize}
+
+\paragraph{校准模式}
+内核在读取配置（见 \verb|config/calibration.json|）后，若 \verb|calibration.enabled=true|，则：
+\begin{itemize}
+  \item 初始化 OracleAgent，并将 \verb|oracle_id| 传递给所有代理；
+  \item 所有代理在校准模式下可选择性地向 Oracle 请求下一时刻的 LOB/OHLC；
+  \item 代理可据此在最佳价/中间价附近生成订单，促使撮合结果逼近历史轨迹；
+  \item 本轮仿真的输出写入 \verb|calibration.output_dir| 以便后续对比。
+\end{itemize}
+
+\paragraph{对比与评估}
+基于两轮仿真日志，可比较价格路径、点差、成交量等指标，计算误差并绘制对比曲线。可新增脚本以加载两轮 \verb|ohlc.csv|/\verb|lob.csv|，按时间对齐后输出误差统计，绘图采用 matplotlib（可选）。
+
 \subsection{MVP 日志与消息格式}
 
 为支持快速调试与可观测性，本版本实现了细粒度的消息流转日志：

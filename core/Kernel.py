@@ -42,16 +42,36 @@ class Kernel:
         ts = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
         log_dir = self.config.get("log_dir", f"log/run_{ts}")
         self.logger = Logger(log_dir)
+        # Optionally disable main message log to reduce IO
+        if self.config.get("disable_main_log", False):
+            self.logger.disable_main_log = True
 
         # Minimal exchange with empty symbol universe, will grow on demand
         ex_params = self.config.get("exchange_params", {})
         self.exchange = Exchange(
             symbols={},
             logger=self.logger,
-            ohlc_freq=ex_params.get("ohlc_freq", "1s"),
+            ohlc_freq=ex_params.get("ohlc_freq", "3s"),
             lob_log_level=ex_params.get("lob_log_level", 5),
             lob_log_freq=ex_params.get("lob_log_freq", "3s"),
+            workers=ex_params.get("workers", 10),
+            out_queue=self.message_queue,
         )
+        # Oracle agent in calibration mode
+        calib = self.config.get("calibration", {})
+        self.oracle = None
+        if calib.get("enabled", False):
+            try:
+                from core.agent.oracle import OracleAgent
+                src_dir = calib.get("source_log_dir")
+                self.oracle = OracleAgent(
+                    id="Oracle",
+                    message_queue=self.message_queue,
+                    logger=self.logger,
+                    source_log_dir=src_dir,
+                )
+            except Exception:
+                self.oracle = None
 
     def init_agent(
         self,
@@ -60,6 +80,7 @@ class Kernel:
         progress: Progress = None,
         task=None,
     ):
+        agent_log_freq = self.config.get("agent_log_freq", "tick")
         for config in agent_config:
             # accept either 'type' or legacy 'name'
             agent_type = config.get("type") or config.get("name")
@@ -67,6 +88,10 @@ class Kernel:
             agent_num = config.get("num", 1)
             # accept either 'params' or legacy 'args'
             args: Dict = config.get("params") or config.get("args") or {}
+            args.setdefault("agent_log_freq", agent_log_freq)
+            if self.oracle is not None:
+                args.setdefault("calibration_mode", True)
+                args.setdefault("oracle_id", "Oracle")
             for id in range(agent_num):
                 if progress and task:
                     progress.update(task, advance=1)
@@ -862,8 +887,13 @@ class Kernel:
                     self.logger.kernel_message_log(rsp, stage="SEND")
                     self.message_queue.put(rsp)
             else:
-                # Unknown recipient; drop or log
-                pass
+                if self.oracle and rid == "Oracle":
+                    # Let oracle handle
+                    self.logger.kernel_message_log(msg, stage="PROC")
+                    self.oracle.receive(msg)
+                else:
+                    # Unknown recipient; drop or log
+                    pass
 
             processed += 1
             steps += 1
@@ -895,6 +925,9 @@ class Kernel:
         ex_params_conf = {}
         try:
             ex_params_conf = getattr(kcfg, "exchange_params")
+            # Normalize SimpleNamespace to dict
+            if isinstance(ex_params_conf, SimpleNamespace):
+                ex_params_conf = vars(ex_params_conf)
         except Exception:
             pass
         if not ex_params_conf:
@@ -921,8 +954,23 @@ class Kernel:
                 "ohlc_freq": ex_params_conf.get("ohlc_freq", "3s"),
                 "lob_log_level": ex_params_conf.get("lob_log_level", 5),
                 "lob_log_freq": ex_params_conf.get("lob_log_freq", "3s"),
+                "workers": ex_params_conf.get("workers", 0),
             },
+            "calibration": {},
         }
+        # Optional calibration settings embedded in config
+        try:
+            calib = getattr(cm, "calibration")
+            if isinstance(calib, SimpleNamespace):
+                calib = vars(calib)
+            if isinstance(calib, dict):
+                cfg["calibration"] = calib
+                # allow override of log_dir for calibration output
+                out_dir = calib.get("output_dir")
+                if out_dir:
+                    cfg["log_dir"] = out_dir
+        except Exception:
+            pass
         kernel = cls(config=cfg)
         kernel.initialize()
         # Initialize exchange symbol universe if provided
@@ -931,6 +979,7 @@ class Kernel:
             for sym in symbols:
                 if sym not in kernel.exchange.lob_dict:
                     from core.lob import LimitOrderBook
+
                     kernel.exchange.lob_dict[sym] = LimitOrderBook(sym)
         except Exception:
             pass
@@ -945,11 +994,13 @@ class Kernel:
                 params = a.get("params") or a.get("args") or {}
                 if atype == "zero_intelligence" and "initial_symbols" not in params:
                     params["initial_symbols"] = list(all_symbols)
-                agent_cfgs.append({
-                    "type": atype,
-                    "num": a.get("num", 1),
-                    "params": params,
-                })
+                agent_cfgs.append(
+                    {
+                        "type": atype,
+                        "num": a.get("num", 1),
+                        "params": params,
+                    }
+                )
         except Exception:
             # Fallback: one zero intelligence agent
             agent_cfgs = [{"type": "zero_intelligence", "num": 1, "params": {}}]

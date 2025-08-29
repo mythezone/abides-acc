@@ -1,4 +1,5 @@
 import logging
+import threading
 
 from joblib import Memory
 from core.base import Singleton
@@ -69,6 +70,8 @@ class Logger(metaclass=Singleton):
         self.log_folder = log_folder
         os.makedirs(self.log_folder, exist_ok=True)
         self.log_file = os.path.join(self.log_folder, "log.csv")
+        self._file_lock = threading.Lock()
+        self.disable_main_log = False
 
         with open(self.log_file, "w") as file:
             file.write("time,stage,type,sender,recipient,content\n")
@@ -154,10 +157,8 @@ class Logger(metaclass=Singleton):
         volume: float,
     ):
         ohlc_path, _ = self._ensure_symbol_paths(symbol_name)
-        with open(ohlc_path, "a") as f:
-            line = (
-                f"{self.iso_time_format(kernel_time)},{open_:.2f},{high:.2f},{low:.2f},{close:.2f},{int(volume)}\n"
-            )
+        with self._file_lock, open(ohlc_path, "a") as f:
+            line = f"{self.iso_time_format(kernel_time)},{open_:.2f},{high:.2f},{low:.2f},{close:.2f},{int(volume)}\n"
             f.write(line)
 
     def exchange_log(
@@ -205,7 +206,7 @@ class Logger(metaclass=Singleton):
         if os.path.getsize(lob_path) == 0:
             with open(lob_path, "w") as f:
                 f.write(self.format_lob_header(level=level))
-        with open(lob_path, "a") as f:
+        with self._file_lock, open(lob_path, "a") as f:
             f.write(f"{self.iso_time_format(kernel_time)},{lob}\n")
 
     @staticmethod
@@ -223,11 +224,12 @@ class Logger(metaclass=Singleton):
         将内存中的日志保存到文件。
         """
         # save all handlers to the primary log file (message flow)
-        with open(self.log_file, "a") as file:
-            for h in self._handlers:
-                if isinstance(h, MemoryHandler):
-                    file.write(h.get_logs())
-                    h.clear_logs()
+        if not self.disable_main_log:
+            with open(self.log_file, "a") as file:
+                for h in self._handlers:
+                    if isinstance(h, MemoryHandler):
+                        file.write(h.get_logs())
+                        h.clear_logs()
 
     def _ensure_agent_path(self, agent_id: str) -> str:
         adir = os.path.join(self.log_folder, "agents")
@@ -245,10 +247,8 @@ class Logger(metaclass=Singleton):
             pos_str = json.dumps(positions, ensure_ascii=False, separators=(",", ":"))
         except Exception:
             pos_str = str(positions)
-        with open(apath, "a") as f:
-            f.write(
-                f"{self.iso_time_format(kernel_time)},{cash:.2f},{total_value:.2f},{pos_str}\n"
-            )
+        with self._file_lock, open(apath, "a") as f:
+            f.write(f"{self.iso_time_format(kernel_time)},{cash:.2f},{total_value:.2f},{pos_str}\n")
 
     @staticmethod
     def format_lob_header(level: int = 5):

@@ -44,7 +44,7 @@ def get_rss_bytes() -> int:
             return 0
 
 
-def inject_orders(kernel: Kernel, symbols, start_time: pd.Timestamp, orders: int, rate_per_sec: int, price_min=10.0, price_max=100.0):
+def inject_orders(kernel: Kernel, symbols, start_time: pd.Timestamp, orders: int, rate_per_sec: int, price_min=10.0, price_max=100.0, virtual_agents: int = 0):
     # Spread orders uniformly across simulation window determined by orders/rate
     sim_duration_sec = orders / max(1, rate_per_sec)
     for i in range(orders):
@@ -53,10 +53,11 @@ def inject_orders(kernel: Kernel, symbols, start_time: pd.Timestamp, orders: int
         side = random.choice(["buy", "sell"])  # introduce both sides
         qty = random.randint(1, 100)
         price = round(random.uniform(price_min, price_max), 2)
+        agent_id = "STRESS" if virtual_agents <= 0 else f"A{(i % virtual_agents):06d}"
         order = {
             "type": "limit_order",
             "symbol": sym,
-            "agent_id": "STRESS",
+            "agent_id": agent_id,
             "timestamp": str(ts),
             "side": side,
             "quantity": qty,
@@ -93,6 +94,9 @@ def main():
 
     # Build kernel from config
     kernel = Kernel.from_config(kernel_cfg_path)
+    # Disable main log if requested
+    if stress_cfg.get("disable_main_log", False):
+        kernel.logger.disable_main_log = True
 
     # Reduce agent noise for stress: if any agents exist, we let them be; this script injects main load
     start_time = kernel.clock.now()
@@ -111,9 +115,13 @@ def main():
     ex_params = kernel.config.get("exchange_params", {})
     ohlc_freq = stress_cfg.get("ohlc_freq", ex_params.get("ohlc_freq", "3s"))
     lob_freq = stress_cfg.get("lob_log_freq", ex_params.get("lob_log_freq", "3s"))
+    workers = int(stress_cfg.get("exchange_workers", ex_params.get("workers", 0)))
     kernel.exchange.ohlc_freq = ohlc_freq
     kernel.exchange._lob_tick_mode = str(lob_freq).lower() == "tick"
     kernel.exchange.lob_log_delta = None if kernel.exchange._lob_tick_mode else pd.Timedelta(lob_freq)
+    if workers and workers > 0 and kernel.exchange.workers == 0:
+        # Reinitialize workers if originally disabled (simple approach: no dynamic restart; warn)
+        print(f"[warn] exchange workers were {kernel.exchange.workers}, requested {workers}. Restart recommended.")
 
     # Baseline memory
     rss_before = get_rss_bytes()
@@ -127,6 +135,7 @@ def main():
         start_time=start_time,
         orders=sample_orders,
         rate_per_sec=orders_per_sec,
+        virtual_agents=int(stress_cfg.get("virtual_agents", 0)),
     )
 
     # Run kernel until queues drain

@@ -1,0 +1,37 @@
+{
+  "simulation": {
+    "seed": 1234,
+    "version": "v0.0.1",
+    "start_date": "2005-05-09",
+    "end_date": "2005-05-09",
+    "exchange_type": "SZSE"
+  },
+  "kernel": {
+    "name": "Testing Simulation",
+    "seed": 1234,
+    "type": "default",
+    "exchange_params": {
+      "workers": 10,
+      "ohlc_freq": "3s",
+      "lob_log_freq": "3s",
+      "lob_log_level": 5
+    },
+    "agents": [
+      {
+        "num": 2,
+        "type": "zero_intelligence",
+        "params": {"wakeup_ms_range": [50, 120]}
+      },
+      {
+        "num": 1,
+        "type": "base",
+        "params": {}
+      }
+    ]
+  },
+  "symbols": [
+    "000001", "000002", "000004", "000006", "000008", "000009",
+    "000010", "000011", "000012", "000016"
+  ]
+}
+
