@@ -1,0 +1,14 @@
+\begin{tikzpicture}
+  \begin{umlpackage}{DataManagement}
+    \umlclass[x=0,y=0]{DataSourceManager}{sources : list}{registerSource(name, datasource) \ getSource(name)}
+    % Place concrete data sources further apart horizontally and lower to improve spacing.
+    \umlclass[x=-7,y=-4]{MarketDataSource}{format : string \ dataPath : string}{loadData(start, end) \ getTick(time)}
+    \umlclass[x=7,y=-4]{SyntheticGenerator}{model : string}{generateSeries(length, params) \ generateOrderStream(params)}
+    \umlclass[x=0,y=-8]{DataInterface}{}{query(asset, fields, start, end) \ subscribe(stream, callback) \ getEventHistory(asset, since)}
+  \end{umlpackage}
+  % Composition: DataSourceManager contains concrete sources
+  \umlunicompo{DataSourceManager}{MarketDataSource}
+  \umlunicompo{DataSourceManager}{SyntheticGenerator}
+  % Association: DataInterface uses DataSourceManager
+  \umlassoc[geometry=|-]{DataInterface}{DataSourceManager}
+\end{tikzpicture}

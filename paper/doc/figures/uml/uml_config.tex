@@ -1,0 +1,11 @@
+\begin{tikzpicture}
+  \begin{umlpackage}{ConfigExperiment}
+    % Spread classes further apart vertically for clarity.
+    \umlclass[x=0,y=0]{ConfigParser}{}{parse(filePath) \\ override(cliArgs)}
+    \umlclass[x=0,y=-4]{ExperimentManager}{}{setupExperiment(config) \\ run() \\ teardown()}
+    \umlclass[x=0,y=-8]{ParameterSweeper}{}{generateExperiments() \\ submitJobs(manager)}
+  \end{umlpackage}
+  % Associations: ExperimentManager uses ConfigParser; ParameterSweeper uses ExperimentManager
+  \umlassoc{ExperimentManager}{ConfigParser}
+  \umlassoc{ParameterSweeper}{ExperimentManager}
+\end{tikzpicture}

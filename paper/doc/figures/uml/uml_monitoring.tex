@@ -1,0 +1,9 @@
+\begin{tikzpicture}
+  \begin{umlpackage}{MonitoringLogging}
+    % Spread monitoring classes evenly across the x-axis for better spacing.
+    \umlclass[x=-8,y=0]{EventLogger}{}{logEvent(event) \\ flush()}
+    \umlclass[x=0,y=0]{PerformanceMonitor}{}{startMonitoring() \\ getMetrics()}
+    \umlclass[x=8,y=0]{MetricCollector}{}{collect(orderBook, trades) \\ report(target)}
+  \end{umlpackage}
+  % There are no explicit relations among these classes in this module.
+\end{tikzpicture}

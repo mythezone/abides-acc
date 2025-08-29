@@ -1,0 +1,17 @@
+\begin{tikzpicture}
+  \begin{umlpackage}{AgentFramework}
+    % Base agent class
+    % Increase vertical and horizontal spacing to avoid overlaps when scaling the diagram.
+    \umlclass[x=0,y=0]{BaseAgent}{cash : float \\ positions : dict \\ orders : dict}{observeMarket() \\ placeOrder(order) \\ cancelOrder(id) \\ updatePortfolio(report)}
+    % Derived agent classes placed farther apart
+    \umlclass[x=-9,y=-5]{TraderAgent}{strategyParams : dict \\ marketView : Data}{decideActions()}
+    \umlclass[x=-3,y=-5]{MarketMaker}{spread : float}{updateQuotes() \\ manageInventory()}
+    \umlclass[x=3,y=-5]{RLAgent}{policyNetwork : Model \\ replayBuffer : Buffer}{selectAction(state) \\ trainOnBatch(batch)}
+    \umlclass[x=9,y=-5]{BackgroundAgent}{arrivalRate : float \\ orderSizeDist : Distribution \\ priceSkew : float}{generateOrder() \\ adjustParameters(newParams)}
+  \end{umlpackage}
+  % Inheritance relationships
+  \umlinherit{TraderAgent}{BaseAgent}
+  \umlinherit{MarketMaker}{BaseAgent}
+  \umlinherit{RLAgent}{BaseAgent}
+  \umlinherit{BackgroundAgent}{BaseAgent}
+\end{tikzpicture}

@@ -1,0 +1,11 @@
+\begin{tikzpicture}
+  \begin{umlpackage}{CalibrationSystem}
+    \umlclass[x=0,y=0]{CalibrationManager}{targetMetrics : dict \\ currentMetrics : dict}{collectMetrics() \\ computeAdjustments() \\ applyAdjustments()}
+    % Place collaborators further apart and lower on the y axis to avoid overlap when scaled.
+    \umlclass[x=-6,y=-5]{MetricMonitor}{metrics : dict}{update(orderBook, trades) \\ getMetric(name)}
+    \umlclass[x=6,y=-5]{ParameterController}{}{adjustArrivalRate(agent, delta) \\ adjustOrderSize(agent, delta) \\ adjustPriceSkew(agent, delta)}
+  \end{umlpackage}
+  % Composition relationships
+  \umlunicompo{CalibrationManager}{MetricMonitor}
+  \umlunicompo{CalibrationManager}{ParameterController}
+\end{tikzpicture}

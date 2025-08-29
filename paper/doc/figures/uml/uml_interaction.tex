@@ -1,0 +1,21 @@
+\begin{tikzpicture}
+  % Interaction classes (spread horizontally for clarity)
+  \umlclass[x=-12,y=0]{APIService}{}{submitOrder(request) \\ getMarketSnapshot() \\ injectStrategy(agentId, strategySpec) \\ subscribe()}
+  \umlclass[x=-4,y=0]{CLI}{}{runSimulation(configPath) \\ status() \\ injectPolicy(agentId, policyFile)}
+  \umlclass[x=4,y=0]{WebUI}{}{displayOrderBook() \\ displayAgentPnL() \\ adjustStrategy(agentId, newParams)}
+  \umlclass[x=12,y=0]{LoggingAnalysis}{}{analyzeLogs() \\ exportReports()}
+
+  % Service classes for dependency demonstration (align with interaction classes)
+  \umlclass[x=-12,y=-5]{AgentFrameworkService}{}{}
+  \umlclass[x=-4,y=-5]{ConfigExperimentService}{}{}
+  \umlclass[x=4,y=-5]{DataManagementService}{}{}
+  \umlclass[x=12,y=-5]{MonitoringLoggingService}{}{}
+
+  % Associations to indicate dependencies (uses)
+  \umlassoc{APIService}{AgentFrameworkService}
+  \umlassoc{APIService}{DataManagementService}
+  \umlassoc{CLI}{ConfigExperimentService}
+  \umlassoc{WebUI}{DataManagementService}
+  \umlassoc{WebUI}{MonitoringLoggingService}
+  \umlassoc{LoggingAnalysis}{MonitoringLoggingService}
+\end{tikzpicture}

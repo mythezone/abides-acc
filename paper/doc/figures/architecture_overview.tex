@@ -1,57 +1,31 @@
-%\tikzset{every picture/.style={line width=0.85pt}}
-% Architecture overview diagram for the full-scale market simulator.
-% This file defines a standalone TikZ picture that can be included
-% in your LaTeX document via \input.
-
-\begin{tikzpicture}[node distance=0.6cm, font=\small]
-
-  % Define styles for layers and components
-  % Layer width increased to 15cm to accommodate five equal-width components
-  \tikzstyle{layer}=[draw, rounded corners=2mm, thick, fill=blue!10, minimum width=15cm, minimum height=2.5cm]
-  \tikzstyle{componentBlue}=[draw, rounded corners=2mm, thick, fill=blue!30, minimum width=3cm, minimum height=1cm, align=center]
-  % All service components have uniform width for better alignment
-  \tikzstyle{componentGreen}=[draw, rounded corners=2mm, thick, fill=green!30, minimum width=3cm, minimum height=1cm, align=center]
-  \tikzstyle{componentOrange}=[draw, rounded corners=2mm, thick, fill=orange!30, minimum width=4.5cm, minimum height=1.2cm, align=center]
-  \tikzstyle{layerLabel}=[font=\bfseries]
-
-  % Top layer: Interaction and monitoring
-  \node[layer] (layer_ui) at (0,6) {};
-  \node[layerLabel] at (layer_ui.north west) [anchor=north west, xshift=0.15cm, yshift=-0.15cm] {交互与监控层};
-  % Components in top layer (reordered: API, Visualization, Logs, CLI)
-  \node[componentBlue] (api) at (-4.5,6) {程序化接口\\Programmatic API};
-  \node[componentBlue] (viz) at (-1.5,6) {可视化\\Web UI};
-  \node[componentBlue] (analytics) at (1.5,6) {日志与分析};
-  \node[componentBlue] (cli) at (4.5,6) {CLI / 脚本};
-
-  % Middle layer: Service support
-  \node[layer] (layer_service) at (0,3.5) {};
-  \node[layerLabel] at (layer_service.north west) [anchor=north west, xshift=0.15cm, yshift=-0.15cm] {服务支撑层};
-  % Components in middle layer (reordered: Agent, Data, Config, Monitoring, Calibration)
-  \node[componentGreen] (agents) at (-6,3.5) {代理框架\\Agent Framework};
-  \node[componentGreen] (data) at (-3,3.5) {数据管理\\Data Mgmt};
-  \node[componentGreen] (config) at (0,3.5) {配置与实验\\Config \& Exp};
-  \node[componentGreen] (monitoring) at (3,3.5) {监控与日志\\Monitoring};
-  \node[componentGreen] (calib) at (6,3.5) {自校准系统\\Calibration};
-
-  % Bottom layer: Core simulation
-  \node[layer] (layer_core) at (0,1) {};
-  \node[layerLabel] at (layer_core.north west) [anchor=north west, xshift=0.15cm, yshift=-0.15cm] {核心仿真层};
-  % Components in bottom layer
-  \node[componentOrange] (kernel) at (3.0,1) {仿真内核\\Simulation Kernel};
-  \node[componentOrange] (market) at (-3.0,1) {市场环境\\Market Environment\\(交易所、订单簿、拍卖、跨资产)};
-
-  % Connections from top to middle layer
-  \draw[->, thick] (api.south) -- ++(0,-0.4) -| (agents.north);
-  \draw[->, thick] (viz.south) -- ++(0,-0.4) -| (data.north);
-  \draw[->, thick] (analytics.south) -- ++(0,-0.4) -| (monitoring.north);
-  \draw[->, thick] (cli.south) -- ++(0,-0.4) -| (calib.north);
-
-  % Connections from middle to bottom layer
-  % Agents, Data, Monitoring and Calibration connect to the Kernel, Config connects to the Market
-  \draw[->, thick] (agents.south) -- ++(0,-0.4) -| (kernel.north);
-  \draw[->, thick] (data.south) -- ++(0,-0.4) -| (kernel.north);
-  \draw[->, thick] (config.south) -- ++(0,-0.4) -| (market.north);
-  \draw[->, thick] (monitoring.south) -- ++(0,-0.4) -| (kernel.north);
-  \draw[->, thick] (calib.south) -- ++(0,-0.4) -| (kernel.north);
-
+\begin{tikzpicture}
+  % Main simulator component as a container for internal modules
+  \begin{umlcomponent}{FullScaleSimulator}
+    % Internal modules arranged in two columns; y‑coordinates provide
+    % vertical separation to avoid overlap when the diagram is enlarged.
+    \umlbasiccomponent[x=-8,y=2]{AgentFramework}
+    \umlbasiccomponent[x=-8,y=-1]{DataMgmt}
+    \umlbasiccomponent[x=-8,y=-4]{ConfigExp}
+    \umlbasiccomponent[x=8,y=2]{Monitoring}
+    \umlbasiccomponent[x=8,y=-1]{Calibration}
+    % Core simulation and market environment placed centrally at the bottom
+    \umlbasiccomponent[x=0,y=-3]{SimulationKernel}
+    \umlbasiccomponent[x=0,y=-6]{MarketEnvironment}
+  \end{umlcomponent}
+  % External components positioned above the simulator container
+  \umlbasiccomponent[x=-9,y=8]{ProgrammaticAPI}
+  \umlbasiccomponent[x=-3,y=8]{WebUI}
+  \umlbasiccomponent[x=3,y=8]{LogsAnalysis}
+  \umlbasiccomponent[x=9,y=8]{CLI}
+  % Connect external components to the corresponding internal modules
+  \umlVHVassemblyconnector[interface=API AF, with port]{ProgrammaticAPI}{AgentFramework}
+  \umlVHVassemblyconnector[interface=WebUI Data, with port]{WebUI}{DataMgmt}
+  \umlVHVassemblyconnector[interface=Logs Mon, with port]{LogsAnalysis}{Monitoring}
+  \umlVHVassemblyconnector[interface=CLI Calib, with port]{CLI}{Calibration}
+  % Connect internal modules to the core simulation and market environment
+  \umlVHVassemblyconnector[interface=AF Kernel, with port]{AgentFramework}{SimulationKernel}
+  \umlVHVassemblyconnector[interface=Data Kernel, with port]{DataMgmt}{SimulationKernel}
+  \umlVHVassemblyconnector[interface=Mon Kernel, with port]{Monitoring}{SimulationKernel}
+  \umlVHVassemblyconnector[interface=Calib Kernel, with port]{Calibration}{SimulationKernel}
+  \umlVHVassemblyconnector[interface=Config Market, with port]{ConfigExp}{MarketEnvironment}
 \end{tikzpicture}

@@ -5,6 +5,14 @@
 \subsection{核心仿真内核模块}
 
 核心仿真内核负责统一协调事件的调度、时间推进和消息传递，是系统的运行核心。本模块的设计目标是保证仿真精确性、可并行性和高吞吐量。
+内核UML如图~\ref{fig:uml_core}所示。
+
+\begin{figure}[htbp]
+  \centering
+  \resizebox{0.7\linewidth}{!}{\input{figures/uml/uml_core.tex}}
+  \caption{核心仿真层 UML 类图}
+  \label{fig:uml_core}
+\end{figure}
 
 \subsubsection{功能描述}
 \begin{itemize}
@@ -147,6 +155,14 @@
 \subsection{智能体框架模块}
 
 智能体框架提供一套抽象基类和工具，支持用户实现多种交易策略并参与仿真。
+智能体框架的UML类图如图~\ref{fig:uml_agent}所示。
+
+\begin{figure}[htbp]
+  \centering
+  \resizebox{\linewidth}{!}{\input{figures/uml/uml_agent.tex}}
+  \caption{智能体框架 UML 类图}
+  \label{fig:uml_agent}
+\end{figure}
 
 \subsubsection{功能描述}
 \begin{itemize}
@@ -221,6 +237,14 @@
 \subsection{自校准模块}
 
 自校准模块监测仿真过程中的市场统计特征，并自动调整背景代理行为以逼近预定指标。
+内核UML如图~\ref{fig:uml_calibration}所示。
+
+\begin{figure}[htbp]
+  \centering
+  \resizebox{\linewidth}{!}{\input{figures/uml/uml_calibration.tex}}
+  \caption{自校准模块 UML 类图}
+  \label{fig:uml_calibration}
+\end{figure}
 
 \subsubsection{功能描述}
 \begin{itemize}
@@ -275,6 +299,15 @@
 \subsection{数据管理模块}
 
 数据管理模块提供历史数据、实时数据的加载和统一访问接口，还支持生成合成数据。
+数据管理模块的UML如图~\ref{fig:uml_data}所示。
+
+\begin{figure}[htbp]
+  \centering
+  \resizebox{\linewidth}{!}{\input{figures/uml/uml_data.tex}}
+  \caption{数据管理模块 UML 类图}
+  \label{fig:uml_data}
+\end{figure}
+
 
 \subsubsection{功能描述}
 \begin{itemize}
@@ -337,6 +370,14 @@
 \subsection{配置与实验管理模块}
 
 配置与实验管理模块负责读取实验配置、初始化仿真环境以及管理实验运行。
+配置与实验管理模块的UML如图~\ref{fig:uml_config}所示。
+
+\begin{figure}[htbp]
+  \centering
+  \resizebox{0.25\linewidth}{!}{\input{figures/uml/uml_config.tex}}
+  \caption{配置与实验管理模块 UML 类图}
+  \label{fig:uml_config}
+\end{figure}
 
 \subsubsection{功能描述}
 \begin{itemize}
@@ -434,6 +475,14 @@ API 层可使用 FastAPI 或 gRPC 实现，高并发场景下可部署在异步 
 \subsection{监控与日志模块}
 
 该模块用于记录仿真过程中的事件和性能信息，并提供可视化。
+监控与日志模块的UML如图~\ref{fig:uml_monitoring}所示。
+
+\begin{figure}[htbp]
+  \centering
+  \resizebox{0.8\linewidth}{!}{\input{figures/uml/uml_monitoring.tex}}
+  \caption{监控与日志模块 UML 类图}
+  \label{fig:uml_monitoring}
+\end{figure}
 
 \subsubsection{功能描述}
 \begin{itemize}
@@ -484,3 +533,11 @@ API 层可使用 FastAPI 或 gRPC 实现，高并发场景下可部署在异步 
 \subsection{模块间关系与整体协作}
 
 各模块之间通过消息和接口协作：仿真内核调度代理和市场环境执行事件；市场环境将成交信息反馈给代理；数据管理和监控模块为代理及自校准模块提供数据支持；自校准模块动态调整背景代理行为；配置与实验管理负责初始化并控制仿真；接口模块则是用户与系统的桥梁。通过上述明确的分工和接口设计，系统结构清晰、易于维护和扩展。
+模块间的关系如图~\ref{fig:uml_interaction}所示。
+
+\begin{figure}[htbp]
+  \centering
+  \resizebox{0.9\linewidth}{!}{\input{figures/uml/uml_interaction.tex}}
+  \caption{模块间关系 UML 类图}
+  \label{fig:uml_interaction}
+\end{figure}

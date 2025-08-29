@@ -1,0 +1,23 @@
+\begin{tikzpicture}
+  \begin{umlpackage}{Core}
+    % Classes in the Core package
+    % Adjusted positions to enlarge the diagram and avoid overlap
+    \umlclass[x=0,y=0]{SimulationKernel}{scheduler : EventScheduler \\ bus : MessageBus}{registerComponent() \\ startSimulation() \\ postEvent(event)}
+    % Increase spacing: place EventScheduler and MessageBus further apart horizontally and lower on the y-axis
+    \umlclass[x=-8,y=-6]{EventScheduler}{eventQueue : list \\ currentTime : float}{schedule(event) \\ runUntil(time)}
+    \umlclass[x=8,y=-6]{MessageBus}{subscribers : dict}{subscribe(topic, handler) \\ publish(topic, message)}
+    \umlclass[x=0,y=-12]{ExchangeManager}{exchanges : dict}{addExchange(name, exchange) \\ getExchange(name) \\ isTrading(time)}
+    \umlclass[x=0,y=-18]{Exchange}{orderBooks : dict \\ matchingEngine : MatchingEngine \\ auctionMechanism : AuctionMechanism}{placeOrder(order) \\ cancelOrder(id) \\ match() \\ auction()}
+    % Bottom layer: order-related components spaced widely across x-axis and lowered to avoid overlap when diagram is scaled
+    \umlclass[x=-8,y=-24]{OrderBook}{bids : list \\ asks : list}{addOrder(order) \\ removeOrder(id) \\ bestBid() \\ bestAsk()}
+    \umlclass[x=0,y=-24]{MatchingEngine}{}{match(orderBook) \\ runAuction(orderBook)}
+    \umlclass[x=8,y=-24]{AuctionMechanism}{}{calculateClearingPrice(orderBook) \\ allocateTrades(orderBook, price)}
+  \end{umlpackage}
+  % Composition relationships
+  \umlunicompo{SimulationKernel}{EventScheduler}
+  \umlunicompo{SimulationKernel}{MessageBus}
+  \umlunicompo{ExchangeManager}{Exchange}
+  \umlunicompo{Exchange}{OrderBook}
+  \umlunicompo{Exchange}{MatchingEngine}
+  \umlunicompo{Exchange}{AuctionMechanism}
+\end{tikzpicture}
