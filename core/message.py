@@ -4,7 +4,8 @@ import pandas as pd
 from functools import total_ordering
 from dataclasses import dataclass, field
 from queue import PriorityQueue
-from typing import List, Dict, Any
+from typing import Any, Dict, Optional
+from uuid import uuid4
 
 
 def worker_put_message(queue, msg, delay):
@@ -131,3 +132,29 @@ class MessageQueue:
 
     def empty_raw(self):
         return self.mp_queue.empty()
+
+
+def new_message(
+    *,
+    message_type: MessageType,
+    sender_id: str,
+    recipient_id: str,
+    send_time: pd.Timestamp,
+    recive_time: Optional[pd.Timestamp] = None,
+    content: Optional[Dict[str, Any]] = None,
+) -> Message:
+    """Helper to create a Message with a generated id and default recive_time.
+
+    Ensures consistent field names (recive_time) across the codebase.
+    """
+    if recive_time is None:
+        recive_time = send_time
+    return Message(
+        id=str(uuid4()),
+        message_type=message_type,
+        sender_id=sender_id,
+        recipient_id=recipient_id,
+        send_time=send_time,
+        recive_time=recive_time,
+        content=content or {},
+    )

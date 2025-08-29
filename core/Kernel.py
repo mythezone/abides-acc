@@ -9,9 +9,10 @@ from rich.progress import Progress
 from rich.panel import Panel
 
 
-from core.message import MessageBox, MessageType, Message, MessageQueue
+from core.message import MessageBox, MessageType, Message, MessageQueue, new_message
 from core.agent import agents
 from core.clock import KernelClock
+from core.exchange import Exchange
 
 from gui.component.agent_panel import AgentPanel
 
@@ -34,6 +35,8 @@ class Kernel:
             trading_days=self.config.get("trading_days", []),
             exchange=self.config.get("exchange_type", "SZSE"),
         )
+        # Minimal exchange with empty symbol universe, will grow on demand
+        self.exchange = Exchange(symbols={})
 
     def init_agent(
         self,
@@ -43,11 +46,12 @@ class Kernel:
         task=None,
     ):
         for config in agent_config:
-
-            agent_type = config["type"]
+            # accept either 'type' or legacy 'name'
+            agent_type = config.get("type") or config.get("name")
             agent_class = agents[agent_type]
-            agent_num = config["num"]
-            args: Dict = config["params"]
+            agent_num = config.get("num", 1)
+            # accept either 'params' or legacy 'args'
+            args: Dict = config.get("params") or config.get("args") or {}
             for id in range(agent_num):
                 if progress and task:
                     progress.update(task, advance=1)
@@ -772,3 +776,54 @@ class Kernel:
             msg = self.in_box.get()
             # TODO: dispatch or handle message as needed
             print(f"Processing message: {msg}")
+
+    def run(self, max_steps: int = 10000):
+        # Seed first wakeups for all agents
+        start_time = self.clock.now()
+        for agent_id in self.agents.keys():
+            wake = new_message(
+                message_type=MessageType.WAKEUP,
+                sender_id=agent_id,
+                recipient_id=agent_id,
+                send_time=start_time,
+                recive_time=start_time,
+                content={},
+            )
+            self.message_queue.put(wake)
+
+        steps = 0
+        processed = 0
+        current_time = start_time
+
+        while steps < max_steps:
+            # Drain inter-process queue into local box
+            while not self.message_queue.empty_raw():
+                self.in_box.put(self.message_queue.get_raw())
+
+            if self.in_box.empty():
+                break
+
+            # Pop next event by time
+            msg = self.in_box.get()
+            current_time = msg.recive_time
+
+            # Route to recipient
+            rid = msg.recipient_id
+            if rid in self.agents:
+                agent = self.agents[rid]
+                if msg.message_type == MessageType.WAKEUP:
+                    agent.wakeup(current_time)
+                else:
+                    agent.receive(msg)
+            elif rid == "Exchange":
+                responses = self.exchange.handle_message(msg)
+                for rsp in responses:
+                    self.message_queue.put(rsp)
+            else:
+                # Unknown recipient; drop or log
+                pass
+
+            processed += 1
+            steps += 1
+
+        return {"processed": processed, "steps": steps, "end_time": current_time}

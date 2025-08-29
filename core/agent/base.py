@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 from typing import List, TYPE_CHECKING
-from core.message import Message, MessageType, MessageQueue
+from core.message import Message, MessageType, MessageQueue, new_message
 
 if TYPE_CHECKING:
     from core.kernel import Kernel
@@ -32,7 +32,8 @@ class BaseAgent:
             setattr(self, key, value)
 
     def send(self, message: Message, delay=0):
-        self.message_queue.put((message, delay))
+        # Align with MessageQueue.put(message, recive_delay=...)
+        self.message_queue.put(message, recive_delay=delay)
 
     def wakeup_delay(self):
         return np.random.randint(1000, 5000)
@@ -42,13 +43,13 @@ class BaseAgent:
             intelver = self.wakeup_delay()
 
         wakeup_time = current_time + pd.Timedelta(milliseconds=intelver)
-        msg = Message(
+        msg = new_message(
             message_type=MessageType.WAKEUP,
             sender_id=self.id,
             recipient_id=self.id,
             send_time=current_time,
-            receive_time=wakeup_time,
-            content=None,
+            recive_time=wakeup_time,
+            content={},
         )
         self.send(msg)
 
