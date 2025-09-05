@@ -1,0 +1,30 @@
+\begin{tikzpicture}[node distance=18mm,>=latex]
+  % Styles
+  \tikzstyle{var}=[circle, draw=black, minimum size=6mm, inner sep=0pt]
+  \tikzstyle{lbl}=[font=\small]
+
+  % Chain A->B->C
+  \node[var] (A1) {A};
+  \node[var, right=of A1] (B1) {B};
+  \node[var, right=of B1] (C1) {C};
+  \draw[->] (A1) -- (B1);
+  \draw[->] (B1) -- (C1);
+  \node[below=2mm of B1,lbl] {链式：央行沟通 \(\to\) 利率预期 \(\to\) 银行估值};
+
+  % Fork A<-B->C
+  \node[var, below=18mm of A1] (A2) {A};
+  \node[var, below=18mm of B1] (B2) {B};
+  \node[var, below=18mm of C1] (C2) {C};
+  \draw[->] (B2) -- (A2);
+  \draw[->] (B2) -- (C2);
+  \node[below=2mm of B2,lbl] {叉式：宏观增长 \(\to\) 风险偏好与成交量};
+
+  % Collider A->C<-B
+  \node[var, below=18mm of A2] (A3) {A};
+  \node[var, below=18mm of B2] (C3) {C};
+  \node[var, below=18mm of C2] (B3) {B};
+  \draw[->] (A3) -- (C3);
+  \draw[->] (B3) -- (C3);
+  \node[below=2mm of C3,lbl] {对撞：私募能力/投行关系 \(\to\) 顶级定增入围（选择偏差）};
+\end{tikzpicture}
+

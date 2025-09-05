@@ -1,63 +1,57 @@
 {
-    "simulation": {
-        "seed": 1234,
-        "version": "v0.0.1",
-        "start_date": "2005-05-09",
-        "end_date": "2006-05-12",
-        "market_table_mode": "simple",
-        "night_trading": false,
-        "exchange_type": "SZSE"
+  "simulation": {
+    "start_date": "2005-05-09 09:20:00",
+    "end_date": "2005-05-09",
+    "exchange_type": "SZSE"
+  },
+  "kernel": {
+    "name": "Testing Simulation",
+    "exchange_params": {
+      "ohlc_freq": "3s",
+      "lob_log_freq": "3s",
+      "lob_log_level": 10,
+      "workers": 0,
+      "fee_rate": 0.0003,
+      "t_plus_one": true,
+      "price_limit_pct": 0.1,
+      "initial_positions": {},
+      "opening_call": true
     },
-
-    "kernel": {
-        "name": "Testing Simulation",
-        "seed": 1234,
-        "type": "default",
-        "params": {
-            "log_level": "info",
-            "max_agents": 100
-        },
-        "logger": {
-            
-        },
-        "agents": [
-            {
-                "num": 20,
-                "type": "zero_intelligence",
-                "params": {"wakeup_ms_range": [50, 120]}
-            },
-            {
-                "num": 10,
-                "type": "base",
-                "params": {}
-            }
-        ]
+    "agent_positions": {
+      "mode": "random",
+      "min_shares": 100,
+      "max_shares": 2000,
+      "min_cash": 100000,
+      "max_cash": 1000000
     },
-    
-    "exchanges": [
-        {
-            "id": 1,
-            "type": "stock_exchange",
-            "params": {
-                "name": "NYSE",
-                "trading_hours": {"start": "09:30", "end": "16:00"},
-                "tick_size": 0.01,
-                "log_ohlc_freq": "3s",
-                "log_lob_freq": "3s",
-                "log_lob_level": 5
-            }
-        }
-    ],
-    "symbols": [
-        "000001",
-        "000002",
-        "000004",
-        "000006",
-        "000008",
-        "000009",
-        "000010",
-        "000011",
-        "000012",
-        "000016"
+    "agents": [
+      {
+        "num": 2,
+        "type": "zero_intelligence",
+        "params": { "wakeup_ms_range": [50, 120], "auction_wakeup_ms_range": [400, 800] }
+      },
+      {
+        "num": 10,
+        "type": "background",
+        "params": { "wakeup_ms_range": [30, 80], "auction_wakeup_ms_range": [300, 600] }
+      },
+      {
+        "num": 10,
+        "type": "base",
+        "params": {}
+      }
     ]
+  },
+  "symbols": [
+    "000001",
+    "000002",
+    "000004",
+    "000006",
+    "000008",
+    "000009",
+    "000010",
+    "000011",
+    "000012",
+    "000016"
+  ]
 }

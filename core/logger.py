@@ -137,12 +137,16 @@ class Logger(metaclass=Singleton):
         os.makedirs(sdir, exist_ok=True)
         ohlc_path = os.path.join(sdir, "ohlc.csv")
         lob_path = os.path.join(sdir, "lob.csv")
+        preopen_path = os.path.join(sdir, "preopen.csv")
         if not os.path.exists(ohlc_path):
             with open(ohlc_path, "w") as f:
                 f.write("kernel_time,open,high,low,close,volume\n")
         if not os.path.exists(lob_path):
             with open(lob_path, "w") as f:
                 # Default header for 5 levels; caller should keep consistent
+                f.write(self.format_lob_header(level=5))
+        if not os.path.exists(preopen_path):
+            with open(preopen_path, "w") as f:
                 f.write(self.format_lob_header(level=5))
         return ohlc_path, lob_path
 
@@ -182,6 +186,11 @@ class Logger(metaclass=Singleton):
         记录一条消息的流转日志。
         stage: SEND | RECV | PROC 等
         """
+        # Reduce volume: only log allowed stages (default only RECV)
+        if not hasattr(self, "kernel_allowed_stages"):
+            self.kernel_allowed_stages = {"RECV"}
+        if stage not in self.kernel_allowed_stages:
+            return
         try:
             import json
             msg = json.dumps(message.content, ensure_ascii=False, separators=(",", ":"))
@@ -207,6 +216,19 @@ class Logger(metaclass=Singleton):
             with open(lob_path, "w") as f:
                 f.write(self.format_lob_header(level=level))
         with self._file_lock, open(lob_path, "a") as f:
+            f.write(f"{self.iso_time_format(kernel_time)},{lob}\n")
+
+    def preopen_log(
+        self, symbol_name: str, kernel_time: Union[str, pd.Timestamp], level: int, lob: str
+    ):
+        sdir = os.path.join(self.log_folder, symbol_name)
+        os.makedirs(sdir, exist_ok=True)
+        preopen_path = os.path.join(sdir, "preopen.csv")
+        # If level differs from default header, rewrite header once
+        if not os.path.exists(preopen_path) or os.path.getsize(preopen_path) == 0:
+            with open(preopen_path, "w") as f:
+                f.write(self.format_lob_header(level=level))
+        with self._file_lock, open(preopen_path, "a") as f:
             f.write(f"{self.iso_time_format(kernel_time)},{lob}\n")
 
     @staticmethod

@@ -37,7 +37,8 @@ class OracleAgent(BaseAgent):
                 try:
                     df = pd.read_csv(ohlc_path)
                     if "kernel_time" in df.columns:
-                        df["kernel_time"] = pd.to_datetime(df["kernel_time"]) 
+                        df["kernel_time"] = pd.to_datetime(df["kernel_time"]).astype('datetime64[ns]')
+                        df = df.sort_values("kernel_time").reset_index(drop=True)
                         self.ohlc[sym] = df
                 except Exception:
                     pass
@@ -45,7 +46,8 @@ class OracleAgent(BaseAgent):
                 try:
                     df = pd.read_csv(lob_path)
                     if "kernel_time" in df.columns:
-                        df["kernel_time"] = pd.to_datetime(df["kernel_time"]) 
+                        df["kernel_time"] = pd.to_datetime(df["kernel_time"]).astype('datetime64[ns]')
+                        df = df.sort_values("kernel_time").reset_index(drop=True)
                         self.lob[sym] = df
                 except Exception:
                     pass
@@ -91,4 +93,3 @@ class OracleAgent(BaseAgent):
                 content={"symbol": symbol, "lob": data},
             )
             self.send(rsp)
-

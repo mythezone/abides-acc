@@ -93,15 +93,20 @@ class LimitOrderBook:
             # Note: Actual heap cleanup not done here (for simplicity)
 
     def snapshot_top_n(self, n=5):
-        def extract_top(heap, is_buy):
-            sorted_heap = sorted(heap, reverse=is_buy)
-            return [
-                (abs(price), order.quantity) for price, _, _, order in sorted_heap[:n]
-            ]
-
+        # For snapshots, derive price from order and ensure correct ordering:
+        # - Buys: highest price first
+        # - Sells: lowest price first
+        buys = sorted(
+            [(entry[3].price if hasattr(entry[3], "price") else -entry[0], entry[3].quantity) for entry in self.buy_heap],
+            key=lambda x: -float(x[0])
+        )[:n]
+        sells = sorted(
+            [(entry[3].price if hasattr(entry[3], "price") else entry[0], entry[3].quantity) for entry in self.sell_heap],
+            key=lambda x: float(x[0])
+        )[:n]
         return {
-            "buy": extract_top(self.buy_heap, is_buy=True),
-            "sell": extract_top(self.sell_heap, is_buy=False),
+            "buy": buys,
+            "sell": sells,
         }
 
     def format_snapshot_csv(self, n=5):

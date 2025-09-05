@@ -12,6 +12,14 @@ class ZeroIntelligenceAgent(BaseAgent):
         self.subscribed_symbols: List[str] = (initial_symbols or [])[:]
 
     def action(self):
+        # Detect SZSE pre-open auction window (09:15-09:25)
+        preopen = False
+        try:
+            to = pd.to_datetime(self.current_time).time()
+            preopen = (pd.Timestamp("09:15").time() <= to < pd.Timestamp("09:25").time())
+        except Exception:
+            preopen = False
+
         if not self.subscribed_symbols:
             n = int(np.random.randint(1, 5))
             request = {"type": "query_symbols", "n": n}
@@ -25,6 +33,43 @@ class ZeroIntelligenceAgent(BaseAgent):
             )
             self.send(msg)
         else:
+            # Pre-open auction: submit fewer limit orders, avoid market orders and cancellations
+            if preopen:
+                selected = list(np.random.choice(self.subscribed_symbols, int(np.random.randint(1, 3)), replace=False))
+                reqs = []
+                for symbol in selected:
+                    side = np.random.choice(["buy", "sell"]) 
+                    # only allow sell if we have inventory
+                    inv = int(self.portfolio.holdings.get(symbol, 0))
+                    if side == "sell" and inv <= 0:
+                        side = "buy"
+                    quantity = int(np.random.randint(1, 50))
+                    if side == "sell" and inv > 0:
+                        quantity = max(1, min(quantity, inv))
+                    price = round(float(np.random.uniform(10, 100)), 2)
+                    order = {
+                        "type": "limit_order",
+                        "symbol": symbol,
+                        "agent_id": self.id,
+                        "timestamp": str(self.current_time),
+                        "side": side,
+                        "quantity": quantity,
+                        "price": price,
+                    }
+                    # Skip zero-quantity sells
+                    if side != "sell" or quantity > 0:
+                        reqs.append(order)
+                if reqs:
+                    msg = new_message(
+                        message_type=MessageType.SUBMIT_ORDER,
+                        sender_id=self.id,
+                        recipient_id="Exchange",
+                        send_time=self.current_time,
+                        recive_time=self.current_time,
+                        content={"requests": reqs},
+                    )
+                    self.send(msg)
+                return
             # Calibration mode: query oracle first, optionally craft orders around oracle snapshot
             if getattr(self, "calibration_mode", False) and self.oracle_id:
                 sym = str(np.random.choice(self.subscribed_symbols))
@@ -32,12 +77,17 @@ class ZeroIntelligenceAgent(BaseAgent):
                 # orders will be sent after oracle response is processed
                 return
             # Normal mode: batch multiple orders into a single message to reduce overhead
-            batch_sz = int(np.random.randint(1, min(5, len(self.subscribed_symbols)) + 1))
+            batch_sz = int(np.random.randint(1, min(10, len(self.subscribed_symbols)) + 1))
             selected = list(np.random.choice(self.subscribed_symbols, batch_sz, replace=False))
             reqs = []
             for symbol in selected:
                 side = np.random.choice(["buy", "sell"]) 
+                inv = int(self.portfolio.holdings.get(symbol, 0))
+                if side == "sell" and inv <= 0:
+                    side = "buy"
                 quantity = int(np.random.randint(1, 100))
+                if side == "sell" and inv > 0:
+                    quantity = max(1, min(quantity, inv))
                 price = round(float(np.random.uniform(10, 100)), 2)
                 order_type = np.random.choice(["limit_order", "market_order"])
                 order = {
@@ -50,7 +100,8 @@ class ZeroIntelligenceAgent(BaseAgent):
                 }
                 if order_type == "limit_order":
                     order["price"] = price
-                reqs.append(order)
+                if side != "sell" or quantity > 0:
+                    reqs.append(order)
             msg = new_message(
                 message_type=MessageType.SUBMIT_ORDER,
                 sender_id=self.id,
@@ -96,21 +147,61 @@ class ZeroIntelligenceAgent(BaseAgent):
                     if best_ask is not None and best_bid is not None:
                         mid = round((best_ask + best_bid) / 2.0, 2)
                         # Place small aggressive orders around oracle implied levels
+                        # buy leg
                         reqs.append({
                             "type": "limit_order", "symbol": symbol, "agent_id": self.id,
                             "timestamp": str(self.current_time), "side": "buy", "quantity": int(np.random.randint(1, 50)),
                             "price": best_bid
                         })
-                        reqs.append({
-                            "type": "limit_order", "symbol": symbol, "agent_id": self.id,
-                            "timestamp": str(self.current_time), "side": "sell", "quantity": int(np.random.randint(1, 50)),
-                            "price": best_ask
-                        })
+                        # sell leg only if inventory is available
+                        inv = int(self.portfolio.holdings.get(symbol, 0))
+                        if inv > 0:
+                            qty = max(1, min(int(np.random.randint(1, 50)), inv))
+                            reqs.append({
+                                "type": "limit_order", "symbol": symbol, "agent_id": self.id,
+                                "timestamp": str(self.current_time), "side": "sell", "quantity": qty,
+                                "price": best_ask
+                            })
+                        # mid buy
                         reqs.append({
                             "type": "limit_order", "symbol": symbol, "agent_id": self.id,
                             "timestamp": str(self.current_time), "side": "buy", "quantity": int(np.random.randint(1, 20)),
                             "price": mid
                         })
+                except Exception:
+                    pass
+                if reqs:
+                    msg = new_message(
+                        message_type=MessageType.SUBMIT_ORDER,
+                        sender_id=self.id,
+                        recipient_id="Exchange",
+                        send_time=self.current_time,
+                        recive_time=self.current_time,
+                        content={"requests": reqs},
+                    )
+                    self.send(msg)
+            elif m.message_type == MessageType.ORACLE_RESPONSE_OHLC and isinstance(m.content, dict):
+                data = m.content.get("ohlc") or {}
+                symbol = m.content.get("symbol")
+                reqs = []
+                try:
+                    close = data.get("close") or data.get("close")
+                    if close is not None and close != "":
+                        close = float(close)
+                        # place buy/sell around close
+                        reqs.append({
+                            "type": "limit_order", "symbol": symbol, "agent_id": self.id,
+                            "timestamp": str(self.current_time), "side": "buy", "quantity": int(np.random.randint(1, 50)),
+                            "price": close
+                        })
+                        inv = int(self.portfolio.holdings.get(symbol, 0))
+                        if inv > 0:
+                            qty = max(1, min(int(np.random.randint(1, 50)), inv))
+                            reqs.append({
+                                "type": "limit_order", "symbol": symbol, "agent_id": self.id,
+                                "timestamp": str(self.current_time), "side": "sell", "quantity": qty,
+                                "price": close
+                            })
                 except Exception:
                     pass
                 if reqs:

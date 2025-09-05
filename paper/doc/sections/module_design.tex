@@ -617,3 +617,15 @@ API 层可使用 FastAPI 或 gRPC 实现，高并发场景下可部署在异步 
   \caption{模块间关系 UML 类图}
   \label{fig:uml_interaction}
 \end{figure}
+% Added: SZSE opening call auction (initial version)
+\paragraph{SZSE 开盘集合竞价流程（初版）}
+为贴合交易所特性，我们在 \verb|SZSEExchange| 中实现了开盘集合竞价的基本机制：
+\begin{itemize}
+  \item 时间阶段：09:15--09:20 可申报且可撤单；09:20--09:25 可申报不可撤单；09:25 进行集中撮合以形成开盘价；09:30 起进入连续竞价（与午间休市相同的分段仍沿用 \verb|EXCHANGE_SESSIONS|）。
+  \item 报单处理：在集合竞价窗口内，订单进入预开盘订单簿（不进入连续竞价 LOB）；撤单仅在 09:15--09:20 阶段允许。
+  \item 开盘定价与撮合：09:25 时，对每只股票在限价集合上遍历候选价格，选择撮合量最大的价格，若有并列，优先最小不平衡度；在该价位按“价高优先/价低优先 + 时间优先”的规则撮合生成成交；未成交的限价单转入连续竞价订单簿。
+  \item 费用与限制：成交时收取手续费（\verb|fee_rate|），同时继续支持 T+1 与涨跌幅限制（限价单在有参考价时校验）。
+\end{itemize}
+
+\paragraph{Agent 在集合竞价阶段的策略差异}
+基础策略在集合竞价窗口（09:15--09:25）下单频率下降（\verb|auction_wakeup_ms_range|），并以限价单为主，避免使用市价单；开盘后恢复常规节奏（\verb|wakeup_ms_range|）。该策略接口位于 \verb|BaseAgent| （动态调整唤醒间隔）与 \verb|ZeroIntelligenceAgent|（在集合竞价阶段仅限价报单）。

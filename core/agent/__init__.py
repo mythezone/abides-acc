@@ -1,6 +1,7 @@
 from core.agent.base import BaseAgent
 from core.agent.zero_intelligence import ZeroIntelligenceAgent
 from core.agent.oracle import OracleAgent
+from core.agent.background import BackgroundAgent
 
 # from agent.trading_agent import TradingAgent
 # from agent.noise_agent import NoiseAgent
@@ -14,6 +15,7 @@ agents = {
     "base": BaseAgent,
     "zero_intelligence": ZeroIntelligenceAgent,
     "oracle": OracleAgent,
+    "background": BackgroundAgent,
     # "trading": TradingAgent,
     # "noise": NoiseAgent,
     # "value": ValueAgent,
@@ -27,6 +29,7 @@ __all__ = [
     "BaseAgent",
     "ZeroIntelligenceAgent",
     "OracleAgent",
+    "BackgroundAgent",
     # "TradingAgent",
     # "NoiseAgent",
     # "ValueAgent",

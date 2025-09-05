@@ -56,7 +56,20 @@ class BaseAgent:
         self.message_queue.put(message, recive_delay=delay)
 
     def wakeup_delay(self):
-        rng = getattr(self, "wakeup_ms_range", None)
+        # Use slower cadence during pre-open call auction if configured
+        preopen = False
+        try:
+            t = getattr(self, "current_time", None)
+            if t is not None:
+                to = pd.to_datetime(t).time()
+                preopen = (pd.Timestamp("09:15").time() <= to < pd.Timestamp("09:25").time())
+        except Exception:
+            preopen = False
+        rng = None
+        if preopen:
+            rng = getattr(self, "auction_wakeup_ms_range", None)
+        if rng is None:
+            rng = getattr(self, "wakeup_ms_range", None)
         if rng and isinstance(rng, (list, tuple)) and len(rng) == 2:
             lo, hi = int(rng[0]), int(rng[1])
             hi = max(hi, lo + 1)
@@ -93,6 +106,13 @@ class BaseAgent:
                         self.portfolio.apply_trade(symbol, "buy", price, qty)
                     if t.get("sell") == self.id:
                         self.portfolio.apply_trade(symbol, "sell", price, qty)
+                # Deduct fees if provided
+                try:
+                    fees = float(m.content.get("fees", 0.0))
+                    if fees > 0:
+                        self.portfolio.cash -= fees
+                except Exception:
+                    pass
                 # After applying, log snapshot
                 if self.logger:
                     should_log = False

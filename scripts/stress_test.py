@@ -188,6 +188,12 @@ def main():
     print(f"Estimated peak/additional RSS: {fmt_bytes(est_mem_bytes)}")
     print(f"Estimated log size: {fmt_bytes(est_logs_bytes)}")
 
+    # Ensure clean shutdown so the process can exit automatically
+    try:
+        kernel.shutdown()
+    except Exception:
+        pass
+
 
 if __name__ == "__main__":
     main()
