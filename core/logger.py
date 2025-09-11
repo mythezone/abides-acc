@@ -66,12 +66,13 @@ class Logger(metaclass=Singleton):
     同步 Logger 类，所有记录会通过同步日志写入文件。
     """
 
-    def __init__(self, log_folder: str, level=5):
+    def __init__(self, log_folder: str = "./log", level: int = 5):
         self.log_folder = log_folder
         os.makedirs(self.log_folder, exist_ok=True)
         self.log_file = os.path.join(self.log_folder, "log.csv")
         self._file_lock = threading.Lock()
         self.disable_main_log = False
+        self.level = level
 
         with open(self.log_file, "w") as file:
             file.write("time,stage,type,sender,recipient,content\n")
@@ -193,6 +194,7 @@ class Logger(metaclass=Singleton):
             return
         try:
             import json
+
             msg = json.dumps(message.content, ensure_ascii=False, separators=(",", ":"))
         except Exception:
             msg = str(message.content)
@@ -208,7 +210,11 @@ class Logger(metaclass=Singleton):
         )
 
     def lob_log(
-        self, symbol_name: str, kernel_time: Union[str, pd.Timestamp], level: int, lob: str
+        self,
+        symbol_name: str,
+        kernel_time: Union[str, pd.Timestamp],
+        level: int,
+        lob: str,
     ):
         _, lob_path = self._ensure_symbol_paths(symbol_name)
         # If level differs from default header, rewrite header once (simple approach)
@@ -219,7 +225,11 @@ class Logger(metaclass=Singleton):
             f.write(f"{self.iso_time_format(kernel_time)},{lob}\n")
 
     def preopen_log(
-        self, symbol_name: str, kernel_time: Union[str, pd.Timestamp], level: int, lob: str
+        self,
+        symbol_name: str,
+        kernel_time: Union[str, pd.Timestamp],
+        level: int,
+        lob: str,
     ):
         sdir = os.path.join(self.log_folder, symbol_name)
         os.makedirs(sdir, exist_ok=True)
@@ -262,15 +272,25 @@ class Logger(metaclass=Singleton):
                 f.write("time,cash,total_value,positions\n")
         return apath
 
-    def agent_log(self, agent_id: str, kernel_time: Union[str, pd.Timestamp], cash: float, total_value: float, positions: dict):
+    def agent_log(
+        self,
+        agent_id: str,
+        kernel_time: Union[str, pd.Timestamp],
+        cash: float,
+        total_value: float,
+        positions: dict,
+    ):
         apath = self._ensure_agent_path(agent_id)
         try:
             import json
+
             pos_str = json.dumps(positions, ensure_ascii=False, separators=(",", ":"))
         except Exception:
             pos_str = str(positions)
         with self._file_lock, open(apath, "a") as f:
-            f.write(f"{self.iso_time_format(kernel_time)},{cash:.2f},{total_value:.2f},{pos_str}\n")
+            f.write(
+                f"{self.iso_time_format(kernel_time)},{cash:.2f},{total_value:.2f},{pos_str}\n"
+            )
 
     @staticmethod
     def format_lob_header(level: int = 5):

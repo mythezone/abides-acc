@@ -23,8 +23,9 @@
       "max_shares": 2000,
       "min_cash": 100000,
       "max_cash": 1000000
-    },
-    "agents": [
+    }
+  },
+  "agents": [
       {
         "num": 2,
         "type": "zero_intelligence",
@@ -40,8 +41,7 @@
         "type": "base",
         "params": {}
       }
-    ]
-  },
+    ],
   "symbols": [
     "000001",
     "000002",

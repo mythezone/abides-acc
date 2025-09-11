@@ -19,7 +19,7 @@ class ConfigManager(metaclass=Singleton):
                 config_data = json.load(config_file)
                 self._update_attributes(config_data)
         else:
-            raise FileNotFoundError(f"No {config_file} found in {self.config_dir}")
+            raise FileNotFoundError(f"No config file found in {config_path}")
 
     def _update_attributes(self, config_data: Dict, prefix: str = ""):
         for key, value in config_data.items():

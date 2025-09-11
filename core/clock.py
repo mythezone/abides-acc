@@ -74,6 +74,11 @@ class KernelClock:
     def is_market_closed(self):
         return self.simulate_time.date() not in self.trading_days
 
+    def kernel_run_time(self):
+        """Return the elapsed real time in seconds since the kernel started."""
+        delta = pd.Timestamp.now() - self.real_start_time
+        return delta.total_seconds()
+
 
 class MarketClock:
     def __init__(self, trading_days, exchange="SZSE"):
@@ -97,7 +102,7 @@ class MarketClock:
             (end - start).total_seconds() for start, end in self.intervals
         )
         self.current_index = 0
-        self.current_time = self.intervals[0][0] if self.intervals else None
+        self.current_time = self.intervals[0][0]
 
     def get_progress(self):
         elapsed = 0

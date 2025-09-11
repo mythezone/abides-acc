@@ -230,6 +230,7 @@ def main():
     df = pd.DataFrame(rows)
     df.to_csv(os.path.join(out_dir, "metrics_by_group.csv"), index=False)
 
+    
     if not df.empty:
         gsum = df.groupby("group").agg({
             "ohlc_mse_ohlc_avg": "mean",

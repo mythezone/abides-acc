@@ -11,6 +11,7 @@ from queue import Queue
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Dict, Tuple
 from core.preopen_book import PreopenOrderBook
+from core.logger import Logger
 
 
 class Exchange:
@@ -19,7 +20,17 @@ class Exchange:
     Subclasses may override validation and fee rules.
     """
 
-    def __init__(self, symbols: dict, logger=None, ohlc_freq: str = "3s", lob_log_level: int = 5, lob_log_freq: str = "3s", workers: int = 0, out_queue=None):
+    def __init__(
+        self,
+        symbols: dict,
+        logger: Logger,
+        ohlc_freq: str = "3s",
+        lob_log_level: int = 5,
+        lob_log_freq: str = "3s",
+        workers: int = 0,
+        out_queue=None,
+        **kwargs,
+    ):
         self.symbols = symbols
         self.lob_dict = {
             symbol_name: LimitOrderBook(symbol_name) for symbol_name in symbols
@@ -29,7 +40,7 @@ class Exchange:
         self.ohlc_by_symbol: dict[str, OHLCAggregator] = {}
         self.lob_log_level = lob_log_level
         # support special tick mode
-        self._lob_tick_mode = (str(lob_log_freq).lower() == "tick")
+        self._lob_tick_mode = str(lob_log_freq).lower() == "tick"
         self.lob_log_delta = None if self._lob_tick_mode else pd.Timedelta(lob_log_freq)
         self._last_lob_log: dict[str, pd.Timestamp] = {}
         self.out_queue = out_queue
@@ -49,10 +60,16 @@ class Exchange:
         self._worker_queues: list[Queue] = []
         self._executor: Optional[ThreadPoolExecutor] = None
         if self.workers > 0:
-            self._executor = ThreadPoolExecutor(max_workers=self.workers, thread_name_prefix="exch")
+            self._executor = ThreadPoolExecutor(
+                max_workers=self.workers, thread_name_prefix="exch"
+            )
             self._worker_queues = [Queue() for _ in range(self.workers)]
             for idx in range(self.workers):
                 self._executor.submit(self._worker_loop, idx)
+
+        # kwargs
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
     def handle_message(self, message: Message):
         response_messages = []
@@ -61,7 +78,11 @@ class Exchange:
         if self.logger is not None:
             self.logger.kernel_message_log(message, stage="PROC")
 
-        if message.message_type in (MessageType.LMT_ORDER, MessageType.MKT_ORDER, MessageType.SUBMIT_ORDER):
+        if message.message_type in (
+            MessageType.LMT_ORDER,
+            MessageType.MKT_ORDER,
+            MessageType.SUBMIT_ORDER,
+        ):
             # Accept generic SUBMIT_ORDER and type-specific LMT/MKT
             for req in message.content.get("requests", []):
                 symbol = req.get("symbol", "SYM")
@@ -92,7 +113,7 @@ class Exchange:
                     if self._route_preopen(order, now):
                         continue
                     if self.workers > 0:
-                    # Enqueue to worker based on symbol shard
+                        # Enqueue to worker based on symbol shard
                         shard = hash(symbol) % self.workers
                         self._worker_queues[shard].put((now, order))
                     else:
@@ -118,7 +139,7 @@ class Exchange:
                 )
         elif message.message_type in (MessageType.MKT_OPEN, MessageType.MKT_CLOSE):
             # Toggle trading session state; primarily informational for now
-            self.is_open = (message.message_type == MessageType.MKT_OPEN)
+            self.is_open = message.message_type == MessageType.MKT_OPEN
             if self.logger is not None:
                 self.logger.exchange_log(
                     f"Market {'OPEN' if self.is_open else 'CLOSE'}",
@@ -130,7 +151,12 @@ class Exchange:
             if content.get("type") == "query_symbols":
                 n = int(content.get("n", 3))
                 # Provide dummy symbol list
-                universe = list(self.lob_dict.keys()) or ["SYM1", "SYM2", "SYM3", "SYM4"]
+                universe = list(self.lob_dict.keys()) or [
+                    "SYM1",
+                    "SYM2",
+                    "SYM3",
+                    "SYM4",
+                ]
                 if len(universe) < n:
                     # Pad with synthetic symbols
                     universe += [f"SYM{i}" for i in range(len(universe) + 1, n + 1)]
@@ -188,7 +214,9 @@ class Exchange:
                 price = round((bid + ask) / 2.0, 2)
             if price is not None and self.logger is not None:
                 if symbol not in self.ohlc_by_symbol:
-                    self.ohlc_by_symbol[symbol] = OHLCAggregator(symbol, self.ohlc_freq, self.logger)
+                    self.ohlc_by_symbol[symbol] = OHLCAggregator(
+                        symbol, self.ohlc_freq, self.logger
+                    )
                 self.ohlc_by_symbol[symbol].update(now, price, volume=0.0)
                 self._last_price[symbol] = float(price)
             # LOB periodic log check
@@ -203,7 +231,9 @@ class Exchange:
                 if should_log:
                     level = self.lob_log_level
                     lob_csv = lob.format_snapshot_csv(level)
-                    self.logger.lob_log(symbol_name=symbol, kernel_time=now, level=level, lob=lob_csv)
+                    self.logger.lob_log(
+                        symbol_name=symbol, kernel_time=now, level=level, lob=lob_csv
+                    )
                     self._last_lob_log[symbol] = now
 
     # Exposed helper for kernel to detect preopen (default False)
@@ -247,7 +277,9 @@ class Exchange:
             self.out_queue.put(msg)
 
     def _process_order(self, now: pd.Timestamp, order: Order):
-        symbol = getattr(order, "_symbol", None) or getattr(order, "symbol", None) or None
+        symbol = (
+            getattr(order, "_symbol", None) or getattr(order, "symbol", None) or None
+        )
         if symbol is None:
             # fallback from request dict stored in order
             if hasattr(order, "__dict__") and "symbol" in order.__dict__:
@@ -283,7 +315,11 @@ class Exchange:
                 recipient_id=order.agent_id,
                 send_time=now,
                 recive_time=now,
-                content={"trades": trades, "symbol": symbol, "fees": round(total_fee, 6)},
+                content={
+                    "trades": trades,
+                    "symbol": symbol,
+                    "fees": round(total_fee, 6),
+                },
             )
             self._emit(execmsg)
 
@@ -299,7 +335,9 @@ class Exchange:
                 price = round((bid + ask) / 2.0, 2)
         if price is not None and self.logger is not None:
             if symbol not in self.ohlc_by_symbol:
-                self.ohlc_by_symbol[symbol] = OHLCAggregator(symbol, self.ohlc_freq, self.logger)
+                self.ohlc_by_symbol[symbol] = OHLCAggregator(
+                    symbol, self.ohlc_freq, self.logger
+                )
             self.ohlc_by_symbol[symbol].update(now, price, volume=float(order.quantity))
             self._last_price[symbol] = float(price)
         # LOB periodic log
@@ -313,7 +351,12 @@ class Exchange:
                     should_log = True
             if should_log:
                 lob_csv = self.lob_dict[symbol].format_snapshot_csv(self.lob_log_level)
-                self.logger.lob_log(symbol_name=symbol, kernel_time=now, level=self.lob_log_level, lob=lob_csv)
+                self.logger.lob_log(
+                    symbol_name=symbol,
+                    kernel_time=now,
+                    level=self.lob_log_level,
+                    lob=lob_csv,
+                )
                 self._last_lob_log[symbol] = now
 
     def shutdown(self, wait: bool = True):
@@ -347,10 +390,19 @@ class Exchange:
             self.workers = 0
 
 
-class SZSEExchange(Exchange):
+class SZSExchange(Exchange):
     """SZSE-like rules: optional T+1, price limits, and fees on executions."""
 
-    def __init__(self, *args, t_plus_one: bool = True, price_limit_pct: float = 0.1, fee_rate: float = 0.0003, initial_positions: Optional[Dict[str, Dict[str, int]]] = None, opening_call: bool = False, **kwargs):
+    def __init__(
+        self,
+        *args,
+        t_plus_one: bool = True,
+        price_limit_pct: float = 0.1,
+        fee_rate: float = 0.0003,
+        initial_positions: Optional[Dict[str, Dict[str, int]]] = None,
+        opening_call: bool = False,
+        **kwargs,
+    ):
         # opening_call is handled here and not passed to base class
         super().__init__(*args, **kwargs)
         self.t_plus_one = bool(t_plus_one)
@@ -413,7 +465,9 @@ class SZSEExchange(Exchange):
         now = message.send_time
         # 09:25:00 auction matching
         try:
-            if self.opening_call and (self._time_only(now) >= pd.Timestamp("09:25").time()):
+            if self.opening_call and (
+                self._time_only(now) >= pd.Timestamp("09:25").time()
+            ):
                 self._run_call_auction(now)
         except Exception:
             pass
@@ -421,7 +475,9 @@ class SZSEExchange(Exchange):
         if (
             message.message_type == MessageType.CANCEL_ORDER
             and self.opening_call
-            and pd.Timestamp("09:15").time() <= self._time_only(now) < pd.Timestamp("09:20").time()
+            and pd.Timestamp("09:15").time()
+            <= self._time_only(now)
+            < pd.Timestamp("09:20").time()
         ):
             for req in message.content.get("requests", []):
                 oid = req.get("order_id")
@@ -456,12 +512,19 @@ class SZSEExchange(Exchange):
                     recipient_id=aid,
                     send_time=now,
                     recive_time=now,
-                    content={"trades": tr, "symbol": symbol, "fees": round(total_fee, 6), "phase": "open_auction"},
+                    content={
+                        "trades": tr,
+                        "symbol": symbol,
+                        "fees": round(total_fee, 6),
+                        "phase": "open_auction",
+                    },
                 )
                 self._emit(execmsg)
 
             # Update OHLC open bar at 09:25 using clearing price if any trade
-            self.ohlc_by_symbol.setdefault(symbol, OHLCAggregator(symbol, self.ohlc_freq, self.logger))
+            self.ohlc_by_symbol.setdefault(
+                symbol, OHLCAggregator(symbol, self.ohlc_freq, self.logger)
+            )
             if trades:
                 vol = float(sum(t["quantity"] for t in trades))
                 px = float(trades[0]["price"]) if trades else None
@@ -513,7 +576,9 @@ class SZSEExchange(Exchange):
         if self.opening_call and self.is_preopen_time(now):
             # Early auction if idle for > 3 seconds
             try:
-                if self._preopen_last_order_ts is not None and (now - self._preopen_last_order_ts) >= pd.Timedelta(seconds=3):
+                if self._preopen_last_order_ts is not None and (
+                    now - self._preopen_last_order_ts
+                ) >= pd.Timedelta(seconds=3):
                     self._run_call_auction(now)
                     return
             except Exception:
@@ -539,7 +604,9 @@ class SZSEExchange(Exchange):
             ap = float(asks[0][0])
             bp = float(bids[0][0])
             mid = round((ap + bp) / 2.0, 2)
-            self.ohlc_by_symbol.setdefault(symbol, OHLCAggregator(symbol, self.ohlc_freq, self.logger))
+            self.ohlc_by_symbol.setdefault(
+                symbol, OHLCAggregator(symbol, self.ohlc_freq, self.logger)
+            )
             self.ohlc_by_symbol[symbol].update(now, mid, volume=0.0)
             self._last_price[symbol] = mid
         # LOB periodic log control
@@ -552,9 +619,16 @@ class SZSEExchange(Exchange):
                 if (last is None) or (now - last >= self.lob_log_delta):
                     should_log = True
             if should_log:
-                csv = self._format_snapshot_csv_from_lists(asks, bids, n=self.lob_log_level)
+                csv = self._format_snapshot_csv_from_lists(
+                    asks, bids, n=self.lob_log_level
+                )
                 # write to preopen.csv instead of lob.csv
-                self.logger.preopen_log(symbol_name=symbol, kernel_time=now, level=self.lob_log_level, lob=csv)
+                self.logger.preopen_log(
+                    symbol_name=symbol,
+                    kernel_time=now,
+                    level=self.lob_log_level,
+                    lob=csv,
+                )
                 self._last_lob_log[symbol] = now
 
     def _validate_order(self, order: Order, now: pd.Timestamp) -> bool:
@@ -579,7 +653,9 @@ class SZSEExchange(Exchange):
                 key = (agent, symbol)
                 buys = int(self._day_buys.get(key, 0))
                 sells = int(self._day_sells.get(key, 0))
-                init_pos = int(((self.initial_positions.get(agent) or {}).get(symbol) or 0))
+                init_pos = int(
+                    ((self.initial_positions.get(agent) or {}).get(symbol) or 0)
+                )
                 # Max sellable today = init_pos - sells (cannot use today's buys)
                 remaining = init_pos - sells
                 if int(order.quantity) > max(0, remaining):
@@ -594,9 +670,13 @@ class SZSEExchange(Exchange):
         if side in ("buy", "sell") and symbol and agent:
             key = (agent, symbol)
             if side == "buy":
-                self._day_buys[key] = int(self._day_buys.get(key, 0)) + int(order.quantity)
+                self._day_buys[key] = int(self._day_buys.get(key, 0)) + int(
+                    order.quantity
+                )
             else:
-                self._day_sells[key] = int(self._day_sells.get(key, 0)) + int(order.quantity)
+                self._day_sells[key] = int(self._day_sells.get(key, 0)) + int(
+                    order.quantity
+                )
         super()._process_order(now, order)
 
 
@@ -608,7 +688,14 @@ class NYSEExchange(Exchange):
         self.fee_rate = float(fee_rate) if fee_rate else 0.0
 
 
-def new_exchange(exchange_type: str, *, symbols: dict, logger=None, exchange_params: Optional[Dict] = None, out_queue=None):
+def new_exchange(
+    exchange_type: str,
+    *,
+    symbols: dict,
+    logger=None,
+    exchange_params: Optional[Dict] = None,
+    out_queue=None,
+):
     p = exchange_params or {}
     common = dict(
         symbols=symbols,
@@ -621,7 +708,7 @@ def new_exchange(exchange_type: str, *, symbols: dict, logger=None, exchange_par
     )
     et = (exchange_type or "SZSE").upper()
     if et == "SZSE":
-        return SZSEExchange(
+        return SZSExchange(
             **common,
             t_plus_one=bool(p.get("t_plus_one", True)),
             price_limit_pct=float(p.get("price_limit_pct", 0.1)),

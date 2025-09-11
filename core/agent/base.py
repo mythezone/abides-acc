@@ -1,12 +1,13 @@
 import pandas as pd
 import numpy as np
 
+
 from typing import List, TYPE_CHECKING
 from core.message import Message, MessageType, MessageQueue, new_message
 from typing import Optional
 from core.logger import Logger
 from core.portfolio import Portfolio
-import json
+
 
 if TYPE_CHECKING:
     from core.kernel import Kernel
@@ -17,9 +18,9 @@ class BaseAgent:
         self,
         id,
         *args,
-        message_queue: MessageQueue = None,
-        logger: Optional[Logger] = None,
-        location: List[float] = None,
+        message_queue: MessageQueue | None = None,
+        logger: Optional[Logger] | None = None,
+        location: List[float] | None = None,
         **kwargs,
     ):
         self.id = id
@@ -31,7 +32,11 @@ class BaseAgent:
         initial_cash = float(kwargs.pop("initial_cash", 1_000_000))
         self.agent_log_freq = kwargs.pop("agent_log_freq", "tick")
         try:
-            self._agent_log_delta = None if str(self.agent_log_freq).lower() == "tick" else pd.Timedelta(str(self.agent_log_freq))
+            self._agent_log_delta = (
+                None
+                if str(self.agent_log_freq).lower() == "tick"
+                else pd.Timedelta(str(self.agent_log_freq))
+            )
         except Exception:
             self._agent_log_delta = None
         self._agent_log_last: Optional[pd.Timestamp] = None
@@ -62,7 +67,9 @@ class BaseAgent:
             t = getattr(self, "current_time", None)
             if t is not None:
                 to = pd.to_datetime(t).time()
-                preopen = (pd.Timestamp("09:15").time() <= to < pd.Timestamp("09:25").time())
+                preopen = (
+                    pd.Timestamp("09:15").time() <= to < pd.Timestamp("09:25").time()
+                )
         except Exception:
             preopen = False
         rng = None
@@ -95,7 +102,9 @@ class BaseAgent:
         # default handler: update portfolio on executions
         remaining = []
         for m in self.inbox:
-            if m.message_type == MessageType.ORDER_EXECUTED and isinstance(m.content, dict):
+            if m.message_type == MessageType.ORDER_EXECUTED and isinstance(
+                m.content, dict
+            ):
                 trades = m.content.get("trades", [])
                 for t in trades:
                     symbol = t.get("symbol")
@@ -119,7 +128,11 @@ class BaseAgent:
                     if self._agent_log_delta is None:
                         should_log = True
                     else:
-                        if self._agent_log_last is None or (m.recive_time - self._agent_log_last) >= self._agent_log_delta:
+                        if (
+                            self._agent_log_last is None
+                            or (m.recive_time - self._agent_log_last)
+                            >= self._agent_log_delta
+                        ):
                             should_log = True
                     if should_log:
                         tv = self.portfolio.current_total_value()
@@ -141,7 +154,11 @@ class BaseAgent:
     def request_oracle(self, symbol: str, kind: str = "lob"):
         if not self.calibration_mode or not self.oracle_id:
             return
-        mtype = MessageType.ORACLE_QUERY_LOB if kind == "lob" else MessageType.ORACLE_QUERY_OHLC
+        mtype = (
+            MessageType.ORACLE_QUERY_LOB
+            if kind == "lob"
+            else MessageType.ORACLE_QUERY_OHLC
+        )
         msg = new_message(
             message_type=mtype,
             sender_id=self.id,
