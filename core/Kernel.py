@@ -43,9 +43,10 @@ class Kernel:
 
         # Minimal exchange with empty symbol universe, will grow on demand
         ex_params = self.config.get("exchange_params", {})
+        symbols = self.config.get("symbols", [])
         self.exchange = new_exchange(
             self.config.get("exchange_type", "SZSE"),
-            symbols={},
+            symbols=symbols,
             logger=self.logger,
             exchange_params=ex_params,
             out_queue=self.message_queue,
@@ -186,6 +187,9 @@ class Kernel:
         # Process messages from inbox in receive_time order
         while (not self.in_box.empty()) and steps < max_steps:
             msg = self.in_box.get()
+            if msg is None:
+                # Nothing to process
+                break
             # Advance simulation time & skip market breaks if necessary
             self.clock.simulate_time = msg.recive_time
             if self.clock.is_market_closed() or self.clock.is_break_time():
@@ -305,6 +309,8 @@ class Kernel:
 
             # Pop next event by time
             msg = self.in_box.get()
+            if msg is None:
+                break
             # Apply trading session skip if needed
             self.clock.simulate_time = msg.recive_time
             if self.clock.is_market_closed() or (
@@ -342,6 +348,12 @@ class Kernel:
                     # Log send
                     self.logger.kernel_message_log(rsp, stage="SEND")
                     self.message_queue.put(rsp)
+                # Drain any additional messages emitted synchronously by Exchange
+                while True:
+                    try:
+                        self.in_box.put(self.message_queue.get_nowait_raw())
+                    except Exception:
+                        break
             else:
                 if self.oracle and rid == "Oracle":
                     # Let oracle handle
@@ -463,10 +475,11 @@ class Kernel:
         # Build agents from config
         agent_cfgs = []
         try:
-            agents = getattr(cm, "agents", [])
+            agent_defs = getattr(cm, "agents", [])
             all_symbols = getattr(cm, "symbols", [])
-            for a in agents:
+            for a in agent_defs:
                 atype = a.get("type") or a.get("name") or "zero_intelligence"
+                # Validate against registered agents registry
                 if atype not in agents:
                     atype = "zero_intelligence"
                 params = a.get("params") or a.get("args") or {}

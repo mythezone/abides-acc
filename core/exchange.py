@@ -1,3 +1,4 @@
+from ast import Raise
 from core.lob import LimitOrderBook
 from core.message import MessageType, new_message, Message
 from core.ohlc import OHLCAggregator
@@ -9,7 +10,7 @@ import numpy as np
 import threading
 from queue import Queue
 from concurrent.futures import ThreadPoolExecutor
-from typing import Optional, Dict, Tuple
+from typing import Optional, Dict, Tuple, Iterable
 from core.preopen_book import PreopenOrderBook
 from core.logger import Logger
 
@@ -22,7 +23,7 @@ class Exchange:
 
     def __init__(
         self,
-        symbols: dict,
+        symbols: Iterable[str],
         logger: Logger,
         ohlc_freq: str = "3s",
         lob_log_level: int = 5,
@@ -32,9 +33,7 @@ class Exchange:
         **kwargs,
     ):
         self.symbols = symbols
-        self.lob_dict = {
-            symbol_name: LimitOrderBook(symbol_name) for symbol_name in symbols
-        }
+        self.lob_dict = {symbol_name: LimitOrderBook(symbol_name) for symbol_name in list(symbols)}
         self.logger = logger
         self.ohlc_freq = ohlc_freq
         self.ohlc_by_symbol: dict[str, OHLCAggregator] = {}
@@ -54,6 +53,9 @@ class Exchange:
         # Per-day buy/sell counters for T+1 enforcement
         self._day_buys: Dict[Tuple[str, str], int] = {}  # (agent,symbol)->qty
         self._day_sells: Dict[Tuple[str, str], int] = {}
+
+        # Market data subscriptions: agent_id -> symbol -> {depth, freq_ms, last_sent}
+        self._subs: dict[str, dict[str, dict]] = {}
 
         # Parallel workers sharded by symbol hash (if requested)
         self.workers = int(workers) if workers and int(workers) > 0 else 0
@@ -87,7 +89,7 @@ class Exchange:
             for req in message.content.get("requests", []):
                 symbol = req.get("symbol", "SYM")
                 # Ensure a LOB exists even if symbols were not pre-registered
-                if symbol not in self.lob_dict:
+                if isinstance(symbol, str) and symbol not in self.lob_dict:
                     self.lob_dict[symbol] = LimitOrderBook(symbol)
 
                 # Decide order class
@@ -122,11 +124,56 @@ class Exchange:
                 else:
                     # Reject order outside rules silently (could emit rejection message)
                     pass
+        elif message.message_type == MessageType.MODIFY_ORDER:
+            # Replace existing orders with modified ones: cancel then insert new
+            for req in message.content.get("requests", []):
+                symbol_val = req.get("symbol")
+                if not isinstance(symbol_val, str):
+                    continue
+                symbol = symbol_val
+                order_id = req.get("order_id")
+                new_order_dict = req.get("new_order", {})
+                if symbol not in self.lob_dict:
+                    continue
+                # Cancel first
+                try:
+                    self.lob_dict[symbol].cancel_order(order_id)
+                except Exception:
+                    pass
+                # Acknowledge cancel
+                response_messages.append(
+                    new_message(
+                        message_type=MessageType.ORDER_CANCELLED,
+                        sender_id="Exchange",
+                        recipient_id=message.sender_id,
+                        send_time=now,
+                        recive_time=now,
+                        content={"order_id": order_id, "symbol": symbol, "reason": "MODIFY"},
+                    )
+                )
+                # Submit new order
+                otype = new_order_dict.get("type")
+                if otype == "limit_order":
+                    order = LimitOrder.from_dict(new_order_dict)
+                elif otype == "market_order":
+                    order = MarketOrder.from_dict(new_order_dict)
+                else:
+                    order = Order.from_dict(new_order_dict)
+                setattr(order, "_symbol", symbol)
+                if self.workers > 0:
+                    shard = hash(symbol) % self.workers
+                    self._worker_queues[shard].put((now, order))
+                else:
+                    self._process_order(now, order)
         elif message.message_type == MessageType.CANCEL_ORDER:
             for req in message.content.get("requests", []):
-                symbol = req.get("symbol")
+                symbol_val = req.get("symbol")
+                if not isinstance(symbol_val, str):
+                    continue
+                symbol = symbol_val
                 order_id = req.get("order_id")
-                self.lob_dict[symbol].cancel_order(order_id)
+                if symbol in self.lob_dict:
+                    self.lob_dict[symbol].cancel_order(order_id)
                 response_messages.append(
                     new_message(
                         message_type=MessageType.ORDER_CANCELLED,
@@ -137,6 +184,186 @@ class Exchange:
                         content={"order_id": order_id, "symbol": symbol},
                     )
                 )
+        elif message.message_type == MessageType.QUERY_LAST_TRADE:
+            # Return last trade price per requested symbol
+            symbol = message.content.get("symbol")
+            if not isinstance(symbol, str):
+                symbol = None
+            price = self._last_price.get(symbol) if isinstance(symbol, str) else None
+            response_messages.append(
+                new_message(
+                    message_type=MessageType.QUERY_LAST_TRADE,
+                    sender_id="Exchange",
+                    recipient_id=message.sender_id,
+                    send_time=now,
+                    recive_time=now,
+                    content={
+                        "symbol": symbol,
+                        "data": price,
+                        "mkt_closed": not self.is_open,
+                    },
+                )
+            )
+        elif message.message_type == MessageType.QUERY_SPERAD:
+            # Typo kept for compatibility with MessageType
+            symbol = message.content.get("symbol")
+            if not isinstance(symbol, str):
+                symbol = None
+            depth = int(message.content.get("depth", 1))
+            bids = []
+            asks = []
+            lob = self._get_lob(symbol)
+            if lob is not None:
+                snap = lob.snapshot_top_n(depth)
+                bids = snap.get("buy", [])
+                asks = snap.get("sell", [])
+            response_messages.append(
+                new_message(
+                    message_type=MessageType.QUERY_SPERAD,
+                    sender_id="Exchange",
+                    recipient_id=message.sender_id,
+                    send_time=now,
+                    recive_time=now,
+                    content={
+                        "symbol": symbol,
+                        "depth": depth,
+                        "bids": bids,
+                        "asks": asks,
+                        "data": self._last_price.get(symbol) if isinstance(symbol, str) else None,
+                        "mkt_closed": not self.is_open,
+                        "book": "",
+                    },
+                )
+            )
+        elif message.message_type == MessageType.QUERY_ORDER_STREAM:
+            symbol = message.content.get("symbol")
+            if not isinstance(symbol, str):
+                symbol = None
+            length = int(message.content.get("length", 10))
+            orders = []
+            lob = self._get_lob(symbol)
+            if lob is not None:
+                orders = list(lob.history_log)[-length:]
+            response_messages.append(
+                new_message(
+                    message_type=MessageType.QUERY_ORDER_STREAM,
+                    sender_id="Exchange",
+                    recipient_id=message.sender_id,
+                    send_time=now,
+                    recive_time=now,
+                    content={
+                        "symbol": symbol,
+                        "length": length,
+                        "orders": orders,
+                        "mkt_closed": not self.is_open,
+                    },
+                )
+            )
+        elif message.message_type == MessageType.QUERY_TRANSACTED_VOLUME:
+            symbol = message.content.get("symbol")
+            if not isinstance(symbol, str):
+                symbol = None
+            lookback = message.content.get("lookback_period", "60s")
+            try:
+                td = pd.Timedelta(lookback) if not isinstance(lookback, (int, float)) else pd.Timedelta(seconds=float(lookback))
+            except Exception:
+                td = pd.Timedelta(seconds=60)
+            cutoff = now - td
+            vol = 0
+            lob = self._get_lob(symbol)
+            if lob is not None:
+                for t in lob.history_log:
+                    try:
+                        ts = pd.to_datetime(t.get("timestamp"))
+                        if ts >= cutoff:
+                            vol += int(t.get("quantity", 0))
+                    except Exception:
+                        pass
+            response_messages.append(
+                new_message(
+                    message_type=MessageType.QUERY_TRANSACTED_VOLUME,
+                    sender_id="Exchange",
+                    recipient_id=message.sender_id,
+                    send_time=now,
+                    recive_time=now,
+                    content={
+                        "symbol": symbol,
+                        "transacted_volume": vol,
+                        "mkt_closed": not self.is_open,
+                    },
+                )
+            )
+        elif message.message_type == MessageType.MKT_DATA_SUBSCRIPTION_REQUEST:
+            # content: {"subscriptions": [{"symbol":s, "depth":n, "freq_ms":ms}, ...]}
+            subs = message.content.get("subscriptions") or []
+            aid = message.sender_id
+            cur = self._subs.setdefault(aid, {})
+            for s in subs:
+                sym = s.get("symbol")
+                if sym is None:
+                    continue
+                cur[sym] = {
+                    "depth": int(s.get("depth", 1)),
+                    "freq_ms": int(s.get("freq_ms", 1000)),
+                    "last_sent": None,
+                }
+            # Acknowledge
+            response_messages.append(
+                new_message(
+                    message_type=MessageType.MKT_DATA_SUBSCRIPTION_REQUEST,
+                    sender_id="Exchange",
+                    recipient_id=aid,
+                    send_time=now,
+                    recive_time=now,
+                    content={"status": "ok", "size": len(subs)},
+                )
+            )
+            # Emit immediate snapshots for each subscribed symbol to confirm stream
+            for s in subs:
+                sym = s.get("symbol")
+                if not isinstance(sym, str):
+                    continue
+                depth = int(s.get("depth", 1))
+                lob = self._get_lob(sym)
+                snap = lob.snapshot_top_n(depth) if lob is not None else {"buy": [], "sell": []}
+                payload = {
+                    "symbol": sym,
+                    "depth": depth,
+                    "bids": snap.get("buy", []),
+                    "asks": snap.get("sell", []),
+                    "ts": str(now),
+                }
+                self._emit(
+                    new_message(
+                        message_type=MessageType.MKT_DATA,
+                        sender_id="Exchange",
+                        recipient_id=aid,
+                        send_time=now,
+                        recive_time=now,
+                        content=payload,
+                    )
+                )
+        elif message.message_type == MessageType.MKT_DATA_SUBSCRIPTION_CANCELLATION:
+            # content: {"symbols": [..]}
+            aid = message.sender_id
+            syms = message.content.get("symbols") or []
+            if aid in self._subs:
+                if syms:
+                    for s in syms:
+                        self._subs[aid].pop(s, None)
+                else:
+                    # cancel all
+                    self._subs.pop(aid, None)
+            response_messages.append(
+                new_message(
+                    message_type=MessageType.MKT_DATA_SUBSCRIPTION_CANCELLATION,
+                    sender_id="Exchange",
+                    recipient_id=aid,
+                    send_time=now,
+                    recive_time=now,
+                    content={"status": "ok"},
+                )
+            )
         elif message.message_type in (MessageType.MKT_OPEN, MessageType.MKT_CLOSE):
             # Toggle trading session state; primarily informational for now
             self.is_open = message.message_type == MessageType.MKT_OPEN
@@ -172,16 +399,21 @@ class Exchange:
                     )
                 )
             else:
+                # Return actual top-of-book snapshot for requested symbols
                 for req in content.get("requests", []):
                     symbol = req.get("symbol", "SYM1")
-                    # Return a dummy snapshot
-                    best_bid = round(np.random.uniform(10, 100), 2)
-                    best_ask = round(best_bid + np.random.uniform(0.01, 0.5), 2)
+                    lob = self._get_lob(symbol)
+                    snap = lob.snapshot_top_n(1) if lob is not None else {"buy": [], "sell": []}
+                    best_bid = float(snap["buy"][0][0]) if snap["buy"] else None
+                    best_ask = float(snap["sell"][0][0]) if snap["sell"] else None
+                    mid = None
+                    if best_bid is not None and best_ask is not None:
+                        mid = round((best_bid + best_ask) / 2.0, 2)
                     snapshot = {
                         "symbol": symbol,
                         "best_bid": best_bid,
                         "best_ask": best_ask,
-                        "mid": round((best_bid + best_ask) / 2, 2),
+                        "mid": mid,
                         "ts": str(now),
                     }
                     response_messages.append(
@@ -213,28 +445,60 @@ class Exchange:
                 ask = float(snap["sell"][0][0])
                 price = round((bid + ask) / 2.0, 2)
             if price is not None and self.logger is not None:
-                if symbol not in self.ohlc_by_symbol:
-                    self.ohlc_by_symbol[symbol] = OHLCAggregator(
-                        symbol, self.ohlc_freq, self.logger
+                sym = str(symbol)
+                if sym not in self.ohlc_by_symbol:
+                    self.ohlc_by_symbol[sym] = OHLCAggregator(
+                        sym, self.ohlc_freq, self.logger
                     )
-                self.ohlc_by_symbol[symbol].update(now, price, volume=0.0)
-                self._last_price[symbol] = float(price)
+                self.ohlc_by_symbol[sym].update(now, price, volume=0.0)
+                self._last_price[sym] = float(price)
             # LOB periodic log check
             if self.logger is not None:
-                last = self._last_lob_log.get(symbol)
+                sym = str(symbol)
+                last = self._last_lob_log.get(sym)
                 should_log = False
                 if self._lob_tick_mode:
                     should_log = True
                 else:
-                    if (last is None) or (now - last >= self.lob_log_delta):
+                    delta = self.lob_log_delta or pd.Timedelta(milliseconds=0)
+                    if (last is None) or (now - last >= delta):
                         should_log = True
                 if should_log:
                     level = self.lob_log_level
                     lob_csv = lob.format_snapshot_csv(level)
                     self.logger.lob_log(
-                        symbol_name=symbol, kernel_time=now, level=level, lob=lob_csv
+                        symbol_name=sym, kernel_time=now, level=level, lob=lob_csv
                     )
-                    self._last_lob_log[symbol] = now
+                    self._last_lob_log[sym] = now
+            # Push subscription updates if due
+            try:
+                for aid, mp in list(self._subs.items()):
+                    sub = mp.get(symbol)
+                    if not sub:
+                        continue
+                    last = sub.get("last_sent")
+                    freq = int(sub.get("freq_ms", 1000))
+                    if last is None or (now - last) >= pd.Timedelta(milliseconds=freq):
+                        snap = lob.snapshot_top_n(int(sub.get("depth", 1)))
+                        payload = {
+                            "symbol": symbol,
+                            "depth": int(sub.get("depth", 1)),
+                            "bids": snap.get("buy", []),
+                            "asks": snap.get("sell", []),
+                            "ts": str(now),
+                        }
+                        msg = new_message(
+                            message_type=MessageType.MKT_DATA,
+                            sender_id="Exchange",
+                            recipient_id=aid,
+                            send_time=now,
+                            recive_time=now,
+                            content=payload,
+                        )
+                        self._emit(msg)
+                        sub["last_sent"] = now
+            except Exception:
+                pass
 
     # Exposed helper for kernel to detect preopen (default False)
     def is_preopen_time(self, now: pd.Timestamp) -> bool:
@@ -276,6 +540,20 @@ class Exchange:
         if self.out_queue is not None:
             self.out_queue.put(msg)
 
+    def _get_lob(self, symbol: Optional[str]) -> Optional[LimitOrderBook]:
+        if isinstance(symbol, str):
+            return self.lob_dict.get(symbol)
+        return None
+
+    def _ensure_lob(self, symbol: Optional[str]) -> Optional[LimitOrderBook]:
+        if not isinstance(symbol, str):
+            return None
+        lob = self.lob_dict.get(symbol)
+        if lob is None:
+            lob = LimitOrderBook(symbol)
+            self.lob_dict[symbol] = lob
+        return lob
+
     def _process_order(self, now: pd.Timestamp, order: Order):
         symbol = (
             getattr(order, "_symbol", None) or getattr(order, "symbol", None) or None
@@ -284,10 +562,11 @@ class Exchange:
             # fallback from request dict stored in order
             if hasattr(order, "__dict__") and "symbol" in order.__dict__:
                 symbol = order.__dict__["symbol"]
-        if symbol not in self.lob_dict:
-            self.lob_dict[symbol] = LimitOrderBook(symbol)
+        lob = self._ensure_lob(symbol)
+        if lob is None:
+            return
 
-        trades = self.lob_dict[symbol].add_order(order)
+        trades = lob.add_order(order)
         # Acknowledge
         ack = new_message(
             message_type=MessageType.ORDER_ACCEPTED,
@@ -295,7 +574,7 @@ class Exchange:
             recipient_id=order.agent_id,
             send_time=now,
             recive_time=now,
-            content={"order_id": order.id, "symbol": symbol},
+            content={"order_id": order.id, "symbol": str(symbol)},
         )
         self._emit(ack)
 
@@ -305,7 +584,7 @@ class Exchange:
             for t in trades:
                 # track last price
                 try:
-                    self._last_price[symbol] = float(t["price"])  # per our trade dict
+                    self._last_price[str(symbol)] = float(t["price"])  # per our trade dict
                 except Exception:
                     pass
                 total_fee += self._apply_fees(t.get("price", 0.0), t.get("quantity", 0))
@@ -317,7 +596,7 @@ class Exchange:
                 recive_time=now,
                 content={
                     "trades": trades,
-                    "symbol": symbol,
+                    "symbol": str(symbol),
                     "fees": round(total_fee, 6),
                 },
             )
@@ -328,36 +607,39 @@ class Exchange:
         if trades:
             price = float(trades[-1]["price"])
         else:
-            snap = self.lob_dict[symbol].snapshot_top_n(1)
+            snap = lob.snapshot_top_n(1)
             if snap["buy"] and snap["sell"]:
                 bid = float(snap["buy"][0][0])
                 ask = float(snap["sell"][0][0])
                 price = round((bid + ask) / 2.0, 2)
         if price is not None and self.logger is not None:
-            if symbol not in self.ohlc_by_symbol:
-                self.ohlc_by_symbol[symbol] = OHLCAggregator(
-                    symbol, self.ohlc_freq, self.logger
+            sym = str(symbol)
+            if sym not in self.ohlc_by_symbol:
+                self.ohlc_by_symbol[sym] = OHLCAggregator(
+                    sym, self.ohlc_freq, self.logger
                 )
-            self.ohlc_by_symbol[symbol].update(now, price, volume=float(order.quantity))
-            self._last_price[symbol] = float(price)
+            self.ohlc_by_symbol[sym].update(now, price, volume=float(order.quantity))
+            self._last_price[sym] = float(price)
         # LOB periodic log
         if self.logger is not None:
-            last = self._last_lob_log.get(symbol)
+            sym = str(symbol)
+            last = self._last_lob_log.get(sym)
             should_log = False
             if self._lob_tick_mode:
                 should_log = True
             else:
-                if (last is None) or (now - last >= self.lob_log_delta):
+                delta = self.lob_log_delta or pd.Timedelta(milliseconds=0)
+                if (last is None) or (now - last >= delta):
                     should_log = True
             if should_log:
-                lob_csv = self.lob_dict[symbol].format_snapshot_csv(self.lob_log_level)
+                lob_csv = lob.format_snapshot_csv(self.lob_log_level)
                 self.logger.lob_log(
-                    symbol_name=symbol,
+                    symbol_name=sym,
                     kernel_time=now,
                     level=self.lob_log_level,
                     lob=lob_csv,
                 )
-                self._last_lob_log[symbol] = now
+                self._last_lob_log[sym] = now
 
     def shutdown(self, wait: bool = True):
         """Gracefully stop background workers and flush aggregators/logs.
@@ -522,40 +804,25 @@ class SZSExchange(Exchange):
                 self._emit(execmsg)
 
             # Update OHLC open bar at 09:25 using clearing price if any trade
+            sym = str(symbol)
             self.ohlc_by_symbol.setdefault(
-                symbol, OHLCAggregator(symbol, self.ohlc_freq, self.logger)
+                sym, OHLCAggregator(sym, self.ohlc_freq, self.logger)
             )
             if trades:
                 vol = float(sum(t["quantity"] for t in trades))
                 px = float(trades[0]["price"]) if trades else None
                 if px is not None:
-                    self.ohlc_by_symbol[symbol].update(now, px, volume=vol)
-                    self._last_price[symbol] = px
+                    self.ohlc_by_symbol[sym].update(now, px, volume=vol)
+                    self._last_price[sym] = px
 
             # Carry remaining quantities into continuous book
             for o in remaining:
-                self.lob_dict.setdefault(symbol, LimitOrderBook(symbol))
-                self.lob_dict[symbol].add_order(o)
+                lob_c = self._ensure_lob(symbol)
+                if lob_c is not None:
+                    lob_c.add_order(o)
             self._auction_done[symbol] = True
 
-    def _preopen_snapshot_top_n(self, symbol: str, n: int = 5):
-        orders = [o for o in self._preopen_orders.get(symbol, []) if o is not None]
-        bids: Dict[float, int] = {}
-        asks: Dict[float, int] = {}
-        for o in orders:
-            price = getattr(o, "price", None)
-            if price is None:
-                # market orders do not contribute to top-of-book price levels
-                continue
-            p = float(price)
-            if getattr(o, "side", None) == "buy":
-                bids[p] = int(bids.get(p, 0)) + int(o.quantity)
-            elif getattr(o, "side", None) == "sell":
-                asks[p] = int(asks.get(p, 0)) + int(o.quantity)
-        # sort: bids desc, asks asc
-        bid_lvls = sorted(bids.items(), key=lambda x: -x[0])[:n]
-        ask_lvls = sorted(asks.items(), key=lambda x: x[0])[:n]
-        return {"buy": bid_lvls, "sell": ask_lvls}
+    # Note: preopen snapshot aggregation is provided by PreopenOrderBook.snapshot_top_n
 
     @staticmethod
     def _format_snapshot_csv_from_lists(asks: list, bids: list, n: int = 5) -> str:
@@ -604,19 +871,22 @@ class SZSExchange(Exchange):
             ap = float(asks[0][0])
             bp = float(bids[0][0])
             mid = round((ap + bp) / 2.0, 2)
+            sym = str(symbol)
             self.ohlc_by_symbol.setdefault(
-                symbol, OHLCAggregator(symbol, self.ohlc_freq, self.logger)
+                sym, OHLCAggregator(sym, self.ohlc_freq, self.logger)
             )
-            self.ohlc_by_symbol[symbol].update(now, mid, volume=0.0)
-            self._last_price[symbol] = mid
+            self.ohlc_by_symbol[sym].update(now, mid, volume=0.0)
+            self._last_price[sym] = mid
         # LOB periodic log control
         if self.logger is not None:
-            last = self._last_lob_log.get(symbol)
+            sym = str(symbol)
+            last = self._last_lob_log.get(sym)
             should_log = False
             if self._lob_tick_mode:
                 should_log = True
             else:
-                if (last is None) or (now - last >= self.lob_log_delta):
+                delta = self.lob_log_delta or pd.Timedelta(milliseconds=0)
+                if (last is None) or (now - last >= delta):
                     should_log = True
             if should_log:
                 csv = self._format_snapshot_csv_from_lists(
@@ -624,18 +894,50 @@ class SZSExchange(Exchange):
                 )
                 # write to preopen.csv instead of lob.csv
                 self.logger.preopen_log(
-                    symbol_name=symbol,
+                    symbol_name=sym,
                     kernel_time=now,
                     level=self.lob_log_level,
                     lob=csv,
                 )
-                self._last_lob_log[symbol] = now
+                self._last_lob_log[sym] = now
+        # Also honor subscriptions during pre-open using indicative book
+        try:
+            for aid, mp in list(self._subs.items()):
+                sub = mp.get(symbol)
+                if not sub:
+                    continue
+                last = sub.get("last_sent")
+                freq = int(sub.get("freq_ms", 1000))
+                if last is None or (now - last) >= pd.Timedelta(milliseconds=freq):
+                    depth = int(sub.get("depth", 1))
+                    # limit lists to depth
+                    pbids = bids[:depth]
+                    pasks = asks[:depth]
+                    msg = new_message(
+                        message_type=MessageType.MKT_DATA,
+                        sender_id="Exchange",
+                        recipient_id=aid,
+                        send_time=now,
+                        recive_time=now,
+                        content={
+                            "symbol": symbol,
+                            "depth": depth,
+                            "bids": pbids,
+                            "asks": pasks,
+                            "ts": str(now),
+                            "phase": "preopen",
+                        },
+                    )
+                    self._emit(msg)
+                    sub["last_sent"] = now
+        except Exception:
+            pass
 
     def _validate_order(self, order: Order, now: pd.Timestamp) -> bool:
         # Enforce price limits only for limit orders when reference available
         if isinstance(order, LimitOrder) and self.price_limit_pct > 0.0:
-            ref = self._last_price.get(getattr(order, "_symbol", None))
-            if ref is not None and ref > 0:
+            ref = self._last_price.get(getattr(order, "_symbol", ""))
+            if ref and ref > 0:
                 up = ref * (1.0 + self.price_limit_pct)
                 dn = ref * (1.0 - self.price_limit_pct)
                 if not (dn <= float(order.price) <= up):
@@ -691,7 +993,7 @@ class NYSEExchange(Exchange):
 def new_exchange(
     exchange_type: str,
     *,
-    symbols: dict,
+    symbols: Iterable[str],
     logger=None,
     exchange_params: Optional[Dict] = None,
     out_queue=None,
@@ -723,4 +1025,4 @@ def new_exchange(
         )
     else:
         # Fallback to generic
-        return Exchange(**common)
+        raise ValueError(f"Unknown exchange type: {exchange_type}")

@@ -18,16 +18,15 @@ class BaseAgent:
         self,
         id,
         *args,
-        message_queue: MessageQueue | None = None,
         logger: Optional[Logger] | None = None,
         location: List[float] | None = None,
         **kwargs,
     ):
         self.id = id
-        self.message_queue = message_queue
+        self.message_queue = MessageQueue()
         self.inbox = []
         self.args = args
-        self.current_time = None
+        self.current_time: Optional[pd.Timestamp] = pd.Timestamp.now()
         self.logger = logger
         initial_cash = float(kwargs.pop("initial_cash", 1_000_000))
         self.agent_log_freq = kwargs.pop("agent_log_freq", "tick")

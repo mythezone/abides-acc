@@ -9,7 +9,7 @@ from typing import List, Dict, Any, Optional, TYPE_CHECKING
 
 
 class LimitOrderBook:
-    def __init__(self, symbol: str):
+    def __init__(self, symbol: str | None):
         self.symbol = symbol
         self.buy_heap = []  # max-heap: use -price
         self.sell_heap = []  # min-heap
@@ -97,12 +97,24 @@ class LimitOrderBook:
         # - Buys: highest price first
         # - Sells: lowest price first
         buys = sorted(
-            [(entry[3].price if hasattr(entry[3], "price") else -entry[0], entry[3].quantity) for entry in self.buy_heap],
-            key=lambda x: -float(x[0])
+            [
+                (
+                    entry[3].price if hasattr(entry[3], "price") else -entry[0],
+                    entry[3].quantity,
+                )
+                for entry in self.buy_heap
+            ],
+            key=lambda x: -float(x[0]),
         )[:n]
         sells = sorted(
-            [(entry[3].price if hasattr(entry[3], "price") else entry[0], entry[3].quantity) for entry in self.sell_heap],
-            key=lambda x: float(x[0])
+            [
+                (
+                    entry[3].price if hasattr(entry[3], "price") else entry[0],
+                    entry[3].quantity,
+                )
+                for entry in self.sell_heap
+            ],
+            key=lambda x: float(x[0]),
         )[:n]
         return {
             "buy": buys,

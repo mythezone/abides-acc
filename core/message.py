@@ -99,11 +99,11 @@ class MessageBox:
         )
         self.messages.put(adjusted_message)
 
-    def get(self) -> Message:
+    def get(self) -> Optional[Message]:
         if not self.messages.empty():
-            return self.messages.get()
-        else:
-            return None
+            m = self.messages.get()
+            return m
+        return None
 
     def empty(self) -> bool:
         return self.messages.empty()

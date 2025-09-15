@@ -152,6 +152,66 @@
   \item \verb|register_listener(listener)|：注册监听器以接收市场事件（如成交、行情变化）。
 \end{itemize}
 
+\subsubsection{交易所消息协议（Exchange Message Protocol）}
+
+\paragraph{概述}
+
+交易所（Exchange）遵循 ABIDES 风格的消息体，支持\emph{按代理批量多标的下单}、\emph{开盘前集合竞价}与\emph{行情订阅}。协议沿用当前 \verb|core.lob.LimitOrderBook| 与 \verb|core.logger.Logger| 的数据与日志格式。
+
+\paragraph{订单流程}
+\textbf{提交订单}：发送 \verb|MessageType.SUBMIT_ORDER|，\verb|content.requests| 为字典列表，每个请求包含：
+\begin{itemize}
+  \item \texttt{type}：\verb|limit_order| 或 \verb|market_order|
+  \item \texttt{symbol}：标的代码（字符串）
+  \item \texttt{agent\_id}, \texttt{timestamp}, \texttt{side}, \texttt{quantity}
+  \item \texttt{price}：限价单必填
+\end{itemize}
+
+\noindent\textbf{修改订单}：发送 \verb|MessageType.MODIFY_ORDER|，\verb|content.requests| 中每项包含：
+\begin{itemize}
+  \item \texttt{symbol}, \texttt{order\_id}, \texttt{new\_order}（结构与提交时一致）
+\end{itemize}
+
+\noindent\textbf{撤销订单}：发送 \verb|MessageType.CANCEL_ORDER|，\verb|content.requests| 中每项包含：
+\begin{itemize}
+  \item \texttt{symbol}, \texttt{order\_id}
+\end{itemize}
+
+\noindent\textbf{回执与成交}：
+\begin{itemize}
+  \item \verb|ORDER_ACCEPTED|：每笔被接收的订单都会发送至 \verb|order.agent_id|
+  \item \verb|ORDER_EXECUTED|：在发生成交时发送，\verb|content.trades| 与 \verb|content.fees| 给出成交与费用明细
+\end{itemize}
+
+\paragraph{查询接口}
+\begin{itemize}
+  \item \verb|QUERY_LAST_TRADE|：\verb|content.symbol| $\rightarrow$ 回复 \verb|data|（最新成交价）与 \verb|mkt_closed| 标记。
+  \item \verb|QUERY_SPREAD|：\verb|content.symbol|, \verb|content.depth| $\rightarrow$ 回复 \verb|bids|, \verb|asks| 与 \verb|data|（含最新成交）。注意：枚举名按历史兼容保留拼写错误 \verb|QUERY_SPREAD|。
+  \item \verb|QUERY_ORDER_STREAM|：\verb|content.symbol|, \verb|content.length| $\rightarrow$ 回复最近的成交条目。
+  \item \verb|QUERY_TRANSACTED_VOLUME|：\verb|content.symbol|, \verb|content.lookback_period|（如 \verb|"60s"|）$\rightarrow$ 回复区间成交量汇总。
+\end{itemize}
+
+\paragraph{行情订阅}
+\textbf{请求}：\verb|MKT_DATA_SUBSCRIPTION_REQUEST|，\verb|content.subscriptions| 为条目列表：
+\begin{itemize}
+  \item \texttt{symbol}, \texttt{depth}（档位）, \texttt{freq\_ms}（最小推送间隔，毫秒）
+\end{itemize}
+\textbf{取消}：\verb|MKT_DATA_SUBSCRIPTION_CANCELLATION|，可选 \verb|content.symbols| 指定取消的标的；为空表示取消全部。
+\textbf{推送}：交易所按订阅以 \verb|MKT_DATA| 推送 \verb|{symbol, depth, bids, asks, ts}|。预开盘期间基于\emph{集合竞价盘}，其余时段来自\emph{连续竞价订单簿}。
+
+\paragraph{开盘前集合竞价（SZSE）}
+当 SZSE 交易所启用 \verb|opening_call=True| 时：
+\begin{itemize}
+  \item \textbf{时段与撤单规则}：09:15--09:20 可申报且可撤；09:20--09:25 可申报不可撤；09:25 集合竞价形成开盘价；09:30 起进入连续竞价（午间休市等分段沿用 \verb|EXCHANGE_SESSIONS|）。
+  \item \textbf{报单归集}：集合竞价窗口内，订单进入\emph{预开盘订单簿}（不计入连续竞价 LOB）；撤单仅 09:15--09:20 允许。
+  \item \textbf{定价与撮合}：09:25 对各标的在限价集合上枚举候选价，选取\emph{最大可成交量}价格；并列时优先\emph{最小不平衡度}。在该价按“价高/价低优先 + 时间优先”撮合；未成交的限价单转入连续竞价 LOB。
+  \item \textbf{费用与限制}：成交收取 \verb|fee_rate|；继续支持 T+1 与涨跌幅限制（有参考价时对限价进行校验）。
+  \item \textbf{预开盘快照日志}：将预开盘 LOB 快照写入 \verb|log/<run>/<symbol>/preopen.csv|，采用与 \verb|lob.csv| 一致的 5 档列式 CSV 架构，便于对齐比对。
+\end{itemize}
+
+\paragraph{日志对齐}
+为避免文档重复，本协议的 OHLC、LOB 与核心流转日志沿用“\S~\ref{fig:uml_monitoring} 监控与日志模块”与“MVP 日志与消息格式”中的定义与路径约定：\verb|log/<run>/<symbol>/ohlc.csv|、\verb|log/<run>/<symbol>/lob.csv| 与 \verb|log/<run>/log.csv|；字段与频率保持一致（可通过配置降低高吞吐阶段的记录密度）。
+
 \subsection{智能体框架模块}
 
 智能体框架提供一套抽象基类和工具，支持用户实现多种交易策略并参与仿真。
@@ -617,15 +677,3 @@ API 层可使用 FastAPI 或 gRPC 实现，高并发场景下可部署在异步 
   \caption{模块间关系 UML 类图}
   \label{fig:uml_interaction}
 \end{figure}
-% Added: SZSE opening call auction (initial version)
-\paragraph{SZSE 开盘集合竞价流程（初版）}
-为贴合交易所特性，我们在 \verb|SZSEExchange| 中实现了开盘集合竞价的基本机制：
-\begin{itemize}
-  \item 时间阶段：09:15--09:20 可申报且可撤单；09:20--09:25 可申报不可撤单；09:25 进行集中撮合以形成开盘价；09:30 起进入连续竞价（与午间休市相同的分段仍沿用 \verb|EXCHANGE_SESSIONS|）。
-  \item 报单处理：在集合竞价窗口内，订单进入预开盘订单簿（不进入连续竞价 LOB）；撤单仅在 09:15--09:20 阶段允许。
-  \item 开盘定价与撮合：09:25 时，对每只股票在限价集合上遍历候选价格，选择撮合量最大的价格，若有并列，优先最小不平衡度；在该价位按“价高优先/价低优先 + 时间优先”的规则撮合生成成交；未成交的限价单转入连续竞价订单簿。
-  \item 费用与限制：成交时收取手续费（\verb|fee_rate|），同时继续支持 T+1 与涨跌幅限制（限价单在有参考价时校验）。
-\end{itemize}
-
-\paragraph{Agent 在集合竞价阶段的策略差异}
-基础策略在集合竞价窗口（09:15--09:25）下单频率下降（\verb|auction_wakeup_ms_range|），并以限价单为主，避免使用市价单；开盘后恢复常规节奏（\verb|wakeup_ms_range|）。该策略接口位于 \verb|BaseAgent| （动态调整唤醒间隔）与 \verb|ZeroIntelligenceAgent|（在集合竞价阶段仅限价报单）。
