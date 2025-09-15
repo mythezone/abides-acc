@@ -26,7 +26,7 @@ class BaseAgent:
         self.message_queue = MessageQueue()
         self.inbox = []
         self.args = args
-        self.current_time: Optional[pd.Timestamp] = pd.Timestamp.now()
+        self.current_time: pd.Timestamp = pd.Timestamp.now()
         self.logger = logger
         initial_cash = float(kwargs.pop("initial_cash", 1_000_000))
         self.agent_log_freq = kwargs.pop("agent_log_freq", "tick")
