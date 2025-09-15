@@ -210,6 +210,12 @@ class Kernel:
                     agent.wakeup(last_time)
                 else:
                     agent.receive(msg)
+                # Drain any messages the agent just enqueued
+                while True:
+                    try:
+                        self.in_box.put(self.message_queue.get_nowait_raw())
+                    except Exception:
+                        break
             elif rid == "Exchange":
                 # Skip PROC log to reduce duplication
                 responses = self.exchange.handle_message(msg)

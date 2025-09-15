@@ -92,10 +92,13 @@ class Exchange:
                 if isinstance(symbol, str) and symbol not in self.lob_dict:
                     self.lob_dict[symbol] = LimitOrderBook(symbol)
 
-                # Decide order class
+                # Decide order class with robust fallback
                 otype = req.get("type")
                 if otype == "limit_order":
-                    order = LimitOrder.from_dict(req)
+                    if "price" not in req or req.get("price") is None:
+                        order = MarketOrder.from_dict(req)
+                    else:
+                        order = LimitOrder.from_dict(req)
                 elif otype == "market_order":
                     order = MarketOrder.from_dict(req)
                 else:

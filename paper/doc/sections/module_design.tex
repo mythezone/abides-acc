@@ -283,6 +283,42 @@
   \end{itemize}
 \end{description}
 
+\paragraph{ABIDES 代理适配与动作逻辑}
+我们在 \verb|core/agent| 中提供了若干与 ABIDES 行为对齐的适配器，并按当前消息协议重写了动作：
+\begin{itemize}
+  \item \textbf{NoiseAgent}：在 \verb|initial_symbols| 中随机选择 $1\sim K$ 个标的（不放回），对每个标的随机生成买/卖与数量；若卖出且库存不足则转为买入；订单类型在限价/市价中随机；使用单条 \verb|SUBMIT_ORDER| 批量发送。时间戳使用代理当前内核时间（若空则回退到 \verb|now()|，保证类型安全）。
+  \item \textbf{OrderBookImbalanceAgent}：先查询 \verb|QUERY_SPERAD| 获取最优一档，然后按买/卖盘量能不平衡（默认 $\sum bid\_vol \le \sum ask\_vol$ 偏买）选择方向；若卖出但库存不足则改为买入；价格取对应方向最佳价，若不存在回退另一侧最佳价；以限价单提交。
+  \item \textbf{HBL（近似）}：先查询盘口，随后在买/卖之间交替选择方向以分散；若卖出无库存则改为买入；锚定最优价发送小额限价单。
+  \item \textbf{ValueAgent}：若启用 Oracle，查询 \verb|ORACLE_QUERY_OHLC| 获取参考收盘价，并在参考价上下各布一笔小额限价单；否则以随机参考价代替。
+  \item \textbf{FundamentalTrackingAgent}：与 ValueAgent 类似，但更强调均值回归（买价略低于参考，卖价略高于参考）。
+\end{itemize}
+
+\subsubsection{ABIDES 代理适配实现}
+为兼容 ABIDES 生态中已有的策略代理，我们在 \verb|core/agent| 下新增了若干适配器，复用统一的 BaseAgent 生命周期、消息协议与我方交易所接口：
+\begin{itemize}
+  \item NoiseAgent（\verb|core/agent/noise.py|）：在已订阅标的上随机生成小额限价/市价单，批量提交（\verb|SUBMIT_ORDER|），用于噪声流量与撮合压力测试。
+  \item ValueAgent（\verb|core/agent/value.py|）：如开启校准模式（\verb|calibration_mode|）则通过 \verb|ORACLE_QUERY_OHLC| 获取“基本面”收盘价，围绕参考价在两侧布置小额限价单；否则退化为基于随机参考价的简化价值单。
+  \item OrderBookImbalanceAgent（\verb|core/agent/obi.py|）：先发出 \verb|QUERY_SPERAD| 获取盘口深度，再依据买卖盘量能不平衡决定交易方向，并在最优价附近下单。
+  \item HeuristicBeliefLearningAgent（\verb|core/agent/hbl.py|）：简化的 HBL 近似实现，交替在买/卖方向上围绕最优价布置小单以实现探索与分散。
+  \item FundamentalTrackingAgent（\verb|core/agent/fundamental.py|）：通过 \verb|ORACLE_QUERY_OHLC| 追踪“基本面”价格，向均值回归方向提交买卖单；在无 Oracle 时退化为随机参考价。
+\end{itemize}
+
+上述代理完全使用我方消息协议：下单统一采用 \verb|SUBMIT_ORDER| 批量格式；依赖行情/盘口的场景使用 \verb|MKT_DATA| 推送或 \verb|QUERY_SPERAD| 查询；成交与资金/持仓更新通过基础框架在 \verb|ORDER_EXECUTED| 中统一处理，记录到代理日志文件中。
+
+\paragraph{从 ABIDES 迁移指南}
+将 ABIDES 代理迁移到当前平台需完成以下替换：
+\begin{enumerate}
+  \item 生命周期与基类：ABIDES \verb|FinancialAgent/TradingAgent| $\rightarrow$ 我方 \verb|core.agent.base.BaseAgent|；
+  将 \verb|kernelInitializing/receiveMessage| 改写为 \verb|wakeup/receive|。
+  \item 时间与调度：移除 ABIDES 内核回调与 pipeline delay 直接调用；
+  使用 \verb|BaseAgent.set_next_wakeup| 控制节奏，必要时在 \verb|wakeup_delay| 中自定义随机区间。
+  \item 消息协议：将 ABIDES 文本消息（如 \verb|"LIMIT_ORDER"|）映射为枚举 \verb|MessageType.SUBMIT_ORDER|，采用批量 \verb|requests| 列表；撤单/改单分别映射为 \verb|CANCEL_ORDER/MODIFY_ORDER|。行情查询使用 \verb|MKT_DATA| 与 \verb|QUERY_*| 枚举。
+  \item 订单/持仓：订单结构体使用我方字典格式；成交回报通过 \verb|ORDER_EXECUTED| 中的 \verb|trades| 与 \verb|fees| 由 \verb|BaseAgent| 自动计入 \verb|Portfolio|。
+  \item 日志与监控：调试打印替换为我方 \verb|Logger|；必要的 LOB/OHLC 快照由交易所模块按频率落盘，无需代理手工输出。
+\end{enumerate}
+
+迁移时可先以“轻量近似”验证端到端可用性，随后再逐步补齐各策略在 ABIDES 中的特定细节（如信念更新、风控限额、细粒度延迟模型等），以降低改造风险与集成成本。
+
 \subsubsection{技术路线与实现}
 代理框架采用面向对象设计，基于组合和继承实现代码复用。状态管理可使用 Dataclass 或 Pydantic 结构，确保类型安全。强化学习代理可集成深度学习框架（如 PyTorch 或 TensorFlow），通过异步模式实现在线训练。
 

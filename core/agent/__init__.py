@@ -2,6 +2,11 @@ from core.agent.base import BaseAgent
 from core.agent.zero_intelligence import ZeroIntelligenceAgent
 from core.agent.oracle import OracleAgent
 from core.agent.background import BackgroundAgent
+from core.agent.noise import NoiseAgent
+from core.agent.value import ValueAgent
+from core.agent.obi import OrderBookImbalanceAgent
+from core.agent.hbl import HeuristicBeliefLearningAgent
+from core.agent.fundamental import FundamentalTrackingAgent
 
 # from agent.trading_agent import TradingAgent
 # from agent.noise_agent import NoiseAgent
@@ -16,9 +21,11 @@ agents = {
     "zero_intelligence": ZeroIntelligenceAgent,
     "oracle": OracleAgent,
     "background": BackgroundAgent,
-    # "trading": TradingAgent,
-    # "noise": NoiseAgent,
-    # "value": ValueAgent,
+    "noise": NoiseAgent,
+    "value": ValueAgent,
+    "order_book_imbalance": OrderBookImbalanceAgent,
+    "hbl": HeuristicBeliefLearningAgent,
+    "fundamental_tracking": FundamentalTrackingAgent,
     # "market_maker": AdaptiveMarketMakerAgent,
     # "momentum": MomentumAgent,
     # "pov_execution": POVExecutionAgent,
@@ -30,9 +37,11 @@ __all__ = [
     "ZeroIntelligenceAgent",
     "OracleAgent",
     "BackgroundAgent",
-    # "TradingAgent",
-    # "NoiseAgent",
-    # "ValueAgent",
+    "NoiseAgent",
+    "ValueAgent",
+    "OrderBookImbalanceAgent",
+    "HeuristicBeliefLearningAgent",
+    "FundamentalTrackingAgent",
     # "AdaptiveMarketMakerAgent",
     # "MomentumAgent",
     # "POVExecutionAgent",

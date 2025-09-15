@@ -1,0 +1,37 @@
+{
+  "simulation": {
+    "start_date": "2025-01-02 09:30:00",
+    "end_date": "2025-01-02",
+    "exchange_type": "SZSE"
+  },
+  "kernel": {
+    "name": "Agents Demo",
+    "exchange_params": {
+      "ohlc_freq": "3s",
+      "lob_log_freq": "3s",
+      "lob_log_level": 5,
+      "workers": 0,
+      "fee_rate": 0.0003,
+      "t_plus_one": true,
+      "price_limit_pct": 0.1,
+      "opening_call": false
+    },
+    "agent_positions": {
+      "mode": "random",
+      "min_shares": 100,
+      "max_shares": 500,
+      "min_cash": 100000,
+      "max_cash": 500000
+    }
+  },
+  "agents": [
+    { "num": 1, "type": "zero_intelligence", "params": {"initial_symbols": ["AAA","BBB","CCC"]} },
+    { "num": 1, "type": "noise", "params": {"initial_symbols": ["AAA","BBB","CCC"]} },
+    { "num": 1, "type": "value", "params": {"initial_symbols": ["AAA","BBB","CCC"]} },
+    { "num": 1, "type": "order_book_imbalance", "params": {"initial_symbols": ["AAA","BBB","CCC"], "depth": 1} },
+    { "num": 1, "type": "hbl", "params": {"initial_symbols": ["AAA","BBB","CCC"]} },
+    { "num": 1, "type": "fundamental_tracking", "params": {"initial_symbols": ["AAA","BBB","CCC"]} }
+  ],
+  "symbols": ["AAA","BBB","CCC"]
+}
+
