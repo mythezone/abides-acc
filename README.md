@@ -1,49 +1,118 @@
-# ABIDES-ACC: Acceleration of ABIDES for Financial Calibration
-[![License](https://img.shields.io/github/license/mythezone/abides-acc.svg)](https://github.com/mythezone/abides-acc/blob/main/LICENSE)
+# ABIDES‑ACC — An Accelerated, ABIDES‑Compatible Market Simulator
 
-## 主要优化
-1. 对于所有类和方法的参数都使用typing进行注释，增加了代码的可读性和规范性。
-2. 重写了`Message`类，让消息的传递、查询和处理更为高效。将`message`模块移动至`core`模块下。
-3. 重写了`Agent`类，增加了对消息的处理和查询方法。
-4. 重写了`Kernel`类，将其放置在`core`模块下，让代码结构更具有逻辑性，修改了kernel的部分实现方式。
-5. 添加了`Simulation`类
-6. 添加了`Market`类
-7. 重写了`Order`类
-8. 添加了GUI模块，提供了Web界面进行可视化运行。
-9. 为每个重构/修改的类添加了单元测试，确保代码的正确性和稳定性。
-10. `Order`作为模拟中的主要组成之一，应该具有独立的模块。将`util.order`模块提升到主模块`order`，中，并且将`Order`相关的类也放到`order`模块中，比如`OrderBook`，`OrderManager`等。
-11. 重新实现`Exchange`类，由于每次模拟都只有一个交易所，其作为`Agent`的子类似乎并不合适，大多数的模拟器功能都要通过该对象实现，因此将其改写后放在`core`模块下，
-12. 按照PEP8规范[1]将整个仓库中的代码变得更`pythonic`的
-    1. 将所有模块名改为小写，类名改为大写，方法名改为小写加下划线。
-    2. 所有的缩进修改为4个空格
-    3. 大段的方法注释改为`"""`的形式
-13. 将python的支持版本提升到3.12 (Pandas的几个函数在3.12中有了新的实现方式，使用了新的语法糖，提升了代码的可读性和性能，但是可能会不兼容3.9及以下版本)
+[![License](https://img.shields.io/github/license/mythezone/abides-acc.svg)](./LICENSE.txt)
 
+ABIDES‑ACC 提供一个现代、可扩展的多资产市场仿真内核，兼容 ABIDES 风格的消息与代理，同时在工程结构、日志体系与易用性方面做了强化。项目包含独立的撮合与日志模块、面向消息的 Agent 框架、以及与 ABIDES 的轻量级兼容层，便于团队协同研发与扩展。
 
-## 仿真流程
+## 特色特性
 
-1. 创建所有`Symbol`对象，对应股市中所有可购买的股票。
-2. 为每个`Symbol`创建对应的`OrderBook`对象，两者之间可以通过`Symbol.name`的属性进行关联。 
-3. 创建`Exchange`对象，包含所有可交易的`Symbol`对象和对应的`OrderBook`对象。
-4. 初始化所有`Agent`对象.
-5. 初始化`Simulator`对象，该对象会包含一个`Kernel`对象和一个`Exchange`对象。通过`Kernel`对象来控制整个仿真过程，主要是对事件的处理和对模拟时间的推进。一些全局的参数也应该放置在`Simulator`对象中，比如`start_time`，`end_time`，`log_frequency`，`log_level`,`log_file`等。
-6. 仿真由`Message`对象驱动，`Message`对象会在`Kernel`中被处理。
+- 明确的分层结构：`core/kernel`（调度）、`core/exchange`（交易所）、`core/lob`（订单簿）、`core/agent`（代理）、`core/logger`（日志）、`core/clock`（交易时钟）。
+- 统一消息协议：支持批量多标的下单、改/撤、数据查询、行情订阅；预开盘集合竞价（SZSE 风格）可选。
+- 日志与可回放：每个标的输出 `ohlc.csv`/`lob.csv`/`preopen.csv`，核心消息流写入 `log.csv`，便于回放与标注。
+- 兼容 ABIDES：提供若干 ABIDES 风格 Agent 适配器与迁移指南；保留 ABIDES 原仓库到 `abides/` 目录以供参考与对照。
+- 工程化与测试：PEP 8/Typing 友好；提供单元测试与一键仿真脚本；更低的上手门槛与二次开发成本。
 
+## 架构总览
 
+- `core/kernel.py`：基于优先队列的事件驱动内核。统一调度消息、推进时间，支持心跳 `LOG_TICK` 驱动的 OHLC/LOB 定时写盘。
+- `core/exchange.py`：交易所，维护每个标的的 LOB。支持限价/市价、改/撤、集合竞价、T+1 与涨跌幅限制（可配置）、行情订阅推送。
+- `core/lob.py`：最小可用、可扩展的 LOB 实现，提供撮合、快照与 CSV 序列化能力。
+- `core/agent/`：代理基类与适配器。基类统一处理收/发、资金/持仓更新；适配器提供 ABIDES 风格策略。
+- `core/logger.py`：统一的日志与 CSV 落盘，便于后处理/标注。
+- `core/clock.py`：交易时段定义、跨日推进、午休跳时段。
 
-## Quickstart
+## 消息协议（摘要）
+
+- 订单类：
+  - `SUBMIT_ORDER`（支持单条消息中批量多标的）；`MODIFY_ORDER`；`CANCEL_ORDER`。
+  - 回执：`ORDER_ACCEPTED`（受理）/`ORDER_EXECUTED`（成交明细含 `trades`/`fees`）。
+- 查询类：
+  - `QUERY_LAST_TRADE`、`QUERY_SPERAD`（按历史兼容保留拼写）、`QUERY_ORDER_STREAM`、`QUERY_TRANSACTED_VOLUME`。
+- 行情订阅：
+  - `MKT_DATA_SUBSCRIPTION_REQUEST/CANCELLATION`；推送 `MKT_DATA`（`{symbol, depth, bids, asks, ts}`）。
+  - 预开盘推送使用集合竞价盘，连续竞价推送使用 LOB。
+- 会话控制：`MKT_OPEN/MKT_CLOSE`；`LOG_TICK` 用于空闲时驱动定时日志。
+
+详见 `docs/source/exchange.rst` 与论文 `paper/doc/sections/module_design.tex` 中对应章节。
+
+## 快速开始
+
 ```bash
-mkdir project
-cd project
-
 git clone https://github.com/mythezone/abides-acc.git
 cd abides-acc
 pip install -r requirements.txt
+
+# 运行包含所有示例代理的演示（短时仿真）
+python scripts/run_all_agents.py
 ```
 
-## Acknowledgements
+输出日志将写入 `log/<run>/` 目录：
 
-This project builds upon [![GitHub stars](https://img.shields.io/github/stars/abides-sim/abides.svg?style=social)](https://github.com/abides-sim/abides/stargazers), an excellent agent-based market simulator.
+- `log/<run>/<symbol>/ohlc.csv`、`lob.csv`、`preopen.csv`
+- `log/<run>/log.csv`（核心消息流）
 
-## References
-[1] [PEP8规范](https://peps.python.org/pep-0008/)
+## 配置说明
+
+- 示例配置：`config/test_agents.json`
+  - `simulation`: 仿真起止时间、交易所类型（`SZSE`/`NYSE`）。
+  - `kernel.exchange_params`: OHLC/LOB 日志频率/档位、workers、撮合规则（T+1/涨跌幅/手续费/是否启用集合竞价）。
+  - `kernel.agent_positions`: 代理初始仓位随机化区间。
+  - `agents`: 代理类型与参数（详见下节 ABIDES 兼容）。
+  - `symbols`: 挂牌标的列表。
+
+## Agent 框架与示例策略
+
+内置若干 ABIDES 风格策略适配器（位于 `core/agent`），全部使用当前消息协议：
+
+- `zero_intelligence.py`：零智代理（示例）。
+- `noise.py`（NoiseAgent）：随机小额限价/市价批量下单；不放回抽样标的；卖出时若库存不足退化为买入。
+- `value.py`（ValueAgent）：若启用 Oracle，围绕参考收盘价在上下侧各布小额限价单；否则围绕随机参考价。
+- `obi.py`（OrderBookImbalanceAgent）：查询盘口后按买/卖盘量能不平衡决定方向；若卖出无库存则改买入；价格锚定最优档，缺失回退到另一侧最优档。
+- `hbl.py`（HeuristicBeliefLearningAgent）：近似 HBL；先查询盘口，随后在买/卖之间交替下单；卖出无库存时改买入。
+- `fundamental.py`（FundamentalTrackingAgent）：与 ValueAgent 类似，但更强调均值回归（买价略低、卖价略高于参考）。
+
+所有代理都通过 `BaseAgent` 统一处理成交反馈（`ORDER_EXECUTED`），自动更新资金/持仓并按节奏写入 `log/agents/<agent>.csv`。
+
+## 与 ABIDES 的兼容与迁移
+
+- 保留 ABIDES 原仓库到 `abides/` 目录，便于查阅原始实现与接口风格。
+- 消息风格兼容：支持 ABIDES 风格的文本语义（限价/市价/改/撤/查询/订阅等）映射为当前枚举协议。
+- 代理适配：已提供 Noise/Value/OBI/HBL/Fundamental 等适配器，可作为迁移模板。
+- 迁移建议：
+  1. 生命周期：`FinancialAgent/TradingAgent` → `BaseAgent`；方法改 `kernelInitializing/receiveMessage` 为 `wakeup/receive`。
+  2. 消息：将 ABIDES 文本消息改为 `MessageType.*`（尤其 `SUBMIT_ORDER` 的批量 `requests`）。
+  3. 订单/仓位：使用当前订单字典结构；成交回报统一由 `BaseAgent` 应用到 `Portfolio`。
+  4. 日志：打印改为 `Logger`；行情快照由交易所模块按配置落盘。
+
+更多详情见论文 `paper/doc/sections/module_design.tex` 中“ABIDES 代理适配与动作逻辑/迁移指南”。
+
+## 测试与验证
+
+- 单元测试（建议安装 pytest）：
+
+```bash
+pytest -q tests/core/agents/test_noise_agent.py
+pytest -q tests/core/agents/test_value_agent.py
+pytest -q tests/core/agents/test_obi_agent.py
+pytest -q tests/core/agents/test_hbl_agent.py
+pytest -q tests/core/agents/test_fundamental_agent.py
+pytest -q tests/core/test_exchange_compat.py
+```
+
+- 一键仿真（覆盖所有示例代理）：
+
+```bash
+python scripts/run_all_agents.py
+# 或使用自定义配置
+python scripts/run_all_agents.py config/test_agents.json
+```
+
+## 贡献与开发
+
+- 代码风格：PEP 8；类型提示完备；Black/Isort 友好。
+- 日志与性能注意：在大规模实验中可通过 `exchange_params` 调低日志频率以减少 IO。
+- 欢迎通过 Issue/PR 讨论新策略、性能优化或更广泛的 ABIDES 兼容。
+
+## 致谢
+
+- 本项目参考并兼容 [ABIDES](https://github.com/abides-sim/abides) 的若干理念与风格，感谢原作者与社区贡献。
