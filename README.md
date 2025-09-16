@@ -33,7 +33,7 @@ ABIDES‑ACC 提供一个现代、可扩展的多资产市场仿真内核，兼�
   - 预开盘推送使用集合竞价盘，连续竞价推送使用 LOB。
 - 会话控制：`MKT_OPEN/MKT_CLOSE`；`LOG_TICK` 用于空闲时驱动定时日志。
 
-详见 `docs/source/exchange.rst` 与论文 `paper/doc/sections/module_design.tex` 中对应章节。
+详见项目书的相关章节。
 
 ## 快速开始
 
