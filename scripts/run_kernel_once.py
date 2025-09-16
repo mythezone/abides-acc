@@ -4,8 +4,15 @@ Run a single Kernel simulation from a JSON config path and exit.
 
 This small wrapper exists to isolate Singletons (Logger, ConfigManager) per process.
 """
-import argparse
+# Get the project root and add it at the begining of the path.
+from pathlib import Path
 import sys
+
+project_root = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(project_root))
+
+
+import argparse
 from core.kernel import Kernel
 import os, shutil
 
