@@ -17,6 +17,7 @@ dependencies = [
     { name = "heapdict" },
     { name = "ipykernel" },
     { name = "joblib" },
+    { name = "jsons" },
     { name = "kiwisolver" },
     { name = "lightning" },
     { name = "matplotlib" },
@@ -63,6 +64,7 @@ requires-dist = [
     { name = "heapdict", specifier = ">=1.0.1" },
     { name = "ipykernel", specifier = ">=6.29.5" },
     { name = "joblib", specifier = ">=1.5.0" },
+    { name = "jsons", specifier = ">=1.6.3" },
     { name = "kiwisolver", specifier = ">=1.4.8" },
     { name = "lightning", specifier = ">=2.5.1.post0" },
     { name = "matplotlib", specifier = ">=3.10.3" },
@@ -855,6 +857,18 @@ name = "jsonpath"
 version = "0.82.2"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/cf/a1/693351acd0a9edca4de9153372a65e75398898ea7f8a5c722ab00f464929/jsonpath-0.82.2.tar.gz", hash = "sha256:d87ef2bcbcded68ee96bc34c1809b69457ecec9b0c4dd471658a12bd391002d1", size = 10353, upload-time = "2023-08-24T18:57:55.459Z" }
+
+[[package]]
+name = "jsons"
+version = "1.6.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typish" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ef/38/c1c4e06725568c21b2cdab96f95450caa257b73aac90f8041af18756f3bf/jsons-1.6.3.tar.gz", hash = "sha256:cd5815c7c6790ae11c70ad9978e0aa850d0d08a643a5105cc604eac8b29a30d7", size = 39884, upload-time = "2022-06-09T19:52:01.861Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9a/22/e18585ccbf9f8c42f8c26435df0e551a924aae33488227eb686876d0bffd/jsons-1.6.3-py3-none-any.whl", hash = "sha256:f07f8919316f72a3843c7ca6cc6c900513089f10092626934d1bfe4b5cf15401", size = 60701, upload-time = "2022-06-09T19:51:59.266Z" },
+]
 
 [[package]]
 name = "jupyter-client"
@@ -1933,6 +1947,9 @@ dependencies = [
     { name = "tqdm" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b6/65/3740b332f66c3e50bb1f67b16eb6909f048f2898941f8f0beb23e524f4ee/pysmb-1.2.11.zip", hash = "sha256:3a33214f737e877a8ead579e63c9944941deff5e12100e1ca65311b230b1786a", size = 1389566, upload-time = "2025-03-25T02:10:32.653Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/92/a7/112f32e726ec16c493de490f6683707e97fc2093244c26d34bf4de6f4ccd/pysmb-1.2.11-py3-none-any.whl", hash = "sha256:df3299f5ae2e9f9c6dd164480d16894e06c6c8a24255bc526b150bffdb9b62a6", size = 85029, upload-time = "2025-08-26T07:31:18.81Z" },
+]
 
 [[package]]
 name = "pytest"
@@ -2542,6 +2559,14 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f8/b1/0c11f5058406b3af7609f121aaa6b609744687f1d158b3c3a5bf4cc94238/typing_inspection-0.4.1.tar.gz", hash = "sha256:6ae134cc0203c33377d43188d4064e9b357dba58cff3185f22924610e70a9d28", size = 75726, upload-time = "2025-05-21T18:55:23.885Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/17/69/cd203477f944c353c31bade965f880aa1061fd6bf05ded0726ca845b6ff7/typing_inspection-0.4.1-py3-none-any.whl", hash = "sha256:389055682238f53b04f7badcb49b989835495a96700ced5dab2d8feae4b26f51", size = 14552, upload-time = "2025-05-21T18:55:22.152Z" },
+]
+
+[[package]]
+name = "typish"
+version = "1.9.3"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9d/d6/3f56c9c0c12adf61dfcf4ed5c8ffd2c431db8dd85592067a57e8e1968565/typish-1.9.3-py3-none-any.whl", hash = "sha256:03cfee5e6eb856dbf90244e18f4e4c41044c8790d5779f4e775f63f982e2f896", size = 45063, upload-time = "2021-08-05T20:36:28.702Z" },
 ]
 
 [[package]]

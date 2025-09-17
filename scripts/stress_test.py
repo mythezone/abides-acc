@@ -44,9 +44,17 @@ def get_rss_bytes() -> int:
             return 0
 
 
-def inject_orders(kernel: Kernel, symbols, start_time: pd.Timestamp, orders: int, rate_per_sec: int, price_min=10.0, price_max=100.0, virtual_agents: int = 0):
+def inject_orders(
+    kernel: Kernel,
+    symbols,
+    start_time: pd.Timestamp,
+    orders: int,
+    rate_per_sec: int,
+    price_min=10.0,
+    price_max=100.0,
+    virtual_agents: int = 0,
+):
     # Spread orders uniformly across simulation window determined by orders/rate
-    sim_duration_sec = orders / max(1, rate_per_sec)
     for i in range(orders):
         ts = start_time + pd.Timedelta(seconds=(i / max(1, rate_per_sec)))
         sym = symbols[i % len(symbols)] if symbols else f"SYM{i%10:02d}"
@@ -118,10 +126,14 @@ def main():
     workers = int(stress_cfg.get("exchange_workers", ex_params.get("workers", 0)))
     kernel.exchange.ohlc_freq = ohlc_freq
     kernel.exchange._lob_tick_mode = str(lob_freq).lower() == "tick"
-    kernel.exchange.lob_log_delta = None if kernel.exchange._lob_tick_mode else pd.Timedelta(lob_freq)
+    kernel.exchange.lob_log_delta = (
+        None if kernel.exchange._lob_tick_mode else pd.Timedelta(lob_freq)
+    )
     if workers and workers > 0 and kernel.exchange.workers == 0:
         # Reinitialize workers if originally disabled (simple approach: no dynamic restart; warn)
-        print(f"[warn] exchange workers were {kernel.exchange.workers}, requested {workers}. Restart recommended.")
+        print(
+            f"[warn] exchange workers were {kernel.exchange.workers}, requested {workers}. Restart recommended."
+        )
 
     # Baseline memory
     rss_before = get_rss_bytes()
@@ -181,7 +193,9 @@ def main():
         f"Memory delta ({'tracemalloc' if use_tracemalloc else 'RSS'}): {fmt_bytes(mem_delta_bytes)} "
         f"(avg {fmt_bytes(per_order_mem_bytes)}/order)"
     )
-    print(f"Logs total: {fmt_bytes(total_log_size)} (avg {fmt_bytes(per_order_log_bytes)}/order)")
+    print(
+        f"Logs total: {fmt_bytes(total_log_size)} (avg {fmt_bytes(per_order_log_bytes)}/order)"
+    )
     print("--- Extrapolated to target ---")
     print(f"Target orders: {target_orders:,}")
     print(f"Estimated wall-clock: {est_time_sec/60:.2f} minutes")
