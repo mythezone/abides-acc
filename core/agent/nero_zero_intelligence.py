@@ -1,5 +1,5 @@
 from core.agent.fundamental import FundamentalTrackingAgent
-from core.message import MessageType, MessageQueue, new_message
+from core.message import MessageType, MessageQueue, Message, new_message
 from typing import List, Optional
 
 import numpy as np
@@ -7,7 +7,7 @@ import pandas as pd
 
 
 class NearZeroIntelligenceAgent(FundamentalTrackingAgent):
-
+    """TO DO: get fundamental value."""
     def __init__(
         self,
         id,
@@ -28,7 +28,11 @@ class NearZeroIntelligenceAgent(FundamentalTrackingAgent):
             **kwargs,
         )
         self.subscribed_symbols: List[str] = (initial_symbols or [])[:]
-
+        self.selected_symbols = list(
+            np.random.choice(
+                self.subscribed_symbols, int(np.random.randint(1, 3)), replace=False
+            )
+        )
         self.alpha = alpha
         self.kappa = kappa
         self.phi = phi
@@ -36,16 +40,12 @@ class NearZeroIntelligenceAgent(FundamentalTrackingAgent):
 
         self.current_period = 0
         self.prev_avg_price = 0
+        self.period_trades = []
 
     def action(self):
         super().action()
-        selected_symbols = list(
-            np.random.choice(
-                self.subscribed_symbols, int(np.random.randint(1, 3)), replace=False
-            )
-        )
 
-        for symbol in selected_symbols:
+        for symbol in self.selected_symbols:
             requests = []
 
             # make the trading decision
@@ -60,7 +60,7 @@ class NearZeroIntelligenceAgent(FundamentalTrackingAgent):
             )
 
             # generate size
-            # Since the paper doesn't speicfy how to generate order size, here I just follow the implementation in ZeroIntellugenceAgent.
+            # Since the paper doesn't speicfy how to generate ORDER SIZE, here I just follow the implementation in ZeroIntellugenceAgent.
             inventory = int(self.portfolio.holdings.get(symbol, 0))
             quantity = int(np.random.randint(1, 50))
             if not is_buyer and inventory > 0:
@@ -120,5 +120,173 @@ class NearZeroIntelligenceAgent(FundamentalTrackingAgent):
         return np.round(price, 2)
 
     def _end_period(self):
-        self.current_period=0
-        pass
+        if self.period_trades:
+            # calculate trading quantity via weighted average price
+            total_value = 0
+            total_quantity = 0
+            for symbol in self.selected_symbols:
+                period_trades_for_symbol = [
+                    trade[symbol] for trade in self.period_trades if symbol in trade
+                ]
+                total_value = np.sum(
+                    price * qty for price, qty in period_trades_for_symbol
+                )
+                total_quantity = np.sum(qty for _, qty in period_trades_for_symbol)
+            avg_price = total_value / total_quantity
+
+        self.prev_avg_price = avg_price
+        self.current_period = 0
+        self.period_trades = []
+
+    def process_inbox(self):
+        """Here I just simply copy the implementation in ZeroIntelligenceAgent. I guess it's OK."""
+        # First apply base processing (portfolio updates)
+        super().process_inbox()
+        # Then pick up symbol list if provided
+        new_symbols = []
+        keep = []
+        for m in self.inbox:
+            if m.message_type == MessageType.MKT_DATA and isinstance(m.content, dict):
+                if "symbols" in m.content:
+                    new_symbols.extend(m.content.get("symbols", []))
+            elif m.message_type == MessageType.ORACLE_RESPONSE_LOB and isinstance(
+                m.content, dict
+            ):
+                data = m.content.get("lob")
+                symbol = m.content.get("symbol")
+                # build simple heuristic orders near oracle best levels
+                reqs = []
+                try:
+                    # Columns are: kernel_time, AskPrice0..AskVolume..BidPrice..BidVolume..
+                    best_ask = None
+                    best_bid = None
+                    # Find first non-empty ask/bid price columns
+                    for k in data.keys():
+                        if str(k).startswith("AskPrice0") or str(k) == "AskPrice0":
+                            val = data[k]
+                            if pd.notna(val) and val != "":
+                                best_ask = float(val)
+                                break
+                    for k in data.keys():
+                        if str(k).startswith("BidPrice0") or str(k) == "BidPrice0":
+                            val = data[k]
+                            if pd.notna(val) and val != "":
+                                best_bid = float(val)
+                                break
+                    if best_ask is not None and best_bid is not None:
+                        mid = round((best_ask + best_bid) / 2.0, 2)
+                        # Place small aggressive orders around oracle implied levels
+                        # buy leg
+                        reqs.append(
+                            {
+                                "type": "limit_order",
+                                "symbol": symbol,
+                                "agent_id": self.id,
+                                "timestamp": str(self.current_time),
+                                "side": "buy",
+                                "quantity": int(np.random.randint(1, 50)),
+                                "price": best_bid,
+                            }
+                        )
+                        # sell leg only if inventory is available
+                        inv = int(self.portfolio.holdings.get(symbol, 0))
+                        if inv > 0:
+                            qty = max(1, min(int(np.random.randint(1, 50)), inv))
+                            reqs.append(
+                                {
+                                    "type": "limit_order",
+                                    "symbol": symbol,
+                                    "agent_id": self.id,
+                                    "timestamp": str(self.current_time),
+                                    "side": "sell",
+                                    "quantity": qty,
+                                    "price": best_ask,
+                                }
+                            )
+                        # mid buy
+                        reqs.append(
+                            {
+                                "type": "limit_order",
+                                "symbol": symbol,
+                                "agent_id": self.id,
+                                "timestamp": str(self.current_time),
+                                "side": "buy",
+                                "quantity": int(np.random.randint(1, 20)),
+                                "price": mid,
+                            }
+                        )
+                except Exception:
+                    pass
+                if reqs:
+                    msg = new_message(
+                        message_type=MessageType.SUBMIT_ORDER,
+                        sender_id=self.id,
+                        recipient_id="Exchange",
+                        send_time=self.current_time,
+                        recive_time=self.current_time,
+                        content={"requests": reqs},
+                    )
+                    self.send(msg)
+            elif m.message_type == MessageType.ORACLE_RESPONSE_OHLC and isinstance(
+                m.content, dict
+            ):
+                data = m.content.get("ohlc") or {}
+                symbol = m.content.get("symbol")
+                reqs = []
+                try:
+                    close = data.get("close") or data.get("close")
+                    if close is not None and close != "":
+                        close = float(close)
+                        # place buy/sell around close
+                        reqs.append(
+                            {
+                                "type": "limit_order",
+                                "symbol": symbol,
+                                "agent_id": self.id,
+                                "timestamp": str(self.current_time),
+                                "side": "buy",
+                                "quantity": int(np.random.randint(1, 50)),
+                                "price": close,
+                            }
+                        )
+                        inv = int(self.portfolio.holdings.get(symbol, 0))
+                        if inv > 0:
+                            qty = max(1, min(int(np.random.randint(1, 50)), inv))
+                            reqs.append(
+                                {
+                                    "type": "limit_order",
+                                    "symbol": symbol,
+                                    "agent_id": self.id,
+                                    "timestamp": str(self.current_time),
+                                    "side": "sell",
+                                    "quantity": qty,
+                                    "price": close,
+                                }
+                            )
+                except Exception:
+                    pass
+                if reqs:
+                    msg = new_message(
+                        message_type=MessageType.SUBMIT_ORDER,
+                        sender_id=self.id,
+                        recipient_id="Exchange",
+                        send_time=self.current_time,
+                        recive_time=self.current_time,
+                        content={"requests": reqs},
+                    )
+                    self.send(msg)
+            else:
+                keep.append(m)
+        self.inbox = keep
+        if new_symbols:
+            # Deduplicate
+            uniq = list(dict.fromkeys(new_symbols))
+            self.subscribed_symbols = uniq
+
+    def receive(self, message: Message):
+        super().receive(message)
+        if message.message_type == "ORDER_EXECUTED":
+            symbol = str(message.content.get("symbol"))
+            price = float(message.content.get("price"))
+            size = int(message.content.get("size"))
+            self.period_trades.append({symbol: (price, size)})
