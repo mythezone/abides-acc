@@ -27,7 +27,7 @@ docs/build/doctrees
 insight
 abides
 comparison/methods
-
+comparison/**/raw_log
 
 rubbish
 old
