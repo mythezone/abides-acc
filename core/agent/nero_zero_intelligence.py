@@ -8,6 +8,7 @@ import pandas as pd
 
 class NearZeroIntelligenceAgent(FundamentalTrackingAgent):
     """TO DO: get fundamental value."""
+
     def __init__(
         self,
         id,
@@ -106,9 +107,14 @@ class NearZeroIntelligenceAgent(FundamentalTrackingAgent):
             is_buyer = True
         return is_buyer
 
-    def _get_fundamental_price(self):
+    def _get_fundamental_price(self, symbol: str):
         """Return the current fundamental prices."""
-        pass
+        msg = self.build_fundamental_query(symbols=[symbol])
+        self.send(msg)
+        msg_in: Message = self.message_queue.get_raw()
+        if msg_in.message_type == "QUERY_FUNDAMENTAL":
+            content = msg_in.content
+            return content["data"]
 
     def _generate_price(self, is_buyer: bool, fundamental_value):
         """Generate the market price, based on fundamental value."""

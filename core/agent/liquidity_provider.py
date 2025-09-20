@@ -5,20 +5,26 @@ from typing import List
 import numpy as np
 
 
-class LiquidityTakerAgent(FundamentalTrackingAgent):
+class LiquidityProviderAgent(FundamentalTrackingAgent):
 
     def __init__(
         self,
         id,
+        lambda_0,
+        C_lambda,
+        alpha,
         delta_s,
-        mu,
+        q_provider=0.5,
         initial_symbols=None,
         *args,
         **kwargs,
     ):
         super().__init__(id, *args, initial_symbols=initial_symbols, **kwargs)
+        self.lambda_0 = lambda_0
+        self.C_lambda = C_lambda
+        self.alpha = alpha
+        self.q_provider = q_provider
         self.delta_s = delta_s
-        self.mu = mu
 
         self.time_step = 1
         self.subscribed_symbols: List[str] = (initial_symbols or [])[:]
@@ -36,16 +42,25 @@ class LiquidityTakerAgent(FundamentalTrackingAgent):
 
         requests = []
         for symbol in self.selected_symbols:
-            q = self.q_taker(t=self.time_step)
+            # get eta
+            eta = self._get_eta(t=self.time_step, symbol=symbol)
             u = np.random.rand()
-            is_buyer = True if u < q else False
+            best_bid, best_ask = self._get_best_bid_ask()
+            is_buyer = False
+            if u < self.q_provider:
+                price = best_ask - 1 - eta  # place a limit buy order
+                is_buyer = True
+            else:
+                price = best_bid + 1 + eta  # place a limit sell order
+
             order = {
-                "type": "market_order",
+                "type": "limit_order",
                 "symbol": symbol,
                 "agent_id": self.id,
                 "timestamp": str(self.current_time),
                 "side": "buy" if is_buyer else "sell",
                 "quantity": 1,
+                "price": price,
             }
             requests.append(order)
 
@@ -63,6 +78,26 @@ class LiquidityTakerAgent(FundamentalTrackingAgent):
 
         # timestamp increment
         self.time_step += 1
+
+    def _get_eta(self, t, symbol):
+        u = np.random.rand()
+        lambda_t = self._get_lambda_t(t, symbol)
+        return np.floor(-lambda_t * np.log(u))
+
+    def _get_lambda_t(self, t, symbol):
+        MC_result = self._MC_simulations(t)
+        return self.lambda_0 * (
+            1
+            + self.C_lambda * np.abs(self.q_taker(t, symbol) - 0.5) / np.sqrt(MC_result)
+        )
+
+    def _MC_simulations(self, t, symbol):
+        q = self.q_taker
+        result_array = []
+        for _ in range(1e5):
+            q_t = q(t, symbol)
+            result_array.append((q_t - 0.5) ** 2)
+        return np.average(result_array)
 
     def q_taker(self, t, symbol: str):
         if t == 0:
@@ -95,3 +130,6 @@ class LiquidityTakerAgent(FundamentalTrackingAgent):
             best_bid = content["best bid"]
             best_ask = content["best ask"]
         return best_bid, best_ask
+
+    def process_inbox(self):
+        super().process_inbox()
