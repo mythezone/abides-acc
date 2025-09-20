@@ -5,7 +5,7 @@ import time
 from datetime import datetime, timedelta
 
 # 初始化 Redis 连接
-r = redis.Redis(host="localhost", port=6379, db=0)
+r = redis.Redis(host="127.0.0.1", port=6379, db=0)
 
 # 模拟的股票代码
 MOCK_SYMBOLS = ["000001", "000002", "000004", "000006", "000007"]

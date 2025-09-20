@@ -62,3 +62,6 @@ history/sample
 
 cli/back
 
+build
+**/build/
+mcp
