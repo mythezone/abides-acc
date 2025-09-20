@@ -28,7 +28,15 @@ def run_replay(config_path: Optional[str] = None, max_steps: int = 500000) -> Pa
         cfg = json.load(fh)
     symbols = cfg.get("symbols") or []
     symbol = str(symbols[0]) if symbols else "SZ000001"
-    raw_log_dir = base_dir / "raw_log"
+    calibration_cfg = cfg.get("calibration") or {}
+    raw_dir_cfg = calibration_cfg.get("output_dir")
+    if raw_dir_cfg:
+        raw_path = Path(raw_dir_cfg)
+        raw_log_dir = (
+            raw_path if raw_path.is_absolute() else (base_dir / raw_path)
+        ).resolve()
+    else:
+        raw_log_dir = base_dir / "raw_log"
     final_log_dir = base_dir / "log"
 
     # Clean previous outputs

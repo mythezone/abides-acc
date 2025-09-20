@@ -8,7 +8,7 @@
     "name": "order_match_ours",
     "exchange_params": {
       "ohlc_freq": "1s",
-      "lob_log_freq": "tick",
+      "lob_log_freq": "1s",
       "lob_log_level": 10,
       "workers": 0,
       "fee_rate": 0.0,
@@ -34,6 +34,6 @@
   ],
   "calibration": {
     "enabled": false,
-    "output_dir": "comparison/order_match/Ours/raw_log"
+    "output_dir": "comparison/order_match/Ours/raw_log_1s"
   }
 }
