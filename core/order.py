@@ -42,6 +42,7 @@ class LimitOrder(Order):
 
 @dataclass
 class MarketOrder(Order):
+    market_depth: Optional[int] = None
 
     @classmethod
     def from_dict(cls, data: dict) -> "MarketOrder":
@@ -51,6 +52,7 @@ class MarketOrder(Order):
             side=data["side"],
             quantity=data["quantity"],
             id=data.get("id", next(_order_id_gen)),
+            market_depth=data.get("market_depth"),
         )
 
 

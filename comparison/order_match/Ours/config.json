@@ -1,0 +1,39 @@
+{
+  "simulation": {
+    "start_date": "2019-01-02 09:30:00",
+    "end_date": "2019-01-02",
+    "exchange_type": "SZSE"
+  },
+  "kernel": {
+    "name": "order_match_ours",
+    "exchange_params": {
+      "ohlc_freq": "1s",
+      "lob_log_freq": "tick",
+      "lob_log_level": 10,
+      "workers": 0,
+      "fee_rate": 0.0,
+      "t_plus_one": false,
+      "price_limit_pct": 0.0,
+      "opening_call": false
+    }
+  },
+  "agents": [
+    {
+      "num": 1,
+      "type": "historical_order_replay",
+      "params": {
+        "orders_csv": "comparison/order_match/MAXE-RJJ/sz000001_RJJ.csv",
+        "symbol": "SZ000001",
+        "start_time": "2019-01-02 09:30:00",
+        "log_tick_after": true
+      }
+    }
+  ],
+  "symbols": [
+    "SZ000001"
+  ],
+  "calibration": {
+    "enabled": false,
+    "output_dir": "comparison/order_match/Ours/raw_log"
+  }
+}

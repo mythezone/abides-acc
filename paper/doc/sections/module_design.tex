@@ -105,12 +105,12 @@
   \end{itemize}
   \item[OrderBook] \emph{订单簿}：维护某资产的买卖挂单。
   \begin{itemize}
-    \item \textbf{属性：}买单队列 \verb|bids|、卖单队列 \verb|asks|，可用平衡树或跳表实现。
+    \item \textbf{属性：}买单堆 \verb|bids|（最大堆）/卖单堆 \verb|asks|（最小堆），堆节点对应单个价格；每个价格节点维护按时间顺序串联的订单链表；`order_index` 哈希表用于撤单/改单定位。
     \item \textbf{方法：}
       \begin{itemize}
-        \item \verb|add_order(order)|：按照价格—时间优先插入队列。
-        \item \verb|remove_order(order_id)|：从队列中删除指定订单。
-        \item \verb|best_bid()/best_ask()|：返回最优买/卖价。
+        \item \verb|add_order(order)|：撮合对手盘后，将剩余限价单插入相应价格节点的 FIFO 队列。
+        \item \verb|remove_order(order_id)|：借助 \verb|order_index| 常数时间定位并从链表中移除订单，必要时回收价格节点。
+        \item \verb|snapshot_top_n(n)|：返回前 \verb|n| 档的价格与聚合量，供日志与行情订阅使用。
       \end{itemize}
   \end{itemize}
   \item[MatchingEngine] \emph{撮合引擎}：实现具体撮合算法。
@@ -140,7 +140,7 @@
 \end{description}
 
 \subsubsection{技术路线与实现}
-订单簿内部使用 \textbf{跳表 (skip list)} 或 \textbf{平衡树} 提供 O(log n) 的插入、查询和删除。撮合引擎可按双向链表遍历、价格指针加速匹配；集合竞价使用求最大成交量的方法确定单一价格。拍卖机制使用特化类区分不同竞价过程。跨资产协调需要同步不同线程的撮合进度，采用时间戳屏障 (barrier) 或分布式锁避免竞态。
+订单簿内部使用 \textbf{堆 + 链表} 结构：价格层级通过最大堆/最小堆在 O(log n) 时间内取得最优价，节点下的订单以双向链表保证价优时优遵循。撮合时直接消费堆顶链表的首单，成交量更新后若链表为空即可惰性回收该价格节点。集合竞价使用最大成交量算法确定单一价格。跨资产协调需要同步不同线程的撮合进度，采用时间戳屏障 (barrier) 或分布式锁避免竞态。
 
 \subsubsection{接口设计}
 市场环境暴露以下接口供外部调用：

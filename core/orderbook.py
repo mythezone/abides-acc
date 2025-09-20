@@ -1,47 +1,136 @@
-# Basic class for an order book for one symbol, in the style of the major US Stock Exchanges.
-# List of bid prices (index zero is best bid), each with a list of LimitOrders.
-# List of ask prices (index zero is best ask), each with a list of LimitOrders.
-import sys
+from __future__ import annotations
 
-from core.message import Message
-from order.limit_order import LimitOrder
-from util.util import log_print, be_silent
+import heapq
+import itertools
+from dataclasses import dataclass
+from typing import Dict, Iterable, List, Optional, Tuple
 
-from copy import deepcopy
 import pandas as pd
-from pandas import json_normalize
-from functools import reduce
-from scipy.sparse import dok_matrix
-from tqdm import tqdm
+
+from core.order import LimitOrder, MarketOrder, Order
 
 
-# from queue import PriorityQueue
+@dataclass
+class OrderNode:
+    """Linked-list node wrapping an order stored at a price level."""
 
-from order.base import Order, Transaction
-from order.limit_order import LimitOrder, OrderHeap
-from core.symbol import Symbol
+    order: LimitOrder
+    prev: Optional["OrderNode"] = None
+    next: Optional["OrderNode"] = None
+    level: Optional["PriceLevel"] = None
 
 
-class OrderBook:
-    _order_books = {}
+class PriceLevel:
+    """FIFO queue of orders at a single price."""
 
-    # An OrderBook requires an owning agent object, which it will use to send messages
-    # outbound via the simulator Kernel (notifications of order creation, rejection,
-    # cancellation, execution, etc).
-    def __init__(self, symbol_name: str):
-        # self.owner = owner
-        if symbol_name in OrderBook._order_books:
-            return
-        self.symbol = Symbol[symbol_name]
+    __slots__ = ("price", "side", "head", "tail", "total_quantity", "active")
 
-        self.bid_side = OrderHeap(side="bid")
-        self.ask_side = OrderHeap(side="ask")
+    def __init__(self, price: float, side: str):
+        self.price = float(price)
+        self.side = side  # 'buy' or 'sell'
+        self.head: Optional[OrderNode] = None
+        self.tail: Optional[OrderNode] = None
+        self.total_quantity: int = 0
+        self.active: bool = True
 
-        self.last_trade = None
+    def append(self, node: OrderNode) -> None:
+        node.prev = self.tail
+        node.next = None
+        node.level = self
+        if self.tail:
+            self.tail.next = node
+            self.tail = node
+        else:
+            self.head = self.tail = node
+        self.total_quantity += int(node.order.quantity)
 
-        # Create an empty list of dictionaries to log the full order book depth (price and volume) each time it changes.
-        self.book_log = []
-        self.quotes_seen = set()
+    def remove(self, node: OrderNode) -> None:
+        if node.prev:
+            node.prev.next = node.next
+        else:
+            self.head = node.next
+        if node.next:
+            node.next.prev = node.prev
+        else:
+            self.tail = node.prev
+        self.total_quantity -= int(node.order.quantity)
+        node.prev = node.next = None
+        node.level = None
+
+    def consume_from_head(self, quantity: int) -> OrderNode:
+        node = self.head
+        if node is None:
+            raise RuntimeError("Attempted to consume from an empty price level")
+        node.order.quantity -= quantity
+        self.total_quantity -= quantity
+        if node.order.quantity <= 0:
+            node.order.quantity = 0
+            self.remove(node)
+        return node
+
+    def top_node(self) -> Optional[OrderNode]:
+        return self.head
+
+    def is_empty(self) -> bool:
+        return self.head is None
+
+
+class OrderHeap:
+    """Heap of price levels maintaining best price first."""
+
+    def __init__(self, side: str):
+        if side not in ("buy", "sell"):
+            raise ValueError("side must be 'buy' or 'sell'")
+        self.side = side
+        self._heap: List[Tuple[float, int, PriceLevel]] = []
+        self._price_map: Dict[float, PriceLevel] = {}
+        self._counter = itertools.count()
+
+    def _heap_price(self, price: float) -> float:
+        return -price if self.side == "buy" else price
+
+    def ensure_level(self, price: float) -> PriceLevel:
+        level = self._price_map.get(price)
+        if level is None or not level.active:
+            level = PriceLevel(price, self.side)
+            self._price_map[price] = level
+            heapq.heappush(self._heap, (self._heap_price(price), next(self._counter), level))
+        return level
+
+    def best_level(self) -> Optional[PriceLevel]:
+        while self._heap:
+            _, _, level = self._heap[0]
+            if level.active and not level.is_empty():
+                return level
+            heapq.heappop(self._heap)
+            if level.price in self._price_map and (not level.active or level.is_empty()):
+                self._price_map.pop(level.price, None)
+        return None
+
+    def remove_level(self, level: PriceLevel) -> None:
+        level.active = False
+        self._price_map.pop(level.price, None)
+
+    def prices(self) -> Iterable[float]:
+        return list(self._price_map.keys())
+
+    def get_level(self, price: float) -> Optional[PriceLevel]:
+        level = self._price_map.get(price)
+        if level and level.active and not level.is_empty():
+            return level
+        return None
+
+
+class LimitOrderBook:
+    """Price-level order book with FIFO queues per price and heap-based best-price access."""
+
+    def __init__(self, symbol: Optional[str]):
+        self.symbol = symbol
+        self.bids = OrderHeap("buy")
+        self.asks = OrderHeap("sell")
+        self._order_index: Dict[str, OrderNode] = {}
+        self.history_log: List[dict] = []
+        self.last_trade_price: Optional[float] = None
         self.ohlc = {
             "open": None,
             "high": None,
@@ -50,226 +139,176 @@ class OrderBook:
             "volume": 0,
         }
 
-        # Last timestamp the orderbook for that symbol was updated
-        self.last_update_ts = None
-        OrderBook._order_books[symbol_name] = self
+    # --- Public API ---
+    def add_order(self, order: Order) -> List[dict]:
+        if order.side not in ("buy", "sell"):
+            raise ValueError("order.side must be 'buy' or 'sell'")
+        trades = self._match(order)
+        if isinstance(order, LimitOrder) and order.quantity > 0:
+            self._rest(order)
+        self.history_log.extend(trades)
+        return trades
 
-    def handle_limit_order(self, order: LimitOrder):
-        # 获取己方订单簿信息
-        this_book = self.bid_side if order.is_buy_order else self.ask_side
+    def cancel_order(self, order_id) -> bool:
+        node = self._order_index.pop(order_id, None)
+        if not node:
+            return False
+        level = node.level
+        if level:
+            level.remove(node)
+            if level.is_empty():
+                heap = self.bids if level.side == "buy" else self.asks
+                heap.remove_level(level)
+        return True
 
-        if this_book.empty() or (
-            order.is_buy_order and order.compare_price >= this_book.peek().compare_price
-        ):
-            this_book.put(order)
-            return
-        # 获取对手盘信息
-        that_book = self.ask_side if order.is_buy_order else self.bid_side
-        if that_book.empty():
-            this_book.put(order)
-            return
+    def snapshot_top_n(self, n: int = 5) -> Dict[str, List[Tuple[float, int]]]:
+        top_buys = self._top_levels(self.bids, n, reverse=True)
+        top_sells = self._top_levels(self.asks, n, reverse=False)
+        return {"buy": top_buys, "sell": top_sells}
 
-        matching = True
+    def format_snapshot_csv(self, n: int = 5) -> str:
+        snap = self.snapshot_top_n(n)
+        parts: List[str] = []
+        asks = snap["sell"]
+        bids = snap["buy"]
+        for i in range(n):
+            parts.append(f"{asks[i][0]:.2f}" if i < len(asks) else "")
+        for i in range(n):
+            parts.append(str(asks[i][1]) if i < len(asks) else "")
+        for i in range(n):
+            parts.append(f"{bids[i][0]:.2f}" if i < len(bids) else "")
+        for i in range(n):
+            parts.append(str(bids[i][1]) if i < len(bids) else "")
+        return ",".join(parts)
 
-        while matching and that_book:
-            if order.is_buy_order and order.limit_price < that_book.peek().limit_price:
-                self.ask_side.put(order)
-                return
-            elif (
-                not order.is_buy_order
-                and order.limit_price > that_book.peek().limit_price
-            ):
-                self.bid_side.put(order)
-                return
-            best_order = that_book.peek()
-
-            trade_quantity = min(order.quantity, best_order.quantity)
-
-            trade_price = best_order.limit_price
-            transaction_time = self.owner.currentTime
-
-            transaction = Transaction(
-                time=transaction_time,
-                price=trade_price,
-                quantity=trade_quantity,
-                bid_order_id=order.id if order.is_buy_order else best_order.id,
-                ask_order_id=best_order.id if order.is_buy_order else order.id,
-            )
-
-            order.deal(transaction)
-            best_order.deal(transaction)
-            if best_order.remaining_quantity == 0:
-                # 如果对手盘的订单完全成交，从订单簿中删除该订单
-                that_book.get()
-
-            if that_book.empty():
-                # 如果对手盘被吃空，直接将剩余的量放入订单簿
-                this_book.put(order)
-                matching = False
-
-            if order.remaining_quantity == 0:
-                # 如果己方订单完全成交，直接返回
-                matching = False
-
-    def handle_market_order(self, order: Order):
-
-        # 匹配市价单，直到订单完全成交或对手盘耗尽
-        book = self.ask_side if order.is_buy_order else self.bid_side
-        matching = True
-
-        while matching and book:
-            best_order = book.peek()
-            # 交易量以双方较小的量为准
-            trade_quantity = min(order.quantity, best_order.quantity)
-            # 交易价格以对手盘的价格为准
-            trade_price = best_order.limit_price
-            # 这个时间待更新
-            transaction_time = self.owner.currentTime
-
-            transaction = Transaction(
-                time=transaction_time,
-                price=trade_price,
-                quantity=trade_quantity,
-                bid_order_id=order.id if order.is_buy_order else best_order.id,
-                ask_order_id=best_order.id if order.is_buy_order else order.id,
-            )
-
-            order.deal(transaction)
-            best_order.deal(transaction)
-
-            if best_order.remaining_quantity == 0:
-                # 如果对手盘的订单完全成交，从订单簿中删除该订单
-                book.get()
-
-            # 目前的策略是当对手盘被吃空就直接取消剩余的量
-            if book.empty():
-                matching = False
-
-            if order.remaining_quantity == 0:
-                matching = False
-
-    def cancel_order(self, order: Order):
-        book = self.bid_side if order.is_buy_order else self.ask_side
-        if not book:
-            return
-
-        book.get_by_id(order.order_id)
-        order.cancel()
-
-    def modify_order(self, order: LimitOrder, modifier: Transaction):
-        book = self.bid_side if order.is_buy_order else self.ask_side
-        if not book:
-            return
-
-        order.modify(modifier)
-
-    def get_current_spread(self, level=1):
-        ask_side_level = self.ask_side.get_price_level(level)
-        bid_side_level = self.bid_side.get_price_level(level)
-        min_len = min(len(ask_side_level), len(bid_side_level))
-        ask_side_level = ask_side_level[:min_len]
-        bid_side_level = bid_side_level[:min_len]
-        result = [a - b for a, b in zip(ask_side_level, bid_side_level)]
-        return result
-
-    def book_log_to_df(self):
-        """Returns a pandas DataFrame constructed from the order book log, to be consumed by
-            agent.ExchangeAgent.logOrderbookSnapshots.
-
-            The first column of the DataFrame is `QuoteTime`. The succeeding columns are prices quoted during the
-            simulation (as taken from self.quotes_seen).
-
-            Each row is a snapshot at a specific time instance. If there is volume at a certain price level (negative
-            for bids, positive for asks) this volume is written in the column corresponding to the price level. If there
-            is no volume at a given price level, the corresponding column has a `0`.
-
-            The data is stored in a sparse format, such that a value of `0` takes up no space.
-
-        :return:
-        """
-        pass
-
-    def reset_ohlc(self):
-        """Resets the OHLC data for the order book."""
+    def reset_ohlc(self) -> None:
+        close = self.ohlc["close"]
         self.ohlc = {
-            "open": self.ohlc["close"],
-            "high": self.ohlc["close"],
-            "low": self.ohlc["close"],
-            "close": self.ohlc["close"],
+            "open": close,
+            "high": close,
+            "low": close,
+            "close": close,
             "volume": 0,
         }
 
-    def report_lob(self, level: int = 5):
-        # Get the bid and ask prices and volumes
-        bid_book = self.bid_side.get_book(level)
-        ask_book = self.ask_side.get_book(level)
+    def render_lob(self) -> str:
+        snap = self.snapshot_top_n(5)
+        lines = [f"Order Book for {self.symbol or 'UNKNOWN'}"]
+        lines.append(" Side | Price | Volume")
+        for price, qty in snap["sell"]:
+            lines.append(f"  ASK | {price:>8.2f} | {qty:>6}")
+        lines.append("  ---   ------   ------")
+        for price, qty in snap["buy"]:
+            lines.append(f"  BID | {price:>8.2f} | {qty:>6}")
+        return "\n".join(lines)
 
-        # Create a DataFrame with the bid and ask prices and volumes
-        res = ""
-        for i in range(level):
-            res += f"{ask_book[i][0]},"
-        for i in range(level):
-            res += f"{ask_book[i][1]},"
-        for i in range(level):
-            res += f"{bid_book[i][0]},"
-        for i in range(level):
-            if i == level - 1:
-                res += f"{bid_book[i][1]}"
-            else:
-                res += f"{bid_book[i][1]},"
-        return res
+    @property
+    def order_map(self) -> Dict[str, OrderNode]:
+        return self._order_index
 
-    # Print a nicely-formatted view of the current order book.
-    # def prettyPrint(self, silent=False):
-    #     # Start at the highest ask price and move down.  Then switch to the highest bid price and move down.
-    #     # Show the total volume at each price.  If silent is True, return the accumulated string and print nothing.
+    # --- Internal helpers ---
+    def _match(self, incoming: Order) -> List[dict]:
+        trades: List[dict] = []
+        opposite = self.asks if incoming.side == "buy" else self.bids
+        market_depth: Optional[int] = None
+        if isinstance(incoming, MarketOrder):
+            market_depth = incoming.market_depth if incoming.market_depth else None
+        levels_remaining = market_depth
+        active_price = None
 
-    #     # If the global silent flag is set, skip prettyPrinting entirely, as it takes a LOT of time.
-    #     if be_silent:
-    #         return ""
+        while incoming.quantity > 0:
+            level = opposite.best_level()
+            if not level:
+                break
+            best_price = level.price
 
-    #     book = "{} order book as of {}\n".format(self.symbol, self.owner.currentTime)
-    #     book += "Last trades: simulated {:d}, historical {:d}\n".format(
-    #         self.last_trade,
-    #         self.owner.oracle.observePrice(
-    #             self.symbol,
-    #             self.owner.currentTime,
-    #             sigma_n=0,
-    #             random_state=self.owner.random_state,
-    #         ),
-    #     )
+            if isinstance(incoming, LimitOrder):
+                if incoming.side == "buy" and incoming.price < best_price:
+                    break
+                if incoming.side == "sell" and incoming.price > best_price:
+                    break
 
-    #     book += "{:10s}{:10s}{:10s}\n".format("BID", "PRICE", "ASK")
-    #     book += "{:10s}{:10s}{:10s}\n".format("---", "-----", "---")
+            if levels_remaining is not None:
+                if active_price is None or best_price != active_price:
+                    if levels_remaining <= 0:
+                        break
+                    active_price = best_price
+                    levels_remaining -= 1
 
-    #     for quote, volume in self.getInsideAsks()[-1::-1]:
-    #         book += "{:10s}{:10s}{:10s}\n".format(
-    #             "", "{:d}".format(quote), "{:d}".format(volume)
-    #         )
+            head = level.top_node()
+            if head is None:
+                opposite.remove_level(level)
+                active_price = None
+                continue
 
-    #     for quote, volume in self.getInsideBids():
-    #         book += "{:10s}{:10s}{:10s}\n".format(
-    #             "{:d}".format(volume), "{:d}".format(quote), ""
-    #         )
+            resting = head.order
+            traded_qty = min(incoming.quantity, resting.quantity)
+            trade_price = best_price
+            trade_time = self._normalize_time(incoming.timestamp)
 
-    #     if silent:
-    #         return book
+            buyer = incoming.agent_id if incoming.side == "buy" else resting.agent_id
+            seller = resting.agent_id if incoming.side == "buy" else incoming.agent_id
 
-    #     log_print(book)
+            trade = {
+                "symbol": self.symbol,
+                "price": round(float(trade_price), 6),
+                "quantity": int(traded_qty),
+                "timestamp": trade_time,
+                "buy": buyer,
+                "sell": seller,
+            }
+            trades.append(trade)
+            self._record_trade(trade)
 
-    @classmethod
-    def get(cls, symbol_name: str):
-        orderbook = cls._order_books.get(symbol_name, None)
-        if not orderbook:
-            orderbook = OrderBook(symbol_name)
-        return orderbook
+            incoming.quantity -= traded_qty
+            level.consume_from_head(traded_qty)
 
-    @classmethod
-    def __class_getitem__(cls, symbol_name: str):
-        return cls.get(symbol_name)
+            if resting.quantity == 0:
+                self._order_index.pop(resting.id, None)
 
-    def get_best_price(self, side: str = "ask"):
-        if side == "ask":
-            return self.ask_side.get_price_level(1)
-        else:
-            return self.bid_side.get_price_level(1)
+            if level.is_empty():
+                opposite.remove_level(level)
+                active_price = None
+
+        return trades
+
+    def _rest(self, order: LimitOrder) -> None:
+        heap = self.bids if order.side == "buy" else self.asks
+        level = heap.ensure_level(order.price)
+        node = OrderNode(order=order)
+        level.append(node)
+        self._order_index[order.id] = node
+
+    def _top_levels(self, heap: OrderHeap, n: int, *, reverse: bool) -> List[Tuple[float, int]]:
+        prices = sorted(heap.prices(), reverse=reverse)
+        result: List[Tuple[float, int]] = []
+        for price in prices:
+            level = heap.get_level(price)
+            if not level:
+                continue
+            qty = level.total_quantity
+            if qty > 0:
+                result.append((price, qty))
+            if len(result) >= n:
+                break
+        return result
+
+    def _record_trade(self, trade: dict) -> None:
+        price = trade["price"]
+        qty = trade["quantity"]
+        self.last_trade_price = price
+        if self.ohlc["open"] is None:
+            self.ohlc["open"] = price
+            self.ohlc["high"] = price
+            self.ohlc["low"] = price
+        self.ohlc["close"] = price
+        self.ohlc["high"] = max(self.ohlc["high"], price)
+        self.ohlc["low"] = min(self.ohlc["low"], price)
+        self.ohlc["volume"] += qty
+
+    @staticmethod
+    def _normalize_time(ts) -> str:
+        try:
+            return str(pd.Timestamp(ts))
+        except Exception:
+            return str(ts)
