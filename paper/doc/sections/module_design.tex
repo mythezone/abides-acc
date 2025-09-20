@@ -189,6 +189,8 @@
   \item \verb|QUERY_SPREAD|：\verb|content.symbol|, \verb|content.depth| $\rightarrow$ 回复 \verb|bids|, \verb|asks| 与 \verb|data|（含最新成交）。注意：枚举名按历史兼容保留拼写错误 \verb|QUERY_SPREAD|。
   \item \verb|QUERY_ORDER_STREAM|：\verb|content.symbol|, \verb|content.length| $\rightarrow$ 回复最近的成交条目。
   \item \verb|QUERY_TRANSACTED_VOLUME|：\verb|content.symbol|, \verb|content.lookback_period|（如 \verb|"60s"|）$\rightarrow$ 回复区间成交量汇总。
+  \item \verb|QUERY_FUNDAMENTAL|：\verb|content.requests| 支持按列表一次查询多个 \verb|symbol|；当前返回值为订单簿中间价（后续以 TODO 标记替换为真实基本面数据），并附带 \verb|mkt_closed| 状态。
+  \item \verb|QUERY_TOP_OF_BOOK|：\verb|content.requests| 中每项包含 \verb|{symbol, depth}|，返回对应标的的最优买卖价（\verb|best_bid|/\verb|best_ask|）及前 \verb|depth| 档 \verb|bids|/\verb|asks|。
 \end{itemize}
 
 \paragraph{行情订阅}

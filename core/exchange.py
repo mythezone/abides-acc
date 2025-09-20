@@ -296,6 +296,78 @@ class Exchange:
                     },
                 )
             )
+        elif message.message_type == MessageType.QUERY_FUNDAMENTAL:
+            requests = message.content.get("requests") or []
+            if not requests and message.content.get("symbol"):
+                requests = [
+                    {
+                        "symbol": message.content.get("symbol"),
+                    }
+                ]
+            for req in requests:
+                symbol = req.get("symbol") if isinstance(req, dict) else None
+                mid_price = None
+                lob = self._get_lob(symbol)
+                if lob is not None:
+                    snap = lob.snapshot_top_n(1)
+                    bid = float(snap["buy"][0][0]) if snap.get("buy") else None
+                    ask = float(snap["sell"][0][0]) if snap.get("sell") else None
+                    if bid is not None and ask is not None:
+                        # TODO: replace mid-price proxy with true fundamental data feed.
+                        mid_price = round((bid + ask) / 2.0, 2)
+                response_messages.append(
+                    new_message(
+                        message_type=MessageType.QUERY_FUNDAMENTAL,
+                        sender_id="Exchange",
+                        recipient_id=message.sender_id,
+                        send_time=now,
+                        recive_time=now,
+                        content={
+                            "symbol": symbol,
+                            "data": mid_price,
+                            "mkt_closed": not self.is_open,
+                        },
+                    )
+                )
+        elif message.message_type == MessageType.QUERY_TOP_OF_BOOK:
+            requests = message.content.get("requests") or []
+            if not requests and message.content.get("symbol"):
+                requests = [
+                    {
+                        "symbol": message.content.get("symbol"),
+                        "depth": message.content.get("depth", 1),
+                    }
+                ]
+            for req in requests:
+                symbol = req.get("symbol") if isinstance(req, dict) else None
+                depth = int(req.get("depth", 1)) if isinstance(req, dict) else 1
+                bids = []
+                asks = []
+                lob = self._get_lob(symbol)
+                if lob is not None:
+                    snap = lob.snapshot_top_n(depth)
+                    bids = snap.get("buy", [])
+                    asks = snap.get("sell", [])
+                best_bid = float(bids[0][0]) if bids else None
+                best_ask = float(asks[0][0]) if asks else None
+                response_messages.append(
+                    new_message(
+                        message_type=MessageType.QUERY_TOP_OF_BOOK,
+                        sender_id="Exchange",
+                        recipient_id=message.sender_id,
+                        send_time=now,
+                        recive_time=now,
+                        content={
+                            "symbol": symbol,
+                            "depth": depth,
+                            "best_bid": best_bid,
+                            "best_ask": best_ask,
+                            "bids": bids,
+                            "asks": asks,
+                            "mkt_closed": not self.is_open,
+                        },
+                    )
+                )
         elif message.message_type == MessageType.MKT_DATA_SUBSCRIPTION_REQUEST:
             # content: {"subscriptions": [{"symbol":s, "depth":n, "freq_ms":ms}, ...]}
             subs = message.content.get("subscriptions") or []

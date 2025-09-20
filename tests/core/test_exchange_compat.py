@@ -1,5 +1,6 @@
 import pandas as pd
 
+from core.agent.base import BaseAgent
 from core.kernel import Kernel
 from core.message import new_message, MessageType
 
@@ -202,7 +203,10 @@ def test_abides_compat_message_flow():
         content={},
     )
     k.message_queue.put(tick)
-    k.process_messages()
+    for _ in range(3):
+        res = k.process_messages()
+        if res.get("processed", 0) > 0:
+            break
 
     # Basic sanity: ensure tester received something from each phase
     msgs = [m for m in k.agents["tester"].inbox]
@@ -215,3 +219,81 @@ def test_abides_compat_message_flow():
     assert MessageType.QUERY_TRANSACTED_VOLUME in kinds
     assert any(m.message_type == MessageType.MKT_DATA for m in msgs)
 
+
+def test_exchange_multi_symbol_queries():
+    k = _make_kernel()
+    now = pd.Timestamp("2025-01-02 09:35:00")
+    agent = k.agents["tester"]
+
+    # Seed resting liquidity for two symbols so queries have data to return.
+    for idx, symbol in enumerate(["AAA", "BBB"]):
+        ts = now + pd.Timedelta(milliseconds=idx)
+        submit = new_message(
+            message_type=MessageType.SUBMIT_ORDER,
+            sender_id="tester",
+            recipient_id="Exchange",
+            send_time=ts,
+            recive_time=ts,
+            content={
+                "requests": [
+                    {
+                        "type": "limit_order",
+                        "symbol": symbol,
+                        "agent_id": "tester",
+                        "timestamp": str(ts),
+                        "side": "buy",
+                        "quantity": 10,
+                        "price": 49.0 + idx,
+                    },
+                    {
+                        "type": "limit_order",
+                        "symbol": symbol,
+                        "agent_id": "tester",
+                        "timestamp": str(ts),
+                        "side": "sell",
+                        "quantity": 12,
+                        "price": 51.0 + idx,
+                    },
+                ]
+            },
+        )
+        k.message_queue.put(submit)
+    k.process_messages()
+    agent.inbox.clear()
+
+    helper = BaseAgent("tester")
+    helper.current_time = now + pd.Timedelta(seconds=1)
+    fund_msg = helper.build_fundamental_query(["AAA", "BBB"])
+    top_msg = helper.build_top_of_book_query(["AAA", "BBB"], depth=1)
+
+    for msg in [fund_msg, top_msg]:
+        assert msg is not None
+        k.message_queue.put(msg)
+
+    # Drain kernel queue; message propagation through multiprocessing.Queue can
+    # require more than one pass, so retry a few times to ensure delivery.
+    for _ in range(3):
+        res = k.process_messages()
+        if res.get("processed", 0) > 0:
+            break
+
+    fund_responses = [
+        m for m in agent.inbox if m.message_type == MessageType.QUERY_FUNDAMENTAL
+    ]
+    top_responses = [
+        m for m in agent.inbox if m.message_type == MessageType.QUERY_TOP_OF_BOOK
+    ]
+
+    assert len(fund_responses) == 2
+    assert len(top_responses) == 2
+
+    fund_map = {m.content.get("symbol"): m for m in fund_responses}
+    top_map = {m.content.get("symbol"): m for m in top_responses}
+
+    assert fund_map["AAA"].content.get("data") == 50.0
+    assert fund_map["BBB"].content.get("data") == 51.0
+
+    assert top_map["AAA"].content.get("best_bid") == 49.0
+    assert top_map["AAA"].content.get("best_ask") == 51.0
+    assert top_map["BBB"].content.get("best_bid") == 50.0
+    assert top_map["BBB"].content.get("best_ask") == 52.0

@@ -177,3 +177,63 @@ class BaseAgent:
 
     def receive(self, message: Message):
         self.inbox.append(message)
+
+    # --- Exchange query helpers ---
+    def build_fundamental_query(
+        self,
+        symbols: List[str],
+        *,
+        send_time: Optional[pd.Timestamp] = None,
+    ) -> Optional[Message]:
+        """Create a fundamental data request for one or more symbols.
+
+        Returns a message targeting the exchange or ``None`` if no valid symbols
+        were provided. Agents should add the resulting message to their outgoing
+        list (alongside orders, etc.) before invoking ``send``.
+        """
+
+        if not symbols:
+            return None
+        valid_symbols = [str(sym) for sym in symbols if isinstance(sym, str)]
+        if not valid_symbols:
+            return None
+        ts = send_time or self.current_time
+        content = {"requests": [{"symbol": sym} for sym in valid_symbols]}
+        return new_message(
+            message_type=MessageType.QUERY_FUNDAMENTAL,
+            sender_id=self.id,
+            recipient_id="Exchange",
+            send_time=ts,
+            recive_time=ts,
+            content=content,
+        )
+
+    def build_top_of_book_query(
+        self,
+        symbols: List[str],
+        *,
+        depth: int = 1,
+        send_time: Optional[pd.Timestamp] = None,
+    ) -> Optional[Message]:
+        """Create a top-of-book snapshot request for the provided symbols."""
+
+        if not symbols:
+            return None
+        valid_symbols = [str(sym) for sym in symbols if isinstance(sym, str)]
+        if not valid_symbols:
+            return None
+        depth = max(1, int(depth))
+        ts = send_time or self.current_time
+        content = {
+            "requests": [
+                {"symbol": sym, "depth": depth} for sym in valid_symbols
+            ]
+        }
+        return new_message(
+            message_type=MessageType.QUERY_TOP_OF_BOOK,
+            sender_id=self.id,
+            recipient_id="Exchange",
+            send_time=ts,
+            recive_time=ts,
+            content=content,
+        )
