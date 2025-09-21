@@ -161,6 +161,34 @@ class LimitOrderBook:
                 heap.remove_level(level)
         return True
 
+    def cancel_by_price(self, side: str, price: float, quantity: int) -> int:
+        if quantity <= 0:
+            return 0
+        heap = self.bids if side == "buy" else self.asks
+        level = heap.get_level(float(price))
+        if level is None:
+            return 0
+        removed = 0
+        while quantity > 0:
+            node = level.top_node()
+            if node is None:
+                heap.remove_level(level)
+                break
+            remaining = int(node.order.quantity)
+            if remaining <= quantity:
+                quantity -= remaining
+                removed += remaining
+                level.remove(node)
+                self._order_index.pop(node.order.id, None)
+            else:
+                node.order.quantity -= quantity
+                level.total_quantity -= quantity
+                removed += quantity
+                quantity = 0
+        if level.is_empty():
+            heap.remove_level(level)
+        return removed
+
     def snapshot_top_n(self, n: int = 5) -> Dict[str, List[Tuple[float, int]]]:
         top_buys = self._top_levels(self.bids, n, reverse=True)
         top_sells = self._top_levels(self.asks, n, reverse=False)

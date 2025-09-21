@@ -7,7 +7,7 @@
 - 历史订单：`comparison/order_match/MAXE-RJJ/sz000001_RJJ.csv`
 - 真实 LOB：`comparison/order_match/MAXE-RJJ/data.csv`（包含真实十档信息，可用于绘制基准中间价）
 - 仿真配置：`comparison/order_match/Ours/config.json`
-- 复现代理：`HistoricalOrderReplayAgent`（`core/agent/replay.py`），会将历史订单逐条转换为交易所可识别的消息，并在每次撮合后触发 LOB 快照记录。由于原始数据的 `CANCEL_TYPE` 字段缺乏明确释义，当前实现会忽略该列，将所有记录按市价/限价单重放。
+- 复现代理：`HistoricalOrderReplayAgent`（`core/agent/replay.py`），会将历史订单逐条转换为交易所可识别的消息，并在每次撮合后触发 LOB 快照记录。对于 `CANCEL_TYPE = 2` 的记录，我们将其解释为按价格撤单，遵循同价位 FIFO 的顺序从盘口中扣减数量，从而在仿真环境中近似真实的撤单行为。
 
 仿真仅包含一个标的 `SZ000001`，且只有一个代理负责按历史时间发送订单。交易所禁用手续费、涨跌幅与 T+1 约束，以贴合历史成交逻辑。
 

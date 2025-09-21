@@ -174,9 +174,37 @@ class Exchange:
                 if not isinstance(symbol_val, str):
                     continue
                 symbol = symbol_val
+                lob = self.lob_dict.get(symbol)
+                if lob is None:
+                    continue
                 order_id = req.get("order_id")
-                if symbol in self.lob_dict:
-                    self.lob_dict[symbol].cancel_order(order_id)
+                if order_id is not None:
+                    lob.cancel_order(order_id)
+                    response_messages.append(
+                        new_message(
+                            message_type=MessageType.ORDER_CANCELLED,
+                            sender_id="Exchange",
+                            recipient_id=message.sender_id,
+                            send_time=now,
+                            recive_time=now,
+                            content={"order_id": order_id, "symbol": symbol},
+                        )
+                    )
+                    continue
+
+                side = req.get("side")
+                price = req.get("price")
+                quantity = req.get("quantity")
+                if side not in ("buy", "sell"):
+                    continue
+                try:
+                    price_val = float(price)
+                    qty_val = int(quantity)
+                except Exception:
+                    continue
+                removed = lob.cancel_by_price(side, price_val, qty_val)
+                if removed <= 0:
+                    continue
                 response_messages.append(
                     new_message(
                         message_type=MessageType.ORDER_CANCELLED,
@@ -184,7 +212,13 @@ class Exchange:
                         recipient_id=message.sender_id,
                         send_time=now,
                         recive_time=now,
-                        content={"order_id": order_id, "symbol": symbol},
+                        content={
+                            "symbol": symbol,
+                            "side": side,
+                            "price": price_val,
+                            "quantity": removed,
+                            "mode": "price",
+                        },
                     )
                 )
         elif message.message_type == MessageType.QUERY_LAST_TRADE:

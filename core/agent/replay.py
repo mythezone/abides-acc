@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Union
 
 import pandas as pd
 
@@ -19,6 +19,14 @@ class _HistoricalOrder:
     market_depth: Optional[int]
 
 
+@dataclass
+class _HistoricalCancel:
+    time: pd.Timestamp
+    side: str
+    price: float
+    quantity: int
+
+
 class HistoricalOrderReplayAgent(BaseAgent):
     """Replay historical order records as agent messages."""
 
@@ -35,7 +43,7 @@ class HistoricalOrderReplayAgent(BaseAgent):
         super().__init__(id, *args, **kwargs)
         self.symbol = str(symbol)
         self._log_tick_after = bool(log_tick_after)
-        self._orders: List[_HistoricalOrder] = []
+        self._events: List[Union[_HistoricalOrder, _HistoricalCancel]] = []
         self._cursor = 0
         csv_path = Path(orders_csv)
         if not csv_path.exists():
@@ -74,15 +82,35 @@ class HistoricalOrderReplayAgent(BaseAgent):
             if qty <= 0:
                 continue
 
-            order_type = str(row.get("ORDER_TYPE", "")).strip()
+            order_type_val = row.get("ORDER_TYPE", "")
+            order_type = str(order_type_val).strip()
             is_market = order_type == "1"
 
+            cancel_type_val = row.get("CANCEL_TYPE")
+            try:
+                cancel_type = int(cancel_type_val)
+            except Exception:
+                cancel_type = None
+
             price_val = row.get("PRICE")
+
+            if cancel_type == 2 and not is_market:
+                if pd.isna(price_val):
+                    continue
+                self._events.append(
+                    _HistoricalCancel(
+                        time=event_time,
+                        side=side,
+                        price=float(price_val),
+                        quantity=qty,
+                    )
+                )
+                continue
+
             price = None
             if not is_market and pd.notna(price_val):
                 price = float(price_val)
             if not is_market and price is None:
-                # 缺失价格的限价单无法执行
                 continue
 
             order_id = row.get("ORDER_ID")
@@ -97,7 +125,7 @@ class HistoricalOrderReplayAgent(BaseAgent):
                 except Exception:
                     market_depth = None
 
-            self._orders.append(
+            self._events.append(
                 _HistoricalOrder(
                     time=event_time,
                     side=side,
@@ -109,7 +137,7 @@ class HistoricalOrderReplayAgent(BaseAgent):
                 )
             )
 
-        self._orders.sort(key=lambda item: item.time)
+        self._events.sort(key=lambda item: item.time)
         self._time_epsilon = pd.Timedelta(microseconds=100)
 
     def wakeup(self, current_time):
@@ -125,11 +153,14 @@ class HistoricalOrderReplayAgent(BaseAgent):
             self.set_next_wakeup(current_time, intelver=delta_ms)
 
     def _emit_orders_until(self, current_time: pd.Timestamp) -> None:
-        while self._cursor < len(self._orders):
-            order = self._orders[self._cursor]
-            if order.time - current_time > self._time_epsilon:
+        while self._cursor < len(self._events):
+            event = self._events[self._cursor]
+            if event.time - current_time > self._time_epsilon:
                 break
-            self._send_submit(order)
+            if isinstance(event, _HistoricalOrder):
+                self._send_submit(event)
+            else:
+                self._send_cancel(event)
             self._cursor += 1
 
     def _send_submit(self, order: _HistoricalOrder) -> None:
@@ -159,6 +190,25 @@ class HistoricalOrderReplayAgent(BaseAgent):
         if self._log_tick_after:
             self._send_tick(order.time)
 
+    def _send_cancel(self, cancel: _HistoricalCancel) -> None:
+        req = {
+            "symbol": self.symbol,
+            "side": cancel.side,
+            "price": float(cancel.price),
+            "quantity": int(cancel.quantity),
+        }
+        msg = new_message(
+            message_type=MessageType.CANCEL_ORDER,
+            sender_id=self.id,
+            recipient_id="Exchange",
+            send_time=cancel.time,
+            recive_time=cancel.time,
+            content={"requests": [req]},
+        )
+        self.send(msg)
+        if self._log_tick_after:
+            self._send_tick(cancel.time)
+
     def _send_tick(self, when: pd.Timestamp) -> None:
         tick = new_message(
             message_type=MessageType.LOG_TICK,
@@ -171,6 +221,6 @@ class HistoricalOrderReplayAgent(BaseAgent):
         self.send(tick)
 
     def _next_order_time(self) -> Optional[pd.Timestamp]:
-        if self._cursor < len(self._orders):
-            return self._orders[self._cursor].time
+        if self._cursor < len(self._events):
+            return self._events[self._cursor].time
         return None
