@@ -83,7 +83,7 @@ class LiquidityTakerAgent(FundamentalTrackingAgent):
         return self._update_q_taker_values(t=t, value=result, symbol=symbol)
 
     def _update_q_taker_values(self, t, value, symbol):
-        self.q_taker_values[symbol].setdefault(key=str(t), value=value)
+        self.q_taker_values[symbol].setdefault(key=str(t), default=value)
         return value
 
     def _get_best_bid_ask(self):
