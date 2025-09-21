@@ -20,10 +20,11 @@ class BaseAgent:
         *args,
         logger: Optional[Logger] | None = None,
         location: List[float] | None = None,
+        message_queue: MessageQueue = None,
         **kwargs,
     ):
         self.id = id
-        self.message_queue = MessageQueue()
+        self.message_queue = message_queue
         self.inbox = []
         self.args = args
         self.current_time: pd.Timestamp = pd.Timestamp.now()
@@ -225,9 +226,7 @@ class BaseAgent:
         depth = max(1, int(depth))
         ts = send_time or self.current_time
         content = {
-            "requests": [
-                {"symbol": sym, "depth": depth} for sym in valid_symbols
-            ]
+            "requests": [{"symbol": sym, "depth": depth} for sym in valid_symbols]
         }
         return new_message(
             message_type=MessageType.QUERY_TOP_OF_BOOK,

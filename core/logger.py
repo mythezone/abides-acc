@@ -143,13 +143,29 @@ class Logger(metaclass=Singleton):
             with open(ohlc_path, "w") as f:
                 f.write("kernel_time,open,high,low,close,volume\n")
         if not os.path.exists(lob_path):
-            with open(lob_path, "w") as f:
-                # Default header for 5 levels; caller should keep consistent
-                f.write(self.format_lob_header(level=5))
+            with open(lob_path, "w"):
+                pass
         if not os.path.exists(preopen_path):
-            with open(preopen_path, "w") as f:
-                f.write(self.format_lob_header(level=5))
+            with open(preopen_path, "w"):
+                pass
         return ohlc_path, lob_path
+
+    def _ensure_lob_header(self, path: str, header: str):
+        header_line = header.strip()
+        if not os.path.exists(path) or os.path.getsize(path) == 0:
+            with open(path, "w") as f:
+                f.write(header)
+            return
+        with open(path, "r+") as f:
+            current = f.readline().strip()
+            if current == header_line:
+                return
+            remainder = f.read(1)
+            if remainder:
+                return
+            f.seek(0)
+            f.write(header)
+            f.truncate()
 
     def ohlc_log(
         self,
@@ -217,12 +233,12 @@ class Logger(metaclass=Singleton):
         lob: str,
     ):
         _, lob_path = self._ensure_symbol_paths(symbol_name)
-        # If level differs from default header, rewrite header once (simple approach)
-        if os.path.getsize(lob_path) == 0:
-            with open(lob_path, "w") as f:
-                f.write(self.format_lob_header(level=level))
-        with self._file_lock, open(lob_path, "a") as f:
-            f.write(f"{self.iso_time_format(kernel_time)},{lob}\n")
+        header = self.format_lob_header(level=level)
+        timestamp = self.iso_time_format(kernel_time)
+        with self._file_lock:
+            self._ensure_lob_header(lob_path, header)
+            with open(lob_path, "a") as f:
+                f.write(f"{timestamp},{lob}\n")
 
     def preopen_log(
         self,
@@ -234,12 +250,12 @@ class Logger(metaclass=Singleton):
         sdir = os.path.join(self.log_folder, symbol_name)
         os.makedirs(sdir, exist_ok=True)
         preopen_path = os.path.join(sdir, "preopen.csv")
-        # If level differs from default header, rewrite header once
-        if not os.path.exists(preopen_path) or os.path.getsize(preopen_path) == 0:
-            with open(preopen_path, "w") as f:
-                f.write(self.format_lob_header(level=level))
-        with self._file_lock, open(preopen_path, "a") as f:
-            f.write(f"{self.iso_time_format(kernel_time)},{lob}\n")
+        header = self.format_lob_header(level=level)
+        timestamp = self.iso_time_format(kernel_time)
+        with self._file_lock:
+            self._ensure_lob_header(preopen_path, header)
+            with open(preopen_path, "a") as f:
+                f.write(f"{timestamp},{lob}\n")
 
     @staticmethod
     def iso_time_format(time: Union[str, pd.Timestamp]) -> str:
