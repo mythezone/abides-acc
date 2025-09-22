@@ -29,6 +29,7 @@ abides
 comparison/methods
 comparison/**/*log*
 comparison/**/MAXE-RJJ
+comparison/test_data/**/**.csv
 
 rubbish
 old
