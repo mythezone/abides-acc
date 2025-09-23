@@ -5,6 +5,7 @@ from core.ohlc import OHLCAggregator
 from core.order import Order, LimitOrder, MarketOrder
 import pandas as pd
 import numpy as np
+import random
 
 
 import threading
@@ -32,8 +33,8 @@ class Exchange:
         out_queue=None,
         **kwargs,
     ):
-        self.symbols = symbols
-        self.lob_dict = {symbol_name: LimitOrderBook(symbol_name) for symbol_name in list(symbols)}
+        self.symbols = list(symbols)
+        self.lob_dict = {symbol_name: LimitOrderBook(symbol_name) for symbol_name in self.symbols}
         self.logger = logger
         self.ohlc_freq = ohlc_freq
         self.ohlc_by_symbol: dict[str, OHLCAggregator] = {}
@@ -55,6 +56,7 @@ class Exchange:
         # Per-day buy/sell counters for T+1 enforcement (legacy metrics)
         self._day_buys: Dict[Tuple[str, str], int] = {}  # (agent,symbol)->qty
         self._day_sells: Dict[Tuple[str, str], int] = {}
+        self._symbol_volume: Dict[str, int] = {str(sym): 0 for sym in self.symbols}
 
         # Market data subscriptions: agent_id -> symbol -> {depth, freq_ms, last_sent}
         self._subs: dict[str, dict[str, dict]] = {}
@@ -260,6 +262,22 @@ class Exchange:
                         },
                     )
                 )
+        elif message.message_type == MessageType.SELECT_SYMBOLS_REQUEST:
+            selection = self._select_symbols(message.content or {})
+            response_messages.append(
+                new_message(
+                    message_type=MessageType.SELECT_SYMBOLS_RESPONSE,
+                    sender_id="Exchange",
+                    recipient_id=message.sender_id,
+                    send_time=now,
+                    recive_time=now,
+                    content={
+                        "strategy": (message.content or {}).get("strategy", "random"),
+                        "symbols": selection,
+                        "count": len(selection),
+                    },
+                )
+            )
         elif message.message_type == MessageType.QUERY_LAST_TRADE:
             # Return last trade price per requested symbol
             symbol = message.content.get("symbol")
@@ -700,7 +718,45 @@ class Exchange:
         if lob is None:
             lob = LimitOrderBook(symbol)
             self.lob_dict[symbol] = lob
+            if symbol not in self.symbols:
+                self.symbols.append(symbol)
+        self._symbol_volume.setdefault(symbol, 0)
         return lob
+
+    def _select_symbols(self, params: Dict) -> list[str]:
+        if not self.symbols:
+            return []
+        strategy = str(params.get("strategy", "random"))
+        try:
+            requested = int(params.get("count", 1))
+        except Exception:
+            requested = 1
+        requested = max(1, requested)
+        exclude_param = params.get("exclude") or []
+        if isinstance(exclude_param, (str, int)):
+            exclude = {str(exclude_param)}
+        else:
+            exclude = {str(sym) for sym in exclude_param if isinstance(sym, (str, int))}
+        pool = [str(sym) for sym in self.symbols if str(sym) not in exclude]
+        if not pool:
+            return []
+
+        if strategy == "top_volume":
+            ranked = sorted(
+                ((sym, self._symbol_volume.get(sym, 0)) for sym in pool),
+                key=lambda item: item[1],
+                reverse=True,
+            )
+            selected = [sym for sym, vol in ranked if vol > 0][:requested]
+            if len(selected) < requested:
+                remaining = [sym for sym, _ in ranked if sym not in selected]
+                selected.extend(remaining[: requested - len(selected)])
+            return selected
+
+        if requested >= len(pool):
+            random.shuffle(pool)
+            return pool
+        return random.sample(pool, requested)
 
     def _process_order(self, now: pd.Timestamp, order: Order):
         symbol = (
@@ -729,13 +785,19 @@ class Exchange:
         if trades:
             # accumulate fee
             total_fee = 0.0
+            executed_qty = 0
             for t in trades:
                 # track last price
                 try:
                     self._last_price[str(symbol)] = float(t["price"])  # per our trade dict
                 except Exception:
                     pass
-                total_fee += self._apply_fees(t.get("price", 0.0), t.get("quantity", 0))
+                qty = int(t.get("quantity", 0))
+                executed_qty += qty
+                total_fee += self._apply_fees(t.get("price", 0.0), qty)
+            if executed_qty > 0:
+                sym_key = str(symbol)
+                self._symbol_volume[sym_key] = int(self._symbol_volume.get(sym_key, 0)) + executed_qty
             execmsg = new_message(
                 message_type=MessageType.ORDER_EXECUTED,
                 sender_id="Exchange",

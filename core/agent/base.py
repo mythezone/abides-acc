@@ -256,3 +256,40 @@ class BaseAgent:
             recive_time=ts,
             content=content,
         )
+
+    def build_symbol_query(
+        self,
+        *,
+        strategy: str = "random",
+        count: int = 1,
+        send_time: Optional[pd.Timestamp] = None,
+        **params,
+    ) -> Message:
+        ts = send_time or self.current_time
+        payload = {"strategy": str(strategy), "count": int(max(1, count))}
+        if params:
+            payload.update(params)
+        return new_message(
+            message_type=MessageType.SELECT_SYMBOLS_REQUEST,
+            sender_id=self.id,
+            recipient_id="Exchange",
+            send_time=ts,
+            recive_time=ts,
+            content=payload,
+        )
+
+    def request_symbols(
+        self,
+        *,
+        strategy: str = "random",
+        count: int = 1,
+        send_time: Optional[pd.Timestamp] = None,
+        **params,
+    ) -> None:
+        msg = self.build_symbol_query(
+            strategy=strategy,
+            count=count,
+            send_time=send_time,
+            **params,
+        )
+        self.send(msg)

@@ -50,6 +50,8 @@ class MessageType(Enum):
     LOG_LOB = 40
     LOG_OHLC = 41
     LOG_TICK = 42
+    SELECT_SYMBOLS_REQUEST = 43
+    SELECT_SYMBOLS_RESPONSE = 44
 
     # Oracle related
     ORACLE_QUERY_LOB = 50
