@@ -20,11 +20,11 @@ class BaseAgent:
         *args,
         logger: Optional[Logger] | None = None,
         location: List[float] | None = None,
-        message_queue: MessageQueue = None,
+        message_queue: MessageQueue | None = None,
         **kwargs,
     ):
         self.id = id
-        self.message_queue = message_queue
+        self.message_queue = message_queue or MessageQueue()
         self.inbox = []
         self.args = args
         self.current_time: pd.Timestamp = pd.Timestamp.now()
@@ -41,6 +41,11 @@ class BaseAgent:
             self._agent_log_delta = None
         self._agent_log_last: Optional[pd.Timestamp] = None
         self.portfolio = Portfolio(initial_cash=initial_cash)
+        # Performance tracking options
+        self.track_performance: bool = bool(kwargs.pop("track_performance", False))
+        self._initial_nav: float = float(
+            kwargs.pop("initial_nav", self.portfolio.current_total_value())
+        )
         # Calibration flags
         self.calibration_mode: bool = bool(kwargs.pop("calibration_mode", False))
         self.oracle_id: Optional[str] = kwargs.pop("oracle_id", None)
@@ -122,28 +127,6 @@ class BaseAgent:
                         self.portfolio.cash -= fees
                 except Exception:
                     pass
-                # After applying, log snapshot
-                if self.logger:
-                    should_log = False
-                    if self._agent_log_delta is None:
-                        should_log = True
-                    else:
-                        if (
-                            self._agent_log_last is None
-                            or (m.recive_time - self._agent_log_last)
-                            >= self._agent_log_delta
-                        ):
-                            should_log = True
-                    if should_log:
-                        tv = self.portfolio.current_total_value()
-                        self.logger.agent_log(
-                            self.id,
-                            m.recive_time,
-                            cash=self.portfolio.cash,
-                            total_value=tv,
-                            positions=self.portfolio.holdings,
-                        )
-                        self._agent_log_last = m.recive_time
             else:
                 remaining.append(m)
         self.inbox = remaining
@@ -174,10 +157,47 @@ class BaseAgent:
         self.set_next_wakeup(current_time)
         self.process_inbox()
         self.action()
+        if self.track_performance:
+            self.log_performance(current_time)
         return
 
     def receive(self, message: Message):
         self.inbox.append(message)
+
+    # --- Performance tracking helpers ---
+
+    def current_total_value(self, price_map: Optional[dict] = None) -> float:
+        return float(self.portfolio.current_total_value(price_map))
+
+    def get_profit(self, price_map: Optional[dict] = None) -> float:
+        return float(self.current_total_value(price_map) - self._initial_nav)
+
+    def performance_snapshot(self, price_map: Optional[dict] = None) -> dict:
+        total_val = self.current_total_value(price_map)
+        return {
+            "cash": round(float(self.portfolio.cash), 2),
+            "total_value": round(total_val, 2),
+            "profit": round(total_val - self._initial_nav, 2),
+            "positions": dict(self.portfolio.holdings),
+        }
+
+    def log_performance(
+        self,
+        timestamp: Optional[pd.Timestamp] = None,
+        price_map: Optional[dict] = None,
+    ) -> None:
+        if not (self.logger and self.track_performance):
+            return
+        ts = timestamp or self.current_time
+        snapshot = self.performance_snapshot(price_map)
+        self.logger.agent_log(
+            agent_id=self.id,
+            kernel_time=ts,
+            cash=snapshot["cash"],
+            total_value=snapshot["total_value"],
+            positions=snapshot["positions"],
+        )
+        self._agent_log_last = ts
 
     # --- Exchange query helpers ---
     def build_fundamental_query(

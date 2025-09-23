@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 import time
+from pathlib import Path
 from typing import List, Dict
 from rich.progress import Progress
 from types import SimpleNamespace
@@ -444,6 +445,21 @@ class Kernel:
         ep.setdefault("lob_log_level", 5)
         ep.setdefault("lob_log_freq", "3s")
         ep.setdefault("workers", 0)
+
+        snapshots = ep.get("initial_snapshots")
+        if isinstance(snapshots, dict):
+            cfg_dir = Path(config_path).resolve().parent
+            resolved = {}
+            for sym, path in snapshots.items():
+                if not path:
+                    continue
+                try:
+                    p = Path(path)
+                    resolved_path = p if p.is_absolute() else (cfg_dir / p)
+                    resolved[sym] = str(resolved_path.resolve())
+                except Exception:
+                    resolved[sym] = path
+            ep["initial_snapshots"] = resolved
 
         cfg = {
             "name": kname,

@@ -49,8 +49,10 @@ class Exchange:
         # Fee rate in bps (subclasses may override)
         self.fee_rate: float = 0.0  # e.g., 0.0003 = 3 bps
         # Optional initial positions for account-aware rules (agent_id -> {symbol: qty})
-        self.initial_positions: Dict[str, Dict[str, int]] = {}
-        # Per-day buy/sell counters for T+1 enforcement
+        self._initial_positions: Dict[str, Dict[str, int]] = {}
+        # Track per-agent T+1 availability (agent, symbol) -> remaining sellable qty
+        self._t1_available: Dict[Tuple[str, str], int] = {}
+        # Per-day buy/sell counters for T+1 enforcement (legacy metrics)
         self._day_buys: Dict[Tuple[str, str], int] = {}  # (agent,symbol)->qty
         self._day_sells: Dict[Tuple[str, str], int] = {}
 
@@ -70,8 +72,45 @@ class Exchange:
                 self._executor.submit(self._worker_loop, idx)
 
         # kwargs
+        init_snapshots = kwargs.pop("initial_snapshots", None)
         for key, value in kwargs.items():
             setattr(self, key, value)
+        if init_snapshots:
+            self._apply_initial_snapshots(init_snapshots)
+
+    def _apply_initial_snapshots(self, snapshots):
+        if hasattr(snapshots, "items"):
+            iterator = snapshots.items()
+        elif isinstance(snapshots, dict):
+            iterator = snapshots.items()
+        else:
+            iterator = []
+        for symbol, path in iterator:
+            lob = self._ensure_lob(symbol)
+            try:
+                lob.initialize_from_csv(path, agent_id="InitAgent", timestamp="1970-01-01T00:00:00")
+            except Exception:
+                pass
+
+    @property
+    def initial_positions(self) -> Dict[str, Dict[str, int]]:
+        return self._initial_positions
+
+    @initial_positions.setter
+    def initial_positions(self, positions: Optional[Dict[str, Dict[str, int]]]):
+        self._initial_positions = positions or {}
+        self._rebuild_t1_limits()
+
+    def _rebuild_t1_limits(self) -> None:
+        self._t1_available.clear()
+        for agent, holdings in self._initial_positions.items():
+            if not isinstance(holdings, dict):
+                continue
+            for symbol, qty in holdings.items():
+                try:
+                    self._t1_available[(agent, symbol)] = int(qty)
+                except Exception:
+                    self._t1_available[(agent, symbol)] = 0
 
     def handle_message(self, message: Message):
         response_messages = []
@@ -791,11 +830,12 @@ class SZSExchange(Exchange):
         price_limit_pct: float = 0.1,
         fee_rate: float = 0.0003,
         initial_positions: Optional[Dict[str, Dict[str, int]]] = None,
+        initial_snapshots: Optional[Dict[str, str]] = None,
         opening_call: bool = False,
         **kwargs,
     ):
         # opening_call is handled here and not passed to base class
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, initial_snapshots=initial_snapshots, **kwargs)
         self.t_plus_one = bool(t_plus_one)
         self.price_limit_pct = float(price_limit_pct) if price_limit_pct else 0.0
         self.fee_rate = float(fee_rate) if fee_rate else 0.0
@@ -1062,15 +1102,16 @@ class SZSExchange(Exchange):
                 if not self.initial_positions or agent not in self.initial_positions:
                     return True
                 key = (agent, symbol)
-                buys = int(self._day_buys.get(key, 0))
-                sells = int(self._day_sells.get(key, 0))
                 init_pos = int(
                     ((self.initial_positions.get(agent) or {}).get(symbol) or 0)
                 )
-                # Max sellable today = init_pos - sells (cannot use today's buys)
-                remaining = init_pos - sells
-                if int(order.quantity) > max(0, remaining):
+                available = self._t1_available.get(key)
+                if available is None:
+                    available = init_pos
+                    self._t1_available[key] = available
+                if int(order.quantity) > max(0, available):
                     return False
+                setattr(order, "_t1_reserved_qty", int(order.quantity))
         return True
 
     def _process_order(self, now: pd.Timestamp, order: Order):
@@ -1088,6 +1129,9 @@ class SZSExchange(Exchange):
                 self._day_sells[key] = int(self._day_sells.get(key, 0)) + int(
                     order.quantity
                 )
+                qty = int(getattr(order, "_t1_reserved_qty", order.quantity))
+                available = int(self._t1_available.get(key, 0))
+                self._t1_available[key] = max(0, available - qty)
         super()._process_order(now, order)
 
 
@@ -1125,6 +1169,7 @@ def new_exchange(
             price_limit_pct=float(p.get("price_limit_pct", 0.1)),
             fee_rate=float(p.get("fee_rate", 0.0003)),
             initial_positions=p.get("initial_positions"),
+            initial_snapshots=p.get("initial_snapshots"),
             opening_call=bool(p.get("opening_call", False)),
         )
     elif et == "NYSE":

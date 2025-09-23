@@ -4,6 +4,8 @@ import heapq
 import itertools
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, Optional, Tuple
+import csv
+from pathlib import Path
 
 import pandas as pd
 
@@ -208,6 +210,75 @@ class LimitOrderBook:
         for i in range(n):
             parts.append(str(bids[i][1]) if i < len(bids) else "")
         return ",".join(parts)
+
+    def initialize_from_snapshot(
+        self,
+        bids: Iterable[Tuple[float, int]],
+        asks: Iterable[Tuple[float, int]],
+        *,
+        agent_id: str = "InitAgent",
+        timestamp: str = "1970-01-01T00:00:00",
+    ) -> None:
+        for price, volume in bids:
+            if volume <= 0:
+                continue
+            order = LimitOrder(
+                agent_id=agent_id,
+                timestamp=timestamp,
+                side="buy",
+                quantity=int(volume),
+                price=float(price),
+                id=f"init_bid_{self.symbol}_{price}_{volume}",
+            )
+            self._rest(order)
+        for price, volume in asks:
+            if volume <= 0:
+                continue
+            order = LimitOrder(
+                agent_id=agent_id,
+                timestamp=timestamp,
+                side="sell",
+                quantity=int(volume),
+                price=float(price),
+                id=f"init_ask_{self.symbol}_{price}_{volume}",
+            )
+            self._rest(order)
+
+    def initialize_from_csv(
+        self,
+        path: str | Path,
+        *,
+        agent_id: str = "InitAgent",
+        timestamp: str = "1970-01-01T00:00:00",
+    ) -> None:
+        bids: List[Tuple[float, int]] = []
+        asks: List[Tuple[float, int]] = []
+        with open(path, "r", newline="") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                try:
+                    bid_price = float(row.get("bid_price"))
+                    bid_volume = int(row.get("bid_volume", 0))
+                except (TypeError, ValueError):
+                    bid_volume = 0
+                else:
+                    if bid_volume > 0:
+                        bids.append((bid_price, bid_volume))
+                try:
+                    ask_price = float(row.get("ask_price"))
+                    ask_volume = int(row.get("ask_volume", 0))
+                except (TypeError, ValueError):
+                    ask_volume = 0
+                else:
+                    if ask_volume > 0:
+                        asks.append((ask_price, ask_volume))
+        if bids or asks:
+            self.initialize_from_snapshot(
+                bids=bids,
+                asks=asks,
+                agent_id=agent_id,
+                timestamp=timestamp,
+            )
 
     def reset_ohlc(self) -> None:
         close = self.ohlc["close"]

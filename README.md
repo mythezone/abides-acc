@@ -15,11 +15,15 @@ ABIDES‑ACC 提供一个现代、可扩展的多资产市场仿真内核，兼�
 ## 架构总览
 
 - `core/kernel.py`：基于优先队列的事件驱动内核。统一调度消息、推进时间，支持心跳 `LOG_TICK` 驱动的 OHLC/LOB 定时写盘。
-- `core/exchange.py`：交易所，维护每个标的的 LOB。支持限价/市价、改/撤、集合竞价、T+1 与涨跌幅限制（可配置）、行情订阅推送。
+- `core/exchange.py`：交易所，维护每个标的的 LOB。支持限价/市价、改/撤、集合竞价、T+1 与涨跌幅限制（可配置）、行情订阅推送。T+1 规则通过为每个代理记录“可售上限”实现：基于日初持仓计算单日可卖数量，所有卖单提交时都会占用额度，无法重复出售同一份库存，买入侧不受限制。若需要复现真实开盘深度，可在配置中为每个标的提供 CSV 形式的初始挂单快照，交易所会在启动时以 `InitAgent` 身份注入，且不会被撤销。
 - `core/lob.py`：价格层级堆 + FIFO 队列实现的 LOB，保证价优时优撮合，提供快照与 CSV 序列化能力。
 - `core/agent/`：代理基类与适配器。基类统一处理收/发、资金/持仓更新；适配器提供 ABIDES 风格策略。
 - `core/logger.py`：统一的日志与 CSV 落盘，便于后处理/标注。
 - `core/clock.py`：交易时段定义、跨日推进、午休跳时段。
+
+### T+1 卖出限制实现
+
+针对 A 股 T+1 规则，交易所会在日初读取 `initial_positions` 并为每个代理、标的生成一份“可卖额度”。每日提交的卖单会立即占用该额度（无论是否成交），超过额度的卖单将被拒绝，从而避免同一日重复出售相同库存；买单不受限制，会在次日计入新的可卖额度。若未提供初始持仓信息，则默认放宽限制以兼容不受约束的场景。
 
 ## 消息协议（摘要）
 
@@ -71,7 +75,12 @@ python scripts/run_all_agents.py
 - `hbl.py`（HeuristicBeliefLearningAgent）：近似 HBL；先查询盘口，随后在买/卖之间交替下单；卖出无库存时改买入。
 - `fundamental.py`（FundamentalTrackingAgent）：与 ValueAgent 类似，但更强调均值回归（买价略低、卖价略高于参考）。
 
-所有代理都通过 `BaseAgent` 统一处理成交反馈（`ORDER_EXECUTED`），自动更新资金/持仓并按节奏写入 `log/agents/<agent>.csv`。
+所有代理都通过 `BaseAgent` 统一处理成交反馈（`ORDER_EXECUTED`），自动更新资金/持仓。若某个代理在构造时启用 `track_performance=True`，则每次被唤醒时都会记录一条包含现金、总资产与收益的快照到 `log/agents/<agent>.csv`（默认不开启）。基础类还提供：
+
+- `current_total_value(price_map=None)`：按最新成交价或自定义价格字典计算资产净值。
+- `get_profit(price_map=None)`：返回相对初始净值的收益。
+- `performance_snapshot(price_map=None)`：生成包含现金、净值、收益与持仓的 JSON 结构，供后处理或自定义日志使用。
+- `log_performance(timestamp=None, price_map=None)`：显式写入一条代理日志（内部调用 `logger.agent_log`）。
 
 ## 与 ABIDES 的兼容与迁移
 

@@ -209,6 +209,7 @@
   \item \textbf{定价与撮合}：09:25 对各标的在限价集合上枚举候选价，选取\emph{最大可成交量}价格；并列时优先\emph{最小不平衡度}。在该价按“价高/价低优先 + 时间优先”撮合；未成交的限价单转入连续竞价 LOB。
   \item \textbf{费用与限制}：成交收取 \verb|fee_rate|；继续支持 T+1 与涨跌幅限制（有参考价时对限价进行校验）。
   \item \textbf{预开盘快照日志}：将预开盘 LOB 快照写入 \verb|log/<run>/<symbol>/preopen.csv|，采用与 \verb|lob.csv| 一致的 5 档列式 CSV 架构，便于对齐比对。
+  \item \textbf{初始订单簿加载}：支持在配置中为每个标的指定初始化 CSV（列为 \verb|bid_price,bid_volume,ask_price,ask_volume|）。仿真启动时，交易所将这些静态挂单注入 LOB，作为“InitAgent”提交的最高优先级订单，不会被撤销，可用于复现真实市场的开盘深度；若缺省则默认从空簿面开始。
 \end{itemize}
 
 \paragraph{日志对齐}
@@ -238,13 +239,15 @@
 \begin{description}
   \item[BaseAgent] \emph{基类代理}：所有代理的父类。
   \begin{itemize}
-    \item \textbf{属性：}代理 ID、持仓 \verb|positions|、现金余额 \verb|cash|、订单记录 \verb|orders|。
+    \item \textbf{属性：}代理 ID、持仓 \verb|positions|、现金余额 \verb|cash|、订单记录 \verb|orders|，以及可选的表现追踪开关 \verb|track_performance|（默认关闭）。
     \item \textbf{方法：}
       \begin{itemize}
         \item \verb|on_start(kernel)|：仿真开始前初始化。
         \item \verb|on_message(message)|：处理来自内核或市场的消息。
         \item \verb|place_order(order)|：创建并发送订单。
         \item \verb|cancel_order(order_id)|：撤销订单。
+        \item \verb|current_total_value(price_map)|、\verb|get_profit(price_map)|、\verb|performance_snapshot(price_map)|：在开启 \verb|track_performance| 时用于计算净值/收益并生成日志快照。
+        \item \verb|log_performance(timestamp, price_map)|：显式写入代理现金、持仓与收益日志；若开启 \verb|track_performance|，\verb|wakeup| 时会自动调用。
       \end{itemize}
   \end{itemize}
   \item[TraderAgent] \emph{交易代理基类}：扩展 BaseAgent，增加市场状态感知。
