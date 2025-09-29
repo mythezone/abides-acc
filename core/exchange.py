@@ -14,6 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Dict, Tuple, Iterable
 from core.preopen_book import PreopenOrderBook
 from core.logger import Logger
+from util.util import random_china_location, network_latency_ms
 
 
 class Exchange:
@@ -33,7 +34,17 @@ class Exchange:
         out_queue=None,
         **kwargs,
     ):
-        self.symbols = list(symbols)
+        location_value = kwargs.pop("location", None)
+        if location_value is None:
+            self.location: Tuple[float, float] = random_china_location()
+        else:
+            try:
+                lat, lon = location_value
+                self.location = (float(lat), float(lon))
+            except Exception:
+                self.location = random_china_location()
+
+        self.symbols = [str(sym) for sym in symbols]
         self.lob_dict = {symbol_name: LimitOrderBook(symbol_name) for symbol_name in self.symbols}
         self.logger = logger
         self.ohlc_freq = ohlc_freq
@@ -60,6 +71,7 @@ class Exchange:
 
         # Market data subscriptions: agent_id -> symbol -> {depth, freq_ms, last_sent}
         self._subs: dict[str, dict[str, dict]] = {}
+        self._agent_locations: Dict[str, Tuple[float, float]] = {}
 
         # Parallel workers sharded by symbol hash (if requested)
         self.workers = int(workers) if workers and int(workers) > 0 else 0
@@ -93,6 +105,17 @@ class Exchange:
                 lob.initialize_from_csv(path, agent_id="InitAgent", timestamp="1970-01-01T00:00:00")
             except Exception:
                 pass
+
+    def register_agent_location(
+        self, agent_id: str, location: Optional[Iterable[float]]
+    ) -> None:
+        if not isinstance(agent_id, str) or location is None:
+            return
+        try:
+            lat, lon = location
+            self._agent_locations[agent_id] = (float(lat), float(lon))
+        except Exception:
+            pass
 
     @property
     def initial_positions(self) -> Dict[str, Dict[str, int]]:
@@ -703,8 +726,14 @@ class Exchange:
                 q.task_done()
 
     def _emit(self, msg: Message):
+        delay = 0.0
+        recipient = getattr(msg, "recipient_id", None)
+        if isinstance(recipient, str):
+            peer_loc = self._agent_locations.get(recipient)
+            if peer_loc is not None:
+                delay = network_latency_ms(self.location, peer_loc)
         if self.out_queue is not None:
-            self.out_queue.put(msg)
+            self.out_queue.put(msg, recive_delay=delay)
 
     def _get_lob(self, symbol: Optional[str]) -> Optional[LimitOrderBook]:
         if isinstance(symbol, str):
@@ -897,7 +926,8 @@ class SZSExchange(Exchange):
         **kwargs,
     ):
         # opening_call is handled here and not passed to base class
-        super().__init__(*args, initial_snapshots=initial_snapshots, **kwargs)
+        default_location = kwargs.pop("location", (22.5333, 114.0667))  # Shenzhen
+        super().__init__(*args, initial_snapshots=initial_snapshots, location=default_location, **kwargs)
         self.t_plus_one = bool(t_plus_one)
         self.price_limit_pct = float(price_limit_pct) if price_limit_pct else 0.0
         self.fee_rate = float(fee_rate) if fee_rate else 0.0

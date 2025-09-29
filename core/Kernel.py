@@ -100,12 +100,20 @@ class Kernel:
                 # Here we would create an agent instance, e.g.:
                 # Agent(id=id, type=agent_type, **args)
                 agent_id = f"{agent_type}_{id}"
-                self.agents[agent_id] = agent_class(
+                agent_instance = agent_class(
                     id=agent_id,
                     message_queue=self.message_queue,
                     logger=self.logger,
                     **args,
                 )
+                agent_instance.exchange_location = getattr(self.exchange, "location", None)
+                self.agents[agent_id] = agent_instance
+                try:
+                    self.exchange.register_agent_location(
+                        agent_id, getattr(agent_instance, "location", None)
+                    )
+                except Exception:
+                    pass
                 # Initialize positions per configuration
                 try:
                     # Per-agent override
@@ -130,9 +138,7 @@ class Kernel:
                             max_cash = float(spec.get("max_cash", 1000000.0))
                             syms = spec.get("symbols") or universe_symbols
                             if syms:
-                                self.agents[
-                                    agent_id
-                                ].portfolio.initialize_random_portfolio(
+                                agent_instance.portfolio.initialize_random_portfolio(
                                     syms,
                                     min_shares=min_sh,
                                     max_shares=max_sh,
@@ -143,10 +149,12 @@ class Kernel:
                     pass
                 if agent_panel:
                     agent_panel.update_agent(
-                        {"agent_id": self.agents[agent_id].id, "status": "sleep"}
+                        {"agent_id": agent_instance.id, "status": "sleep"}
                     )
                     agent_panel.render()
                     time.sleep(0.01)
+
+        self._sync_agent_locations()
 
         # After all agents are initialized, feed initial positions to exchange for T+1 rules
         try:
@@ -531,3 +539,20 @@ class Kernel:
                     self.logger.save_log_to_file()
             except Exception:
                 pass
+
+    def _sync_agent_locations(self) -> None:
+        try:
+            exchange_loc = getattr(self.exchange, "location", None)
+        except Exception:
+            exchange_loc = None
+        location_map = {
+            aid: getattr(agent, "location", None) for aid, agent in self.agents.items()
+        }
+        for aid, agent in self.agents.items():
+            agent.exchange_location = exchange_loc
+            peer_map = {
+                other_id: loc
+                for other_id, loc in location_map.items()
+                if other_id != aid and loc is not None
+            }
+            agent._peer_locations = peer_map

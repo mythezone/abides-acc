@@ -2,11 +2,11 @@ import pandas as pd
 import numpy as np
 
 
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Optional, Dict, Tuple
 from core.message import Message, MessageType, MessageQueue, new_message
-from typing import Optional
 from core.logger import Logger
 from core.portfolio import Portfolio
+from util.util import random_china_location, network_latency_ms
 
 
 if TYPE_CHECKING:
@@ -19,7 +19,7 @@ class BaseAgent:
         id,
         *args,
         logger: Optional[Logger] | None = None,
-        location: List[float] | None = None,
+        location: List[float] | Tuple[float, float] | None = None,
         message_queue: MessageQueue | None = None,
         **kwargs,
     ):
@@ -46,24 +46,51 @@ class BaseAgent:
         self._initial_nav: float = float(
             kwargs.pop("initial_nav", self.portfolio.current_total_value())
         )
+        location_value = location if location is not None else kwargs.pop("location", None)
+        if location_value is None:
+            self.location: Tuple[float, float] = random_china_location()
+        else:
+            try:
+                lat, lon = location_value
+                self.location = (float(lat), float(lon))
+            except Exception:
+                self.location = random_china_location()
+        self.exchange_location: Optional[Tuple[float, float]] = kwargs.pop(
+            "exchange_location", None
+        )
+        self._peer_locations: Dict[str, Tuple[float, float]] = {}
         # Calibration flags
         self.calibration_mode: bool = bool(kwargs.pop("calibration_mode", False))
         self.oracle_id: Optional[str] = kwargs.pop("oracle_id", None)
 
-        if location:
-            self.location = location
-        else:
-            self.location = np.random.uniform(-180, 180, size=2).tolist()
-
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-    def send(self, message: Message, delay=0):
+    def send(
+        self,
+        message: Message,
+        delay: Optional[float] = None,
+        *,
+        delay_mode: str = "latency",
+    ):
         # Align with MessageQueue.put(message, recive_delay=...)
+        computed_delay = delay
+        if delay is None and delay_mode == "latency":
+            computed_delay = 0.0
+            recipient = getattr(message, "recipient_id", None)
+            if isinstance(recipient, str):
+                if recipient == "Exchange" and self.exchange_location is not None:
+                    computed_delay = network_latency_ms(self.location, self.exchange_location)
+                else:
+                    peer_loc = self._peer_locations.get(recipient)
+                    if peer_loc is not None:
+                        computed_delay = network_latency_ms(self.location, peer_loc)
+        elif delay is None:
+            computed_delay = 0.0
         if self.logger:
             # Log the sending event (stage=SEND)
             self.logger.kernel_message_log(message, stage="SEND")
-        self.message_queue.put(message, recive_delay=delay)
+        self.message_queue.put(message, recive_delay=computed_delay)
 
     def wakeup_delay(self):
         # Use slower cadence during pre-open call auction if configured

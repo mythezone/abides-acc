@@ -5,8 +5,10 @@ import warnings
 from scipy.spatial.distance import pdist, squareform
 from core.logger import Logger
 import heapq
+import random
+import math
 
-from typing import List, Dict, TYPE_CHECKING
+from typing import List, Dict, TYPE_CHECKING, Iterable, Tuple
 
 # if TYPE_CHECKING:
 #     from order.base import Order
@@ -178,3 +180,100 @@ def sigmoid(x, beta):
         # zero because it's 1+z.
         z = np.exp(beta * x)
         return z / (1 + z)
+
+
+_CITY_DISTRIBUTION: List[Tuple[float, float, float]] = [
+    (39.9042, 116.4074, 21.5),  # Beijing
+    (31.2304, 121.4737, 24.3),  # Shanghai
+    (23.1291, 113.2644, 18.7),  # Guangzhou
+    (22.5431, 114.0579, 17.5),  # Shenzhen
+    (30.5728, 104.0668, 16.3),  # Chengdu
+    (29.5630, 106.5516, 31.0),  # Chongqing (municipality)
+    (39.3434, 117.3616, 13.9),  # Tianjin
+    (30.5928, 114.3055, 12.3),  # Wuhan
+    (34.3416, 108.9398, 12.0),  # Xi'an
+    (30.2741, 120.1551, 12.2),  # Hangzhou
+    (32.0603, 118.7969, 9.6),   # Nanjing
+    (31.2989, 120.5853, 10.7),  # Suzhou
+    (34.7466, 113.6254, 10.3),  # Zhengzhou
+    (28.2282, 112.9388, 8.4),   # Changsha
+    (41.8057, 123.4315, 8.3),   # Shenyang
+    (45.8038, 126.5349, 9.5),   # Harbin
+    (36.0671, 120.3826, 9.0),   # Qingdao
+    (36.6500, 117.1201, 9.2),   # Jinan
+    (31.8206, 117.2272, 8.2),   # Hefei
+    (26.0745, 119.2965, 7.9),   # Fuzhou
+    (24.4798, 118.0894, 5.1),   # Xiamen
+    (25.0389, 102.7183, 6.6),   # Kunming
+    (43.8256, 87.6168, 4.0),    # Urumqi
+]
+
+
+def random_china_location(seed: int | None = None) -> Tuple[float, float]:
+    """Sample a latitude/longitude pair within China, weighted by major population centers.
+
+    The distribution is approximated by selecting from a list of major cities using their
+    metropolitan populations as weights, then applying a small Gaussian perturbation. The
+    result is clamped to China's approximate geographic bounding box.
+    """
+
+    rng = random.Random(seed) if seed is not None else random
+    weights = [entry[2] for entry in _CITY_DISTRIBUTION]
+    lat, lon, _ = rng.choices(_CITY_DISTRIBUTION, weights=weights, k=1)[0]
+    lat = rng.gauss(lat, 0.5)
+    lon = rng.gauss(lon, 0.5)
+    lat = min(max(lat, 18.0), 53.5)
+    lon = min(max(lon, 73.0), 134.5)
+    return (round(float(lat), 6), round(float(lon), 6))
+
+
+def network_latency_ms(
+    location_a: Iterable[float] | None,
+    location_b: Iterable[float] | None,
+    *,
+    speed_km_per_ms: float = 200.0,
+    jitter_std: float = 0.15,
+    minimum_ms: float = 0.05,
+) -> float:
+    """Estimate signal latency between two geographic coordinates in milliseconds.
+
+    Parameters
+    ----------
+    location_a, location_b : iterable of float
+        Latitude/longitude pairs in degrees. If either is missing, returns 0.
+    speed_km_per_ms : float
+        Effective propagation speed (default approximates fibre at ~200,000 km/s).
+    jitter_std : float
+        Standard deviation of Gaussian noise applied to the latency (ms).
+    minimum_ms : float
+        Lower bound to avoid zero/negative delays.
+    """
+
+    if location_a is None or location_b is None:
+        return 0.0
+    try:
+        lat1_deg, lon1_deg = location_a
+        lat2_deg, lon2_deg = location_b
+    except Exception:
+        return 0.0
+
+    lat1 = math.radians(float(lat1_deg))
+    lon1 = math.radians(float(lon1_deg))
+    lat2 = math.radians(float(lat2_deg))
+    lon2 = math.radians(float(lon2_deg))
+
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+    c = 2 * math.asin(min(1.0, math.sqrt(a)))
+    earth_radius_km = 6371.0
+    distance_km = earth_radius_km * c
+
+    if speed_km_per_ms <= 0:
+        base_delay = 0.0
+    else:
+        base_delay = distance_km / float(speed_km_per_ms)
+
+    jitter = random.gauss(0.0, jitter_std) if jitter_std > 0 else 0.0
+    delay = max(minimum_ms, base_delay + jitter)
+    return float(delay)

@@ -210,6 +210,7 @@
   \item \textbf{费用与限制}：成交收取 \verb|fee_rate|；继续支持 T+1 与涨跌幅限制（有参考价时对限价进行校验）。
   \item \textbf{预开盘快照日志}：将预开盘 LOB 快照写入 \verb|log/<run>/<symbol>/preopen.csv|，采用与 \verb|lob.csv| 一致的 5 档列式 CSV 架构，便于对齐比对。
   \item \textbf{初始订单簿加载}：支持在配置中为每个标的指定初始化 CSV（列为 \verb|bid_price,bid_volume,ask_price,ask_volume|）。仿真启动时，交易所将这些静态挂单注入 LOB，作为“InitAgent”提交的最高优先级订单，不会被撤销，可用于复现真实市场的开盘深度；若缺省则默认从空簿面开始。
+  \item \textbf{地理位置与链路延迟}：交易所和代理均带有经纬度属性（默认使用中国境内高人口密度点采样；SZSE 交易所默认落在深圳）。消息收发默认根据交易所与代理之间的地理距离估算传播时延，并加入高斯扰动，以模拟网络延迟。
 \end{itemize}
 
 \paragraph{日志对齐}
@@ -248,6 +249,7 @@
         \item \verb|cancel_order(order_id)|：撤销订单。
         \item \verb|current_total_value(price_map)|、\verb|get_profit(price_map)|、\verb|performance_snapshot(price_map)|：在开启 \verb|track_performance| 时用于计算净值/收益并生成日志快照。
         \item \verb|log_performance(timestamp, price_map)|：显式写入代理现金、持仓与收益日志；若开启 \verb|track_performance|，\verb|wakeup| 时会自动调用。
+        \item \verb|request_symbols(strategy, count, **params)|：向交易所请求符合策略（随机、成交量前列等）的标的列表。
       \end{itemize}
   \end{itemize}
   \item[TraderAgent] \emph{交易代理基类}：扩展 BaseAgent，增加市场状态感知。
