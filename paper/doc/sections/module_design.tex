@@ -105,7 +105,7 @@
   \end{itemize}
   \item[OrderBook] \emph{订单簿}：维护某资产的买卖挂单。
   \begin{itemize}
-    \item \textbf{属性：}买单堆 \verb|bids|（最大堆）/卖单堆 \verb|asks|（最小堆），堆节点对应单个价格；每个价格节点维护按时间顺序串联的订单链表；`order_index` 哈希表用于撤单/改单定位。
+    \item \textbf{属性：}买单堆 \verb|bids|（最大堆）卖单堆 \verb|asks|（最小堆），堆节点对应单个价格；每个价格节点维护按时间顺序串联的订单链表；order\_index 哈希表用于撤单/改单定位。
     \item \textbf{方法：}
       \begin{itemize}
         \item \verb|add_order(order)|：撮合对手盘后，将剩余限价单插入相应价格节点的 FIFO 队列。
