@@ -59,6 +59,7 @@ class BaseAgent:
             "exchange_location", None
         )
         self._peer_locations: Dict[str, Tuple[float, float]] = {}
+        self._latest_symbol_response: Dict[str, object] | None = None
         # Calibration flags
         self.calibration_mode: bool = bool(kwargs.pop("calibration_mode", False))
         self.oracle_id: Optional[str] = kwargs.pop("oracle_id", None)
@@ -132,7 +133,6 @@ class BaseAgent:
 
     def process_inbox(self):
         # default handler: update portfolio on executions
-        remaining = []
         for m in self.inbox:
             if m.message_type == MessageType.ORDER_EXECUTED and isinstance(
                 m.content, dict
@@ -154,9 +154,11 @@ class BaseAgent:
                         self.portfolio.cash -= fees
                 except Exception:
                     pass
+            elif m.message_type == MessageType.SELECT_SYMBOLS_RESPONSE and isinstance(m.content, dict):
+                self._latest_symbol_response = m.content
             else:
-                remaining.append(m)
-        self.inbox = remaining
+                self.handle_inbox_message(m)
+        self.inbox = []
 
     def action(self):
         pass
@@ -190,6 +192,9 @@ class BaseAgent:
 
     def receive(self, message: Message):
         self.inbox.append(message)
+
+    def handle_inbox_message(self, message: Message) -> bool:
+        return False
 
     # --- Performance tracking helpers ---
 

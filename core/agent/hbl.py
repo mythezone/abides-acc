@@ -39,52 +39,47 @@ class HeuristicBeliefLearningAgent(BaseAgent):
         )
         self.send(msg)
 
-    def receive(self, message):
-        super().receive(message)
-        keep = []
-        for m in self.inbox:
-            if m.message_type == MessageType.QUERY_SPERAD and isinstance(m.content, dict):
-                sym = str(m.content.get("symbol"))
-                bids = m.content.get("bids", [])
-                asks = m.content.get("asks", [])
-                if not (bids or asks):
-                    continue
-                # alternate side to reduce bias; fallback to buy if no inventory for sell
-                side = "buy" if self._last_side == "sell" else "sell"
-                self._last_side = side
-                price = None
-                if side == "buy" and bids:
-                    price = float(bids[0][0])
-                elif side == "sell" and asks:
-                    price = float(asks[0][0])
-                qty = int(np.random.randint(1, 30))
-                inv = int(self.portfolio.holdings.get(sym, 0))
-                if side == "sell" and inv <= 0:
-                    side = "buy"
-                if side == "sell":
-                    qty = max(1, min(qty, inv))
-                import pandas as pd
-                ts2 = self.current_time if isinstance(self.current_time, pd.Timestamp) else pd.Timestamp.now()
-                req = {
-                    "type": "limit_order",
-                    "symbol": sym,
-                    "agent_id": self.id,
-                    "timestamp": str(ts2),
-                    "side": side,
-                    "quantity": qty,
-                }
-                if price is not None:
-                    req["price"] = price
-                self.send(
-                    new_message(
-                        message_type=MessageType.SUBMIT_ORDER,
-                        sender_id=self.id,
-                        recipient_id="Exchange",
-                        send_time=ts2,
-                        recive_time=ts2,
-                        content={"requests": [req]},
-                    )
+    def handle_inbox_message(self, message):
+        if message.message_type == MessageType.QUERY_SPERAD and isinstance(message.content, dict):
+            sym = str(message.content.get("symbol"))
+            bids = message.content.get("bids", [])
+            asks = message.content.get("asks", [])
+            if not (bids or asks):
+                return True
+            side = "buy" if self._last_side == "sell" else "sell"
+            self._last_side = side
+            price = None
+            if side == "buy" and bids:
+                price = float(bids[0][0])
+            elif side == "sell" and asks:
+                price = float(asks[0][0])
+            qty = int(np.random.randint(1, 30))
+            inv = int(self.portfolio.holdings.get(sym, 0))
+            if side == "sell" and inv <= 0:
+                side = "buy"
+            if side == "sell":
+                qty = max(1, min(qty, inv))
+            import pandas as pd
+            ts2 = self.current_time if isinstance(self.current_time, pd.Timestamp) else pd.Timestamp.now()
+            req = {
+                "type": "limit_order",
+                "symbol": sym,
+                "agent_id": self.id,
+                "timestamp": str(ts2),
+                "side": side,
+                "quantity": qty,
+            }
+            if price is not None:
+                req["price"] = price
+            self.send(
+                new_message(
+                    message_type=MessageType.SUBMIT_ORDER,
+                    sender_id=self.id,
+                    recipient_id="Exchange",
+                    send_time=ts2,
+                    recive_time=ts2,
+                    content={"requests": [req]},
                 )
-            else:
-                keep.append(m)
-        self.inbox = keep
+            )
+            return True
+        return super().handle_inbox_message(message)

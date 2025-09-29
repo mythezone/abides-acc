@@ -44,24 +44,21 @@ class ValueAgent(BaseAgent):
         ref = float(np.random.uniform(20, 80))
         self._emit_orders_near(sym, ref)
 
-    def receive(self, message):
-        super().receive(message)  # portfolio updates and inbox retention
-        keep = []
-        for m in self.inbox:
-            if m.message_type == MessageType.ORACLE_RESPONSE_OHLC and isinstance(
-                m.content, dict
-            ):
-                sym = str(m.content.get("symbol"))
-                data = m.content.get("ohlc") or {}
-                try:
-                    close = data.get("close")
-                    if close is not None and close != "":
-                        self._emit_orders_near(sym, float(close))
-                except Exception:
-                    pass
-            else:
-                keep.append(m)
-        self.inbox = keep
+    def handle_inbox_message(self, message):
+        if (
+            message.message_type == MessageType.ORACLE_RESPONSE_OHLC
+            and isinstance(message.content, dict)
+        ):
+            sym = str(message.content.get("symbol"))
+            data = message.content.get("ohlc") or {}
+            try:
+                close = data.get("close")
+                if close is not None and close != "":
+                    self._emit_orders_near(sym, float(close))
+            except Exception:
+                pass
+            return True
+        return super().handle_inbox_message(message)
 
     def _emit_orders_near(self, symbol: str, ref: float):
         # one buy, one sell (sell only if inventory)
@@ -102,4 +99,3 @@ class ValueAgent(BaseAgent):
             content={"requests": reqs},
         )
         self.send(msg)
-

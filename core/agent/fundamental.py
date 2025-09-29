@@ -40,22 +40,21 @@ class FundamentalTrackingAgent(BaseAgent):
             return
         self._submit_towards(sym, float(np.random.uniform(20, 80)))
 
-    def receive(self, message):
-        super().receive(message)
-        keep = []
-        for m in self.inbox:
-            if m.message_type == MessageType.ORACLE_RESPONSE_OHLC and isinstance(m.content, dict):
-                sym = str(m.content.get("symbol"))
-                data = m.content.get("ohlc") or {}
-                try:
-                    close = data.get("close")
-                    if close is not None and close != "":
-                        self._submit_towards(sym, float(close))
-                except Exception:
-                    pass
-            else:
-                keep.append(m)
-        self.inbox = keep
+    def handle_inbox_message(self, message):
+        if (
+            message.message_type == MessageType.ORACLE_RESPONSE_OHLC
+            and isinstance(message.content, dict)
+        ):
+            sym = str(message.content.get("symbol"))
+            data = message.content.get("ohlc") or {}
+            try:
+                close = data.get("close")
+                if close is not None and close != "":
+                    self._submit_towards(sym, float(close))
+            except Exception:
+                pass
+            return True
+        return super().handle_inbox_message(message)
 
     def _submit_towards(self, symbol: str, ref: float):
         # Buy below ref, sell above if inventory
@@ -95,4 +94,3 @@ class FundamentalTrackingAgent(BaseAgent):
             content={"requests": reqs},
         )
         self.send(msg)
-

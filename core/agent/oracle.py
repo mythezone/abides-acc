@@ -62,11 +62,10 @@ class OracleAgent(BaseAgent):
         row = df.iloc[idx]
         return row.to_dict()
 
-    def receive(self, message):
+    def handle_inbox_message(self, message):
         # Answer queries immediately with response messages
         t = pd.to_datetime(message.content.get("time", message.recive_time))
         symbol = message.content.get("symbol")
-        out_msgs = []
         if message.message_type == MessageType.ORACLE_QUERY_OHLC:
             data = None
             if symbol in self.ohlc:
@@ -80,7 +79,8 @@ class OracleAgent(BaseAgent):
                 content={"symbol": symbol, "ohlc": data},
             )
             self.send(rsp)
-        elif message.message_type == MessageType.ORACLE_QUERY_LOB:
+            return True
+        if message.message_type == MessageType.ORACLE_QUERY_LOB:
             data = None
             if symbol in self.lob:
                 data = self._find_next(self.lob[symbol], t)
@@ -93,3 +93,5 @@ class OracleAgent(BaseAgent):
                 content={"symbol": symbol, "lob": data},
             )
             self.send(rsp)
+            return True
+        return super().handle_inbox_message(message)
