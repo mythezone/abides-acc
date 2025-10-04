@@ -95,7 +95,7 @@
   \end{itemize}
   \item[Exchange] \emph{交易所}：封装单个交易所的订单簿和撮合逻辑。
   \begin{itemize}
-    \item \textbf{属性：}资产列表、订单簿字典 \verb|order_books|、撮合引擎 \verb|matching_engine|。
+    \item \textbf{属性：}资产列表、订单簿字典 \verb|order_books|、撮合引擎 \verb|matching_engine|，以及标的元数据字典 \verb|symbol_metadata|（记录市值等基础指标，并在未配置时按 \verb|market_cap_range| 自动生成）。
     \item \textbf{方法：}
       \begin{itemize}
         \item \verb|place_order(order)|：接收并入簿订单。
@@ -111,6 +111,10 @@
         \item \verb|add_order(order)|：撮合对手盘后，将剩余限价单插入相应价格节点的 FIFO 队列。
         \item \verb|remove_order(order_id)|：借助 \verb|order_index| 常数时间定位并从链表中移除订单，必要时回收价格节点。
         \item \verb|snapshot_top_n(n)|：返回前 \verb|n| 档的价格与聚合量，供日志与行情订阅使用。
+        \item \verb|traded_volume()|：返回自仿真开始以来的累计成交量，供量能型策略使用。
+        \item \verb|resting_volume(side, depth)|：统计指定方向前 \verb|depth| 档的挂单量，刻画流动性。
+        \item \verb|spread()|：计算当前盘口最优买卖价差，用于紧凑价差筛选。
+        \item \verb|book_imbalance(depth)|：给出买卖盘不平衡度（$[-1,1]$），用于压力/动量策略。
       \end{itemize}
   \end{itemize}
   \item[MatchingEngine] \emph{撮合引擎}：实现具体撮合算法。
@@ -191,7 +195,10 @@
   \item \verb|QUERY_TRANSACTED_VOLUME|：\verb|content.symbol|, \verb|content.lookback_period|（如 \verb|"60s"|）$\rightarrow$ 回复区间成交量汇总。
   \item \verb|QUERY_FUNDAMENTAL|：\verb|content.requests| 支持按列表一次查询多个 \verb|symbol|；当前返回值为订单簿中间价（后续以 TODO 标记替换为真实基本面数据），并附带 \verb|mkt_closed| 状态。
   \item \verb|QUERY_TOP_OF_BOOK|：\verb|content.requests| 中每项包含 \verb|{symbol, depth}|，返回对应标的的最优买卖价（\verb|best_bid|/\verb|best_ask|）及前 \verb|depth| 档 \verb|bids|/\verb|asks|。
+  \item \verb|SELECT_SYMBOLS_REQUEST|：\verb|content.strategy| 指定选股策略（\verb|random|、\verb|market_cap|、\verb|small_cap|、\verb|volume|、\verb|liquidity|、\verb|tight_spread|、\verb|momentum|、\verb|bid_pressure| 等），\verb|content.count| 为期望标的数，\verb|content.exclude|/\verb|content.depth| 等可选参数用于过滤或调节评分。交易所基于相应指标构建权重分布并抽样，回复 \verb|SELECT_SYMBOLS_RESPONSE|，其中包含已采样的 \verb|symbols| 与策略元信息。
 \end{itemize}
+
+配置文件中的 \verb|symbols| 数组支持直接为每个元素提供 \verb|{symbol, market_cap, ...}| 结构。若未显式给出市值，交易所会基于 \verb|exchange_params.market_cap_range|（默认 $[5\times10^9, 5\times10^{11}]$）随机生成，保证市值型策略在任意市场组合下均可使用。
 
 \paragraph{行情订阅}
 \textbf{请求}：\verb|MKT_DATA_SUBSCRIPTION_REQUEST|，\verb|content.subscriptions| 为条目列表：
@@ -249,7 +256,7 @@
         \item \verb|cancel_order(order_id)|：撤销订单。
         \item \verb|current_total_value(price_map)|、\verb|get_profit(price_map)|、\verb|performance_snapshot(price_map)|：在开启 \verb|track_performance| 时用于计算净值/收益并生成日志快照。
         \item \verb|log_performance(timestamp, price_map)|：显式写入代理现金、持仓与收益日志；若开启 \verb|track_performance|，\verb|wakeup| 时会自动调用。
-        \item \verb|request_symbols(strategy, count, **params)|：向交易所请求符合策略（随机、成交量前列等）的标的列表。
+        \item \verb|request_symbols(strategy, count, **params)|：向交易所请求符合策略（随机、市值权重、成交量、流动性/盘口压力、紧凑价差等）的标的列表，可通过 \verb|params| 指定深度、排除集合或其他策略参数。
       \end{itemize}
   \end{itemize}
   \item[TraderAgent] \emph{交易代理基类}：扩展 BaseAgent，增加市场状态感知。

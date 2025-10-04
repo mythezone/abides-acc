@@ -140,6 +140,8 @@ class LimitOrderBook:
             "close": None,
             "volume": 0,
         }
+        # Track rolling statistics for downstream analytics
+        self.total_traded_volume: int = 0
 
     # --- Public API ---
     def add_order(self, order: Order) -> List[dict]:
@@ -404,6 +406,7 @@ class LimitOrderBook:
         self.ohlc["high"] = max(self.ohlc["high"], price)
         self.ohlc["low"] = min(self.ohlc["low"], price)
         self.ohlc["volume"] += qty
+        self.total_traded_volume += int(qty)
 
     @staticmethod
     def _normalize_time(ts) -> str:
@@ -411,3 +414,53 @@ class LimitOrderBook:
             return str(pd.Timestamp(ts))
         except Exception:
             return str(ts)
+
+    # --- Derived analytics helpers ---
+    def traded_volume(self) -> int:
+        """Return cumulative traded volume observed by this book."""
+        return int(self.total_traded_volume)
+
+    def resting_volume(self, side: str, depth: Optional[int] = None) -> int:
+        """Aggregate resting volume for the given side up to `depth` price levels."""
+        if side not in ("buy", "sell"):
+            return 0
+        heap = self.bids if side == "buy" else self.asks
+        prices = sorted(
+            heap.prices(),
+            reverse=True if side == "buy" else False,
+        )
+        total = 0
+        counted = 0
+        max_levels = None
+        if depth is not None:
+            try:
+                max_levels = max(1, int(depth))
+            except Exception:
+                max_levels = None
+        for price in prices:
+            level = heap.get_level(price)
+            if not level:
+                continue
+            total += int(level.total_quantity)
+            counted += 1
+            if max_levels is not None and counted >= max_levels:
+                break
+        return total
+
+    def spread(self) -> Optional[float]:
+        """Return the best ask - best bid spread when both are available."""
+        best_bid = self.bids.best_level()
+        best_ask = self.asks.best_level()
+        if best_bid and best_ask:
+            return float(best_ask.price) - float(best_bid.price)
+        return None
+
+    def book_imbalance(self, depth: int = 5) -> float:
+        """Compute bid/ask imbalance within the given depth."""
+        depth = max(1, int(depth))
+        bid_vol = self.resting_volume("buy", depth)
+        ask_vol = self.resting_volume("sell", depth)
+        total = bid_vol + ask_vol
+        if total <= 0:
+            return 0.0
+        return (bid_vol - ask_vol) / total

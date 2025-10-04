@@ -32,6 +32,9 @@
     { "num": 1, "type": "hbl", "params": {"initial_symbols": ["AAA","BBB","CCC"]} },
     { "num": 1, "type": "fundamental_tracking", "params": {"initial_symbols": ["AAA","BBB","CCC"]} }
   ],
-  "symbols": ["AAA","BBB","CCC"]
+  "symbols": [
+    {"symbol": "AAA", "market_cap": 80000000000},
+    {"symbol": "BBB", "market_cap": 62000000000},
+    {"symbol": "CCC"}
+  ]
 }
-

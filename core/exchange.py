@@ -11,7 +11,7 @@ import random
 import threading
 from queue import Queue
 from concurrent.futures import ThreadPoolExecutor
-from typing import Optional, Dict, Tuple, Iterable
+from typing import Optional, Dict, Tuple, Iterable, List
 from core.preopen_book import PreopenOrderBook
 from core.logger import Logger
 from util.util import random_china_location, network_latency_ms
@@ -44,8 +44,14 @@ class Exchange:
             except Exception:
                 self.location = random_china_location()
 
-        self.symbols = [str(sym) for sym in symbols]
-        self.lob_dict = {symbol_name: LimitOrderBook(symbol_name) for symbol_name in self.symbols}
+        market_cap_range = kwargs.pop("market_cap_range", (5e9, 5e11))
+        self.market_cap_range = self._normalize_market_cap_range(market_cap_range)
+        self.symbols, self.symbol_metadata = self._normalize_symbol_specs(symbols)
+        self.lob_dict = {
+            symbol_name: LimitOrderBook(symbol_name) for symbol_name in self.symbols
+        }
+        for sym in self.symbols:
+            self._ensure_market_cap(sym)
         self.logger = logger
         self.ohlc_freq = ohlc_freq
         self.ohlc_by_symbol: dict[str, OHLCAggregator] = {}
@@ -735,6 +741,70 @@ class Exchange:
         if self.out_queue is not None:
             self.out_queue.put(msg, recive_delay=delay)
 
+    # --- Symbol metadata helpers ---
+    def _normalize_market_cap_range(self, raw) -> Tuple[float, float]:
+        try:
+            lo, hi = raw
+            lo = float(lo)
+            hi = float(hi)
+        except Exception:
+            lo, hi = 5e9, 5e11
+        if not np.isfinite(lo) or lo < 0:
+            lo = 0.0
+        if not np.isfinite(hi) or hi <= lo:
+            hi = lo * 10 if lo > 0 else lo + 1.0
+        return float(lo), float(hi)
+
+    def _normalize_symbol_specs(
+        self, symbols: Iterable
+    ) -> Tuple[List[str], Dict[str, Dict[str, object]]]:
+        if symbols is None:
+            iterable = []
+        elif isinstance(symbols, (str, bytes)):
+            iterable = [symbols]
+        else:
+            iterable = list(symbols)
+        names: List[str] = []
+        metadata: Dict[str, Dict[str, object]] = {}
+        seen = set()
+        for entry in iterable:
+            symbol: Optional[str] = None
+            extra: Dict[str, object] = {}
+            if isinstance(entry, dict):
+                raw_sym = entry.get("symbol")
+                if raw_sym is None:
+                    continue
+                symbol = str(raw_sym)
+                extra = {k: v for k, v in entry.items() if k != "symbol"}
+            elif entry is None:
+                continue
+            else:
+                symbol = str(entry)
+            if not symbol:
+                continue
+            if symbol not in seen:
+                names.append(symbol)
+                seen.add(symbol)
+            meta = metadata.setdefault(symbol, {})
+            if extra:
+                meta.update(extra)
+        for sym in names:
+            metadata.setdefault(sym, {})
+        return names, metadata
+
+    def _ensure_market_cap(self, symbol: str) -> float:
+        meta = self.symbol_metadata.setdefault(symbol, {})
+        current = meta.get("market_cap")
+        try:
+            cap_val = float(current)
+        except Exception:
+            cap_val = None
+        if cap_val is None or not np.isfinite(cap_val) or cap_val <= 0:
+            lo, hi = self.market_cap_range
+            cap_val = random.uniform(lo, hi)
+        meta["market_cap"] = float(cap_val)
+        return float(cap_val)
+
     def _get_lob(self, symbol: Optional[str]) -> Optional[LimitOrderBook]:
         if isinstance(symbol, str):
             return self.lob_dict.get(symbol)
@@ -749,8 +819,165 @@ class Exchange:
             self.lob_dict[symbol] = lob
             if symbol not in self.symbols:
                 self.symbols.append(symbol)
+            self.symbol_metadata.setdefault(symbol, {})
+        self._ensure_market_cap(symbol)
         self._symbol_volume.setdefault(symbol, 0)
         return lob
+
+    def _build_strategy_weights(
+        self, strategy: str, pool: List[str], params: Dict
+    ) -> List[Tuple[str, float]]:
+        strat = (strategy or "random").lower()
+        weights: List[Tuple[str, float]] = []
+        if strat == "random":
+            return [(sym, 1.0) for sym in pool]
+        if strat in ("market_cap", "large_cap"):
+            for sym in pool:
+                cap = self.symbol_metadata.get(sym, {}).get("market_cap")
+                try:
+                    weight = float(cap)
+                except Exception:
+                    weight = 0.0
+                weights.append((sym, max(weight, 0.0)))
+            return weights
+        if strat in ("small_cap", "inverse_market_cap"):
+            for sym in pool:
+                cap = self.symbol_metadata.get(sym, {}).get("market_cap")
+                try:
+                    cap_val = float(cap)
+                except Exception:
+                    cap_val = 0.0
+                weight = 0.0
+                if cap_val > 0:
+                    weight = 1.0 / cap_val
+                weights.append((sym, weight))
+            return weights
+        if strat in ("volume", "high_volume", "top_volume"):
+            for sym in pool:
+                vol = self._symbol_volume.get(sym, 0)
+                if vol <= 0:
+                    lob = self._get_lob(sym)
+                    if lob is not None:
+                        vol = lob.traded_volume()
+                weights.append((sym, float(max(vol, 0))))
+            return weights
+        if strat in ("low_volume",):
+            tmp: List[Tuple[str, float]] = []
+            for sym in pool:
+                vol = self._symbol_volume.get(sym, 0)
+                if vol <= 0:
+                    lob = self._get_lob(sym)
+                    if lob is not None:
+                        vol = lob.traded_volume()
+                weight = 0.0
+                if vol > 0:
+                    weight = 1.0 / vol
+                tmp.append((sym, weight))
+            return tmp
+        if strat == "liquidity":
+            depth = params.get("depth")
+            try:
+                depth_val = max(1, int(depth))
+            except Exception:
+                depth_val = 5
+            for sym in pool:
+                lob = self._get_lob(sym)
+                if lob is None:
+                    weights.append((sym, 0.0))
+                    continue
+                bid_volume = lob.resting_volume("buy", depth_val)
+                ask_volume = lob.resting_volume("sell", depth_val)
+                weights.append((sym, float(bid_volume + ask_volume)))
+            return weights
+        if strat == "tight_spread":
+            eps = params.get("epsilon", 1e-6)
+            try:
+                eps = float(eps)
+            except Exception:
+                eps = 1e-6
+            eps = max(eps, 1e-12)
+            for sym in pool:
+                lob = self._get_lob(sym)
+                spread = lob.spread() if lob is not None else None
+                if spread is None or spread < 0:
+                    weight = 0.0
+                else:
+                    weight = 1.0 / (spread + eps) if spread + eps > 0 else 0.0
+                weights.append((sym, weight))
+            return weights
+        if strat == "momentum":
+            for sym in pool:
+                lob = self._get_lob(sym)
+                if lob is None:
+                    weights.append((sym, 0.0))
+                    continue
+                open_price = lob.ohlc.get("open")
+                close_price = lob.ohlc.get("close")
+                if open_price is None or close_price is None:
+                    weights.append((sym, 0.0))
+                    continue
+                change = float(close_price) - float(open_price)
+                weights.append((sym, max(change, 0.0)))
+            return weights
+        if strat in ("bid_pressure", "ask_pressure", "imbalance"):
+            depth = params.get("depth")
+            try:
+                depth_val = max(1, int(depth))
+            except Exception:
+                depth_val = 5
+            for sym in pool:
+                lob = self._get_lob(sym)
+                if lob is None:
+                    weights.append((sym, 0.0))
+                    continue
+                imbalance = lob.book_imbalance(depth_val)
+                if strat == "bid_pressure" or (strat == "imbalance" and imbalance >= 0):
+                    weight = max(imbalance, 0.0)
+                else:
+                    weight = max(-imbalance, 0.0)
+                weights.append((sym, weight))
+            return weights
+        return []
+
+    def _weighted_sample(
+        self, weighted_symbols: List[Tuple[str, float]], count: int
+    ) -> List[str]:
+        pool = []
+        for sym, weight in weighted_symbols:
+            if not isinstance(sym, str):
+                continue
+            try:
+                w = float(weight)
+            except Exception:
+                w = 0.0
+            if w < 0:
+                w = 0.0
+            pool.append([sym, w])
+        if not pool:
+            return []
+        unique_count = len(pool)
+        if count >= unique_count:
+            ordered = sorted(pool, key=lambda item: item[1], reverse=True)
+            return [sym for sym, _ in ordered]
+        selected: List[str] = []
+        while pool and len(selected) < count:
+            total_weight = sum(item[1] for item in pool)
+            if total_weight <= 0:
+                remaining = [item[0] for item in pool]
+                random.shuffle(remaining)
+                needed = count - len(selected)
+                selected.extend(remaining[:needed])
+                break
+            r = random.uniform(0, total_weight)
+            cumulative = 0.0
+            for idx, item in enumerate(pool):
+                cumulative += item[1]
+                if cumulative >= r:
+                    selected.append(item[0])
+                    pool.pop(idx)
+                    break
+        return selected
+
 
     def _select_symbols(self, params: Dict) -> list[str]:
         if not self.symbols:
@@ -769,23 +996,14 @@ class Exchange:
         pool = [str(sym) for sym in self.symbols if str(sym) not in exclude]
         if not pool:
             return []
-
-        if strategy == "top_volume":
-            ranked = sorted(
-                ((sym, self._symbol_volume.get(sym, 0)) for sym in pool),
-                key=lambda item: item[1],
-                reverse=True,
-            )
-            selected = [sym for sym, vol in ranked if vol > 0][:requested]
-            if len(selected) < requested:
-                remaining = [sym for sym, _ in ranked if sym not in selected]
-                selected.extend(remaining[: requested - len(selected)])
-            return selected
-
-        if requested >= len(pool):
-            random.shuffle(pool)
-            return pool
-        return random.sample(pool, requested)
+        weights = self._build_strategy_weights(strategy, pool, params)
+        if not weights:
+            weights = self._build_strategy_weights("random", pool, params)
+        selection = self._weighted_sample(weights, requested)
+        if selection:
+            return selection
+        random.shuffle(pool)
+        return pool[:requested]
 
     def _process_order(self, now: pd.Timestamp, order: Order):
         symbol = (
@@ -1252,6 +1470,7 @@ def new_exchange(
         lob_log_freq=p.get("lob_log_freq", "3s"),
         workers=int(p.get("workers", 0)),
         out_queue=out_queue,
+        market_cap_range=p.get("market_cap_range"),
     )
     et = (exchange_type or "SZSE").upper()
     if et == "SZSE":
