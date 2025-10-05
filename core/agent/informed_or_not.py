@@ -316,9 +316,7 @@ class UninformedAgent(FundamentalTrackingAgent):
 
         for symbol in self.selected_symbols:
             # 1. get p_hat
-            p_hat = self._get_expected_price(
-                t=self.time_step, symbol=symbol
-            )
+            p_hat = self._get_expected_price(t=self.time_step, symbol=symbol)
 
             # 2. get order submission price
             price = self._compute_submission_price(symbol=symbol, p_hat=p_hat)
