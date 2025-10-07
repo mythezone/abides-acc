@@ -61,15 +61,6 @@ class GPAgent(FundamentalTrackingAgent):
         # the return rate
         self.R = 1 + self.r / self.K
 
-        # initialize necessary data structure to store data
-        # the traders historic wealth
-        self.wealths = {}
-        self.wealths["1"] = starting_cash
-
-        # the historical price and dividents
-        self.prices = {}
-        self.dividends = {}
-
         self.selected_symbols = list(
             np.random.choice(
                 initial_symbols, int(np.random.randint(1, 3)), replace=False
@@ -79,14 +70,18 @@ class GPAgent(FundamentalTrackingAgent):
         # expectation array and variance array
         self.expectations = {}
         self.variances = {}
+        # the historical price and dividents
+        self.prices = {}
+        self.dividends = {}
+        # auxiliary u array
+        self.u = {}
+
         for symbol in self.selected_symbols:
             self.prices[symbol] = {}
             self.dividends[symbol] = {}
             self.expectations[symbol] = {}
             self.variances[symbol] = {}
-
-        # auxiliary u array
-        self.u = {}
+            self.u[symbol] = {}
 
         # record time step
         self.time_step = 1
@@ -313,12 +308,13 @@ class GPAgent(FundamentalTrackingAgent):
         D_t = self.dividends.get(symbol)[f"{t}"]
 
         if str(t - 1) in self.u.keys():
-            u_t_minus_one = self.u[f"{t-1}"]
+            u_t_minus_one = self.u.get(symbol)[f"{t-1}"]
         else:
-            u_t_minus_two = self.u[f"{t-2}"]
+            u_t_minus_two = self.u.get(symbol)[f"{t-2}"]
             u_t_minus_one = (1 - self.theta_1) * u_t_minus_two + self.theta_1 * (
                 P_t + D_t
             )
+            self.u.get(symbol)[str(t - 1)] = u_t_minus_one
 
         result = (
             (1 - self.theta_1 - self.theta_2) * prev_sigma_square
@@ -351,7 +347,7 @@ class GPAgent(FundamentalTrackingAgent):
         self.dividends.get(symbol)[str(t)] = np.random.normal(
             loc=self.D_bar, scale=self.sigma_D_square**0.5
         )
-        
+
     def process_inbox(self):
         super().process_inbox()
 

@@ -28,7 +28,7 @@ class BDIAgent(FundamentalTrackingAgent):
         self.sell_params = genome[28:]
 
         self.last_price = None
-        self.price_concession = {"buy": 0, "sell": 0}
+        self.price_concession = {}
 
         self.price_history = {}
         self.selected_smbols = list(
@@ -36,6 +36,10 @@ class BDIAgent(FundamentalTrackingAgent):
                 initial_symbols, int(np.random.randint(1, 3)), replace=False
             )
         )
+        for symbol in self.selected_smbols:
+            self.price_history[symbol] = []
+            self.price_concession[symbol] = {"buy": 0, "sell": 0}
+            self.last_price[symbol] = None
 
     def action(self):
         super().action()
@@ -84,11 +88,11 @@ class BDIAgent(FundamentalTrackingAgent):
     def get_technical_indicators(self, symbol) -> list:
         """Return all technical indicators as a list."""
         # make sure that there are enough historical data
-        if symbol not in self.price_history:
+        if symbol not in self.price_history.keys():
             self.price_history[symbol] = deque(maxlen=50)
 
         # get current price
-        current_price = self.last_price
+        current_price = self.last_price.get(symbol)
         if current_price is None:
             return [0] * 22
 
@@ -205,13 +209,15 @@ class BDIAgent(FundamentalTrackingAgent):
             V_bid = M * gb1
 
         # update price concession
-        if self.price_concession["buy"] == 0:
-            self.price_concession["buy"] = 2 * goal_strenth + gb4
+        if self.price_concession[symbol]["buy"] == 0:
+            self.price_concession[symbol]["buy"] = 2 * goal_strenth + gb4
         else:
-            c = self.price_concession["buy"]
-            self.price_concession["buy"] = c + (1 - c) * (4 * goal_strenth + gb5)
+            c = self.price_concession[symbol]["buy"]
+            self.price_concession[symbol]["buy"] = c + (1 - c) * (
+                4 * goal_strenth + gb5
+            )
 
-        p_bid = self.last_price * (1 - self.price_concession["buy"])
+        p_bid = self.last_price.get(symbol) * (1 - self.price_concession[symbol]["buy"])
         q_bid = V_bid / p_bid
 
         if q_bid > 0:
@@ -241,13 +247,15 @@ class BDIAgent(FundamentalTrackingAgent):
             V_ask = A * ga1
 
         # update price concession
-        if self.price_concession["sell"] == 0:
-            self.price_concession["sell"] = 2 * goal_strenth + ga4
+        if self.price_concession[symbol]["sell"] == 0:
+            self.price_concession[symbol]["sell"] = 2 * goal_strenth + ga4
         else:
-            c = self.price_concession["sell"]
-            self.price_concession["sell"] = c + (1 - c) * (4 * goal_strenth + ga5)
+            c = self.price_concession[symbol]["sell"]
+            self.price_concession[symbol]["sell"] = c + (1 - c) * (
+                4 * goal_strenth + ga5
+            )
 
-        p_ask = self.last_price * self.price_concession["sell"]
+        p_ask = self.last_price.get(symbol) * self.price_concession[symbol]["sell"]
         q_ask = V_ask / p_ask
 
         if q_ask > 0:
@@ -271,27 +279,28 @@ class BDIAgent(FundamentalTrackingAgent):
             if msg.message_type == MessageType.ORDER_EXECUTED and isinstance(
                 msg.content, dict
             ):
+                symbol = msg.content.get("symbol")
                 if msg.content.get("side") == "buy":
-                    self.price_concession["buy"] = 0
+                    self.price_concession[symbol]["buy"] = 0
                 elif msg.content.get("side") == "sell":
-                    self.price_concession["sell"] = 0
+                    self.price_concession[symbol]["sell"] = 0
             elif msg.message_type == MessageType.MKT_CLOSE and isinstance(
                 msg.content, dict
             ):
-                self.price_concession = {"buy": 0, "sell": 0}
+                self.price_concession[symbol] = {"buy": 0, "sell": 0}
             elif msg.message_type == MessageType.QUERY_LAST_TRADE and isinstance(
                 msg.content, dict
             ):
                 content = msg.content
                 symbol = content["symbol"]
                 last_price = content["data"]
-                self.last_price = last_price
+                self.last_price[symbol] = last_price
                 self.update_price_history(self.last_price, symbol)
             else:
                 remaining.append(msg)
         self.inbox = remaining
 
     def update_price_history(self, price, symbol):
-        if symbol not in self.price_history:
+        if symbol not in self.price_history.keys():
             self.price_history[symbol] = deque(maxlen=50)
         self.price_history[symbol].append(price)
