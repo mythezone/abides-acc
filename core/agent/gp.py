@@ -32,6 +32,7 @@ class GPAgent(FundamentalTrackingAgent):
         omega=15,
         theta_1=0.01,
         theta_2=0.001,
+        u_0=0.5, # the very first element in the array u
         random_state=None,
         starting_cash=100000,
         initial_symbols=None,
@@ -81,7 +82,7 @@ class GPAgent(FundamentalTrackingAgent):
             self.dividends[symbol] = {}
             self.expectations[symbol] = {}
             self.variances[symbol] = {}
-            self.u[symbol] = {}
+            self.u[symbol] = {"1": u_0}
 
         # record time step
         self.time_step = 1
