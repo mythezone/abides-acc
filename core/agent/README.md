@@ -77,9 +77,15 @@
 ## 现有 Agent 目录备忘
 
 - `background.py` — 集合竞价阶段的背景买卖盘。
-- `fundamental.py` — 基于基本面回归的策略示例。
-- `noise.py`, `value.py`, `zero_intelligence.py` — 不同噪声/价值驱动策略。
-- `oracle.py` — 回放历史行情或外部真实数据。
+- `noise.py`, `value.py`, `zero_intelligence.py` — 基础噪声/价值/零智策略。
+- `nero_zero_intelligence.py` — 加入价格记忆与基本面查询的“近似零智”版本。
+- `fundamental.py`, `fcn.py` — 基于基本面与预测价格的均值回归类策略。
+- `bdi.py` — 依据技术指标构建信念-愿望-意图（BDI）的认知型做市代理。
+- `chartist.py` — 趋势跟随者，比较价格与移动均线偏差决定买卖。
+- `gp.py` — 借助遗传程序生成价格预期与保留价，动态切换市价/限价执行。
+- `informed_or_not.py` — 拥有私有估值的“消息灵通”代理，根据期望头寸选择市价或限价。
+- `liquidity_provider.py`, `liquidity_taker.py` — 分别模拟做市/吃单侧流动性参与者。
+- `oracle.py`, `replay.py` — 回放/参考外部行情。
 - `hbl.py`, `obi.py` — 启发式信念学习与订单簿不平衡策略。
 
 可按照上述步骤派生新的 Agent，与交易所通过统一的消息协议交互。

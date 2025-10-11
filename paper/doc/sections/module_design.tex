@@ -315,6 +315,14 @@
   \item OrderBookImbalanceAgent（\verb|core/agent/obi.py|）：先发出 \verb|QUERY_SPERAD| 获取盘口深度，再依据买卖盘量能不平衡决定交易方向，并在最优价附近下单。
   \item HeuristicBeliefLearningAgent（\verb|core/agent/hbl.py|）：简化的 HBL 近似实现，交替在买/卖方向上围绕最优价布置小单以实现探索与分散。
   \item FundamentalTrackingAgent（\verb|core/agent/fundamental.py|）：通过 \verb|ORACLE_QUERY_OHLC| 追踪“基本面”价格，向均值回归方向提交买卖单；在无 Oracle 时退化为随机参考价。
+  \item BDIAgent（\verb|core/agent/bdi.py|）：引入信念-愿望-意图（BDI）框架，利用 22 项技术指标与现金/仓位阈值更新信念，依据基因组参数化的目标强度调整价格让步，在成交后重置买卖侧让步幅度，适合研究认知驱动的限价行为。
+  \item Chartist（\verb|core/agent/chartist.py|）：计算价格与移动均线的偏离度，若向上突破则以随机上浮价限价买入，若向下偏离则降价卖出，体现经典动量/趋势跟随策略。
+  \item FCNAgent（\verb|core/agent/fcn.py|）：将基本面价格建模为几何布朗运动，结合历史收益率与噪声估计预测未来价格；当预测价偏离当前价时按方向提交限价单，价差容忍度由参数 \verb|k| 控制。
+  \item GPAgent（\verb|core/agent/gp.py|）：围绕股息/价格历史运行简化遗传程序以拟合期望收益与方差，得到保留价后在不同盘口情况下选择市价或限价出入场，支持策略自适应演化。
+  \item InformedAgent（\verb|core/agent/informed_or_not.py|）：融合私有估值与盘口中价生成提交价，按目标头寸与风险厌恶参数计算需求量，依据盘口是否跨价决定市价或限价提交，可用于研究信息优势对库存调节的影响。
+  \item LiquidityProviderAgent（\verb|core/agent/liquidity_provider.py|）：基于流动性需求模拟（\verb|q_taker|）和指数族随机变量生成价差让步，控制在买卖两侧提供限价流动性，反映做市行为对价差的反馈。
+  \item LiquidityTakerAgent（\verb|core/agent/liquidity_taker.py|）：按照演化的 \verb|q_taker| 序列决定买卖方向，直接以市价单消耗流动性，用于测试对手方交易压力。
+  \item NearZeroIntelligenceAgent（\verb|core/agent/nero_zero_intelligence.py|）：在 Zero-Intelligence 基础上加入期内成交价记忆与买卖概率衰减，并通过基本面查询校准报价，兼顾随机性与温和理性约束。
 \end{itemize}
 
 上述代理完全使用我方消息协议：下单统一采用 \verb|SUBMIT_ORDER| 批量格式；依赖行情/盘口的场景使用 \verb|MKT_DATA| 推送或 \verb|QUERY_SPERAD| 查询；成交与资金/持仓更新通过基础框架在 \verb|ORDER_EXECUTED| 中统一处理，记录到代理日志文件中。
