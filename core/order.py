@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Optional
 import itertools
+import random
+import time
 
 _order_id_gen = itertools.count(1)
 
@@ -11,15 +13,18 @@ class Order:
     timestamp: str
     side: str  # 'buy' or 'sell'
     quantity: int
+    symbol: str = ""
     id: int = field(default_factory=lambda: next(_order_id_gen))
 
     @classmethod
     def from_dict(cls, data: dict) -> "Order":
+        symbol = data.get("symbol") or data.get("_symbol") or ""
         return cls(
             agent_id=data["agent_id"],
             timestamp=data["timestamp"],
             side=data["side"],
             quantity=data["quantity"],
+            symbol=symbol,
             id=data.get("id", next(_order_id_gen)),
         )
 
@@ -36,6 +41,7 @@ class LimitOrder(Order):
             side=data["side"],
             quantity=data["quantity"],
             price=data["price"],
+            symbol=data.get("symbol") or data.get("_symbol") or "",
             id=data.get("id", next(_order_id_gen)),
         )
 
@@ -51,14 +57,10 @@ class MarketOrder(Order):
             timestamp=data["timestamp"],
             side=data["side"],
             quantity=data["quantity"],
+            symbol=data.get("symbol") or data.get("_symbol") or "",
             id=data.get("id", next(_order_id_gen)),
             market_depth=data.get("market_depth"),
         )
-
-
-# --- Random order generator ---
-import random
-import time
 
 
 def generate_random_order(symbol: str) -> Order:
@@ -72,6 +74,7 @@ def generate_random_order(symbol: str) -> Order:
     if order_type == "limit":
         return LimitOrder(
             agent_id=agent_id,
+            symbol=symbol,
             timestamp=timestamp,
             side=side,
             quantity=quantity,
@@ -79,5 +82,9 @@ def generate_random_order(symbol: str) -> Order:
         )
     else:
         return MarketOrder(
-            agent_id=agent_id, timestamp=timestamp, side=side, quantity=quantity
+            agent_id=agent_id,
+            symbol=symbol,
+            timestamp=timestamp,
+            side=side,
+            quantity=quantity
         )

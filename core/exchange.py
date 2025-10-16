@@ -6,6 +6,8 @@ from core.order import Order, LimitOrder, MarketOrder
 import pandas as pd
 import numpy as np
 import random
+import csv
+from pathlib import Path
 
 
 import threading
@@ -78,6 +80,26 @@ class Exchange:
         # Market data subscriptions: agent_id -> symbol -> {depth, freq_ms, last_sent}
         self._subs: dict[str, dict[str, dict]] = {}
         self._agent_locations: Dict[str, Tuple[float, float]] = {}
+
+        trade_log_enabled = bool(kwargs.pop("trade_log_enabled", False))
+        trade_log_path = kwargs.pop("trade_log_path", None)
+        self._trade_log_lock = threading.Lock()
+        self.trade_log_enabled = trade_log_enabled
+        self.trade_log_path = None
+        self._trade_log_file = None
+        self._trade_log_writer = None
+        self._trade_log_base_time: Optional[pd.Timestamp] = None
+        self._trade_log_counter: int = 0
+        if self.trade_log_enabled:
+            if not trade_log_path:
+                raise ValueError("trade_log_path must be provided when trade logging is enabled.")
+            self.trade_log_path = Path(trade_log_path).expanduser()
+            self.trade_log_path.parent.mkdir(parents=True, exist_ok=True)
+            self._trade_log_file = self.trade_log_path.open(
+                "w", newline="", encoding="utf-8"
+            )
+            self._trade_log_writer = csv.writer(self._trade_log_file)
+            self._trade_log_writer.writerow(["id", "time", "valume", "price"])
 
         # Parallel workers sharded by symbol hash (if requested)
         self.workers = int(workers) if workers and int(workers) > 0 else 0
@@ -1058,6 +1080,7 @@ class Exchange:
                 },
             )
             self._emit(execmsg)
+            self._log_trades(trades, now)
 
         # OHLC update
         price = None
@@ -1098,6 +1121,39 @@ class Exchange:
                 )
                 self._last_lob_log[sym] = now
 
+    def _log_trades(self, trades: List[dict], now: pd.Timestamp) -> None:
+        if not self.trade_log_enabled or self._trade_log_writer is None:
+            return
+        with self._trade_log_lock:
+            if self._trade_log_base_time is None:
+                try:
+                    self._trade_log_base_time = pd.Timestamp(now)
+                except Exception:
+                    self._trade_log_base_time = pd.Timestamp.now()
+            base = self._trade_log_base_time
+            for trade in trades:
+                raw_ts = trade.get("timestamp", now)
+                try:
+                    trade_ts = pd.Timestamp(raw_ts)
+                except Exception:
+                    trade_ts = pd.Timestamp(now)
+                rel_time = (trade_ts - base).total_seconds()
+                quantity = float(trade.get("quantity", 0))
+                price = float(trade.get("price", 0))
+                self._trade_log_counter += 1
+                self._trade_log_writer.writerow(
+                    [
+                        self._trade_log_counter,
+                        f"{rel_time:.6f}",
+                        f"{quantity:.6f}",
+                        f"{price:.5f}",
+                    ]
+                )
+            try:
+                self._trade_log_file.flush()
+            except Exception:
+                pass
+
     def shutdown(self, wait: bool = True):
         """Gracefully stop background workers and flush aggregators/logs.
 
@@ -1127,6 +1183,17 @@ class Exchange:
                     self._executor.shutdown(wait=wait)
             # Mark workers disabled
             self.workers = 0
+        if self._trade_log_file is not None:
+            try:
+                self._trade_log_file.flush()
+            except Exception:
+                pass
+            try:
+                self._trade_log_file.close()
+            except Exception:
+                pass
+            self._trade_log_file = None
+            self._trade_log_writer = None
 
 
 class SZSExchange(Exchange):
@@ -1471,6 +1538,8 @@ def new_exchange(
         workers=int(p.get("workers", 0)),
         out_queue=out_queue,
         market_cap_range=p.get("market_cap_range"),
+        trade_log_enabled=bool(p.get("trade_log_enabled", False)),
+        trade_log_path=p.get("trade_log_path"),
     )
     et = (exchange_type or "SZSE").upper()
     if et == "SZSE":

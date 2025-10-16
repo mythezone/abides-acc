@@ -1,7 +1,7 @@
 import pandas as pd
 
-INPUT_PATH = "comparison/order_match/Ours/raw_log_1s/SZ000001/lob.csv"
-OUTPUT_PATH = "comparison/order_match/Ours/raw_log_1s/SZ000001/processed_lob.csv"
+INPUT_PATH = "comparison/order_match/Ours/raw_log_1s_unique/lob.csv"
+OUTPUT_PATH = "comparison/order_match/Ours/raw_log_1s_unique/processed_lob.csv"
 MAX_ROWS = 3600
 
 FIELDS = ["time", "bestBidPrice", "bestAskPrice", "bestBidVolume", "bestAskVolume"]

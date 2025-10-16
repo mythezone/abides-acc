@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Dict
 
 import pandas as pd
 
@@ -22,9 +22,8 @@ class _HistoricalOrder:
 @dataclass
 class _HistoricalCancel:
     time: pd.Timestamp
-    side: str
-    price: float
-    quantity: int
+    order_id: str
+    quantity: Optional[int]
 
 
 class HistoricalOrderReplayAgent(BaseAgent):
@@ -45,6 +44,7 @@ class HistoricalOrderReplayAgent(BaseAgent):
         self._log_tick_after = bool(log_tick_after)
         self._events: List[Union[_HistoricalOrder, _HistoricalCancel]] = []
         self._cursor = 0
+        self._known_order_qty: Dict[str, int] = {}
         csv_path = Path(orders_csv)
         if not csv_path.exists():
             raise FileNotFoundError(f"Historical orders file not found: {orders_csv}")
@@ -92,29 +92,40 @@ class HistoricalOrderReplayAgent(BaseAgent):
             except Exception:
                 cancel_type = None
 
-            price_val = row.get("PRICE")
+            order_id_val = row.get("ORDER_ID")
+            order_id = str(order_id_val) if pd.notna(order_id_val) else None
 
-            if cancel_type == 2 and not is_market:
-                if pd.isna(price_val):
+            if cancel_type == 2:
+                if order_id is None:
                     continue
+                cancel_qty: Optional[int] = qty if qty > 0 else None
+                if order_id in self._known_order_qty:
+                    if cancel_qty is None:
+                        self._known_order_qty.pop(order_id, None)
+                    else:
+                        available = self._known_order_qty[order_id]
+                        cancel_qty = min(cancel_qty, available)
+                        remaining = available - cancel_qty
+                        if remaining > 0:
+                            self._known_order_qty[order_id] = remaining
+                        else:
+                            self._known_order_qty.pop(order_id, None)
                 self._events.append(
                     _HistoricalCancel(
                         time=event_time,
-                        side=side,
-                        price=float(price_val),
-                        quantity=qty,
+                        order_id=order_id,
+                        quantity=cancel_qty,
                     )
                 )
                 continue
+
+            price_val = row.get("PRICE")
 
             price = None
             if not is_market and pd.notna(price_val):
                 price = float(price_val)
             if not is_market and price is None:
                 continue
-
-            order_id = row.get("ORDER_ID")
-            order_id = str(order_id) if pd.notna(order_id) else None
 
             market_depth = row.get("MARKET_ORDER_TYPE")
             if pd.isna(market_depth):
@@ -125,17 +136,19 @@ class HistoricalOrderReplayAgent(BaseAgent):
                 except Exception:
                     market_depth = None
 
-            self._events.append(
-                _HistoricalOrder(
-                    time=event_time,
-                    side=side,
-                    quantity=qty,
-                    price=price,
-                    order_id=order_id,
-                    is_market=is_market,
-                    market_depth=market_depth,
-                )
+            order_event = _HistoricalOrder(
+                time=event_time,
+                side=side,
+                quantity=qty,
+                price=price,
+                order_id=order_id,
+                is_market=is_market,
+                market_depth=market_depth,
             )
+            self._events.append(order_event)
+
+            if not order_event.is_market and order_event.order_id is not None:
+                self._known_order_qty[order_event.order_id] = int(order_event.quantity)
 
         self._events.sort(key=lambda item: item.time)
         self._time_epsilon = pd.Timedelta(microseconds=100)
@@ -193,10 +206,10 @@ class HistoricalOrderReplayAgent(BaseAgent):
     def _send_cancel(self, cancel: _HistoricalCancel) -> None:
         req = {
             "symbol": self.symbol,
-            "side": cancel.side,
-            "price": float(cancel.price),
-            "quantity": int(cancel.quantity),
+            "order_id": cancel.order_id,
         }
+        if cancel.quantity is not None:
+            req["quantity"] = int(cancel.quantity)
         msg = new_message(
             message_type=MessageType.CANCEL_ORDER,
             sender_id=self.id,

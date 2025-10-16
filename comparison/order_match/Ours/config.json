@@ -17,7 +17,9 @@
       "opening_call": false,
       "initial_snapshots": {
         "SZ000001": "comparison/test_data/setup_lob.csv"
-      }
+      },
+      "trade_log_enabled": true,
+      "trade_log_path": "comparison/order_match/Ours/trade/sz000001_unique.csv"
     }
   },
   "agents": [
@@ -37,6 +39,6 @@
   ],
   "calibration": {
     "enabled": false,
-    "output_dir": "comparison/order_match/Ours/raw_log_1s"
+    "output_dir": "comparison/order_match/Ours/raw_log_1s_unique"
   }
 }

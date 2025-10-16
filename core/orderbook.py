@@ -226,6 +226,7 @@ class LimitOrderBook:
                 continue
             order = LimitOrder(
                 agent_id=agent_id,
+                symbol=self.symbol or "",
                 timestamp=timestamp,
                 side="buy",
                 quantity=int(volume),
@@ -238,6 +239,7 @@ class LimitOrderBook:
                 continue
             order = LimitOrder(
                 agent_id=agent_id,
+                symbol=self.symbol or "",
                 timestamp=timestamp,
                 side="sell",
                 quantity=int(volume),
