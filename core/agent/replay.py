@@ -4,6 +4,11 @@ from typing import Optional, List, Union, Dict
 
 import pandas as pd
 
+try:
+    from tqdm import tqdm
+except ImportError:  # pragma: no cover
+    tqdm = None
+
 from core.agent.base import BaseAgent
 from core.message import MessageType, new_message
 
@@ -152,18 +157,25 @@ class HistoricalOrderReplayAgent(BaseAgent):
 
         self._events.sort(key=lambda item: item.time)
         self._time_epsilon = pd.Timedelta(microseconds=100)
+        self._scheduled_time: Optional[pd.Timestamp] = None
+        self._progress = (
+            tqdm(total=len(self._events), desc=f"{self.id} replay", unit="event")
+            if tqdm is not None
+            else None
+        )
+        if not self._events and self._progress is not None:
+            self._progress.close()
+            self._progress = None
 
     def wakeup(self, current_time):
         self.current_time = current_time
         self.process_inbox()
+        self._scheduled_time = None
         self._emit_orders_until(current_time)
-        next_time = self._next_order_time()
-        if next_time is not None:
-            delta_ms = max(
-                1,
-                int(max(pd.Timedelta(0), next_time - current_time).total_seconds() * 1000),
-            )
-            self.set_next_wakeup(current_time, intelver=delta_ms)
+        if self._cursor >= len(self._events):
+            self._finalize_progress()
+        else:
+            self._schedule_next_event()
 
     def _emit_orders_until(self, current_time: pd.Timestamp) -> None:
         while self._cursor < len(self._events):
@@ -175,6 +187,15 @@ class HistoricalOrderReplayAgent(BaseAgent):
             else:
                 self._send_cancel(event)
             self._cursor += 1
+            if self._progress is not None:
+                self._progress.update(1)
+                self._progress.set_postfix(
+                    {
+                        "current_time": str(event.time),
+                        "remaining": len(self._events) - self._cursor,
+                    },
+                    refresh=False,
+                )
 
     def _send_submit(self, order: _HistoricalOrder) -> None:
         req: dict = {
@@ -200,8 +221,6 @@ class HistoricalOrderReplayAgent(BaseAgent):
             content={"requests": [req]},
         )
         self.send(msg)
-        if self._log_tick_after:
-            self._send_tick(order.time)
 
     def _send_cancel(self, cancel: _HistoricalCancel) -> None:
         req = {
@@ -219,21 +238,30 @@ class HistoricalOrderReplayAgent(BaseAgent):
             content={"requests": [req]},
         )
         self.send(msg)
-        if self._log_tick_after:
-            self._send_tick(cancel.time)
-
-    def _send_tick(self, when: pd.Timestamp) -> None:
-        tick = new_message(
-            message_type=MessageType.LOG_TICK,
-            sender_id=self.id,
-            recipient_id="Exchange",
-            send_time=when,
-            recive_time=when,
-            content={},
-        )
-        self.send(tick)
 
     def _next_order_time(self) -> Optional[pd.Timestamp]:
         if self._cursor < len(self._events):
             return self._events[self._cursor].time
         return None
+
+    def _schedule_next_event(self) -> None:
+        next_time = self._next_order_time()
+        if next_time is None:
+            return
+        if self._scheduled_time is not None:
+            delta = (next_time - self._scheduled_time).abs()
+            if delta <= self._time_epsilon:
+                return
+        self._scheduled_time = next_time
+        self.schedule_message(
+            when=next_time,
+            message_type=MessageType.WAKEUP,
+            recipient_id=self.id,
+            content={},
+            sender_id=self.id,
+        )
+
+    def _finalize_progress(self) -> None:
+        if self._progress is not None:
+            self._progress.close()
+            self._progress = None

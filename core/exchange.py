@@ -62,6 +62,8 @@ class Exchange:
         self._lob_tick_mode = str(lob_log_freq).lower() == "tick"
         self.lob_log_delta = None if self._lob_tick_mode else pd.Timedelta(lob_log_freq)
         self._last_lob_log: dict[str, pd.Timestamp] = {}
+        self._lob_log_initialized = False
+        self._next_lob_log_time: Optional[pd.Timestamp] = None
         self.out_queue = out_queue
         self.is_open: bool = True
         # Price references and last prices per symbol for limit checks in subclasses
@@ -145,6 +147,57 @@ class Exchange:
         except Exception:
             pass
 
+    def _ensure_lob_scheduler(self, now: pd.Timestamp) -> None:
+        if self._lob_tick_mode or self.lob_log_delta is None or self.out_queue is None:
+            return
+        if self._lob_log_initialized:
+            return
+        anchor = pd.Timestamp(now)
+        next_time = anchor.ceil(self.lob_log_delta)
+        if next_time < anchor:
+            next_time = next_time + self.lob_log_delta
+        self._schedule_lob_tick(next_time)
+        self._lob_log_initialized = True
+
+    def _schedule_lob_tick(self, when: pd.Timestamp) -> None:
+        if self.out_queue is None or self.lob_log_delta is None:
+            return
+        self._next_lob_log_time = when
+        msg = new_message(
+            message_type=MessageType.LOG_TICK,
+            sender_id="Exchange",
+            recipient_id="Exchange",
+            send_time=when,
+            recive_time=when,
+            content={"kind": "LOB_SNAPSHOT"},
+        )
+        if self.logger is not None:
+            try:
+                self.logger.kernel_message_log(msg, stage="SEND")
+            except Exception:
+                pass
+        self.out_queue.put(msg)
+
+    def _schedule_subscription_tick(
+        self, agent_id: str, symbol: str, when: pd.Timestamp
+    ) -> None:
+        if self.out_queue is None:
+            return
+        msg = new_message(
+            message_type=MessageType.MKT_DATA_SUBSCRIPTION_TICK,
+            sender_id="Exchange",
+            recipient_id="Exchange",
+            send_time=when,
+            recive_time=when,
+            content={"agent_id": agent_id, "symbol": symbol},
+        )
+        if self.logger is not None:
+            try:
+                self.logger.kernel_message_log(msg, stage="SEND")
+            except Exception:
+                pass
+        self.out_queue.put(msg)
+
     @property
     def initial_positions(self) -> Dict[str, Dict[str, int]]:
         return self._initial_positions
@@ -168,6 +221,7 @@ class Exchange:
     def handle_message(self, message: Message):
         response_messages = []
         now = message.send_time
+        self._ensure_lob_scheduler(now)
         # PROC log for incoming message at Exchange
         if self.logger is not None:
             self.logger.kernel_message_log(message, stage="PROC")
@@ -519,11 +573,17 @@ class Exchange:
                 sym = s.get("symbol")
                 if sym is None:
                     continue
+                freq_ms = int(s.get("freq_ms", 1000))
                 cur[sym] = {
                     "depth": int(s.get("depth", 1)),
-                    "freq_ms": int(s.get("freq_ms", 1000)),
+                    "freq_ms": freq_ms,
                     "last_sent": None,
                 }
+                self._schedule_subscription_tick(
+                    aid,
+                    sym,
+                    now + pd.Timedelta(milliseconds=freq_ms),
+                )
             # Acknowledge
             response_messages.append(
                 new_message(
@@ -560,6 +620,7 @@ class Exchange:
                         content=payload,
                     )
                 )
+                cur[sym]["last_sent"] = now
         elif message.message_type == MessageType.MKT_DATA_SUBSCRIPTION_CANCELLATION:
             # content: {"symbols": [..]}
             aid = message.sender_id
@@ -581,6 +642,34 @@ class Exchange:
                     content={"status": "ok"},
                 )
             )
+        elif message.message_type == MessageType.MKT_DATA_SUBSCRIPTION_TICK:
+            aid = message.content.get("agent_id")
+            symbol = message.content.get("symbol")
+            sub = self._subs.get(aid, {}).get(symbol) if aid else None
+            if sub:
+                lob = self._get_lob(symbol)
+                depth = int(sub.get("depth", 1))
+                freq_ms = int(sub.get("freq_ms", 1000))
+                snap = lob.snapshot_top_n(depth) if lob is not None else {"buy": [], "sell": []}
+                payload = {
+                    "symbol": symbol,
+                    "depth": depth,
+                    "bids": snap.get("buy", []),
+                    "asks": snap.get("sell", []),
+                    "ts": str(now),
+                }
+                msg = new_message(
+                    message_type=MessageType.MKT_DATA,
+                    sender_id="Exchange",
+                    recipient_id=aid,
+                    send_time=now,
+                    recive_time=now,
+                    content=payload,
+                )
+                self._emit(msg)
+                sub["last_sent"] = now
+                next_time = now + pd.Timedelta(milliseconds=freq_ms)
+                self._schedule_subscription_tick(aid, symbol, next_time)
         elif message.message_type in (MessageType.MKT_OPEN, MessageType.MKT_CLOSE):
             # Toggle trading session state; primarily informational for now
             self.is_open = message.message_type == MessageType.MKT_OPEN
@@ -644,78 +733,40 @@ class Exchange:
                         )
                     )
         elif message.message_type == MessageType.LOG_TICK:
-            # Heartbeat to emit periodic logs even without orders
-            try:
-                self._tick_log(now)
-            except Exception:
-                pass
+            self._tick_log(now)
         return response_messages
 
     def _tick_log(self, now: pd.Timestamp):
-        # For each symbol, emit OHLC and periodic LOB snapshot per configured frequency
+        self._log_lob_snapshot(now)
+        if not self._lob_tick_mode and self.lob_log_delta is not None:
+            self._next_lob_log_time = now + self.lob_log_delta
+            self._schedule_lob_tick(self._next_lob_log_time)
+
+    def _log_lob_snapshot(self, now: pd.Timestamp) -> None:
+        if self.logger is None:
+            return
         for symbol, lob in self.lob_dict.items():
-            # Determine a working price: prefer last trade via aggregator, else mid from book
+            sym = str(symbol)
             price = None
             snap = lob.snapshot_top_n(1)
             if snap["buy"] and snap["sell"]:
                 bid = float(snap["buy"][0][0])
                 ask = float(snap["sell"][0][0])
                 price = round((bid + ask) / 2.0, 2)
-            if price is not None and self.logger is not None:
-                sym = str(symbol)
+            if price is not None:
                 if sym not in self.ohlc_by_symbol:
                     self.ohlc_by_symbol[sym] = OHLCAggregator(
                         sym, self.ohlc_freq, self.logger
                     )
                 self.ohlc_by_symbol[sym].update(now, price, volume=0.0)
                 self._last_price[sym] = float(price)
-            # LOB periodic log check
-            if self.logger is not None:
-                sym = str(symbol)
-                last = self._last_lob_log.get(sym)
-                should_log = False
-                if self._lob_tick_mode:
-                    should_log = True
-                else:
-                    delta = self.lob_log_delta or pd.Timedelta(milliseconds=0)
-                    if (last is None) or (now - last >= delta):
-                        should_log = True
-                if should_log:
-                    level = self.lob_log_level
-                    lob_csv = lob.format_snapshot_csv(level)
-                    self.logger.lob_log(
-                        symbol_name=sym, kernel_time=now, level=level, lob=lob_csv
-                    )
-                    self._last_lob_log[sym] = now
-            # Push subscription updates if due
-            try:
-                for aid, mp in list(self._subs.items()):
-                    sub = mp.get(symbol)
-                    if not sub:
-                        continue
-                    last = sub.get("last_sent")
-                    freq = int(sub.get("freq_ms", 1000))
-                    if last is None or (now - last) >= pd.Timedelta(milliseconds=freq):
-                        snap = lob.snapshot_top_n(int(sub.get("depth", 1)))
-                        payload = {
-                            "symbol": symbol,
-                            "depth": int(sub.get("depth", 1)),
-                            "bids": snap.get("buy", []),
-                            "asks": snap.get("sell", []),
-                            "ts": str(now),
-                        }
-                        msg = new_message(
-                            message_type=MessageType.MKT_DATA,
-                            sender_id="Exchange",
-                            recipient_id=aid,
-                            send_time=now,
-                            recive_time=now,
-                            content=payload,
-                        )
-                        self._emit(msg)
-                        sub["last_sent"] = now
-            except Exception:
-                pass
+            level = self.lob_log_level
+            lob_csv = lob.format_snapshot_csv(level)
+            self.logger.lob_log(
+                symbol_name=sym, kernel_time=now, level=level, lob=lob_csv
+            )
+            self._last_lob_log[sym] = now
+
 
     # Exposed helper for kernel to detect preopen (default False)
     def is_preopen_time(self, now: pd.Timestamp) -> bool:
@@ -1100,27 +1151,6 @@ class Exchange:
                 )
             self.ohlc_by_symbol[sym].update(now, price, volume=float(order.quantity))
             self._last_price[sym] = float(price)
-        # LOB periodic log
-        if self.logger is not None:
-            sym = str(symbol)
-            last = self._last_lob_log.get(sym)
-            should_log = False
-            if self._lob_tick_mode:
-                should_log = True
-            else:
-                delta = self.lob_log_delta or pd.Timedelta(milliseconds=0)
-                if (last is None) or (now - last >= delta):
-                    should_log = True
-            if should_log:
-                lob_csv = lob.format_snapshot_csv(self.lob_log_level)
-                self.logger.lob_log(
-                    symbol_name=sym,
-                    kernel_time=now,
-                    level=self.lob_log_level,
-                    lob=lob_csv,
-                )
-                self._last_lob_log[sym] = now
-
     def _log_trades(self, trades: List[dict], now: pd.Timestamp) -> None:
         if not self.trade_log_enabled or self._trade_log_writer is None:
             return
@@ -1406,26 +1436,17 @@ class SZSExchange(Exchange):
         # LOB periodic log control
         if self.logger is not None:
             sym = str(symbol)
-            last = self._last_lob_log.get(sym)
-            should_log = False
-            if self._lob_tick_mode:
-                should_log = True
-            else:
-                delta = self.lob_log_delta or pd.Timedelta(milliseconds=0)
-                if (last is None) or (now - last >= delta):
-                    should_log = True
-            if should_log:
-                csv = self._format_snapshot_csv_from_lists(
-                    asks, bids, n=self.lob_log_level
-                )
-                # write to preopen.csv instead of lob.csv
-                self.logger.preopen_log(
-                    symbol_name=sym,
-                    kernel_time=now,
-                    level=self.lob_log_level,
-                    lob=csv,
-                )
-                self._last_lob_log[sym] = now
+            csv = self._format_snapshot_csv_from_lists(
+                asks, bids, n=self.lob_log_level
+            )
+            # write to preopen.csv instead of lob.csv
+            self.logger.preopen_log(
+                symbol_name=sym,
+                kernel_time=now,
+                level=self.lob_log_level,
+                lob=csv,
+            )
+            self._last_lob_log[sym] = now
         # Also honor subscriptions during pre-open using indicative book
         try:
             for aid, mp in list(self._subs.items()):

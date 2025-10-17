@@ -93,6 +93,29 @@ class BaseAgent:
             self.logger.kernel_message_log(message, stage="SEND")
         self.message_queue.put(message, recive_delay=computed_delay)
 
+    def schedule_message(
+        self,
+        *,
+        when,
+        message_type: MessageType,
+        recipient_id: str = "Exchange",
+        content: Optional[Dict] = None,
+        sender_id: Optional[str] = None,
+    ) -> None:
+        """Insert a message that will be delivered exactly at `when`."""
+        schedule_time = pd.Timestamp(when)
+        msg = new_message(
+            message_type=message_type,
+            sender_id=sender_id or self.id,
+            recipient_id=recipient_id,
+            send_time=schedule_time,
+            recive_time=schedule_time,
+            content=content or {},
+        )
+        if self.logger:
+            self.logger.kernel_message_log(msg, stage="SEND")
+        self.message_queue.put(msg, recive_delay=0)
+
     def wakeup_delay(self):
         # Use slower cadence during pre-open call auction if configured
         preopen = False

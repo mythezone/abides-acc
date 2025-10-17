@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import heapq
-import itertools
-from dataclasses import dataclass
-from typing import Dict, Iterable, List, Optional, Tuple
 import csv
+from collections import deque
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Deque, Dict, Iterable, List, Optional, Tuple
 
 import pandas as pd
 
@@ -13,124 +12,58 @@ from core.order import LimitOrder, MarketOrder, Order
 
 
 @dataclass
-class OrderNode:
-    """Linked-list node wrapping an order stored at a price level."""
+class OrderEntry:
+    """Index entry tracking an order registered in the book."""
 
     order: LimitOrder
-    prev: Optional["OrderNode"] = None
-    next: Optional["OrderNode"] = None
-    level: Optional["PriceLevel"] = None
+    side: str
+    price: float
 
 
 class PriceLevel:
     """FIFO queue of orders at a single price."""
 
-    __slots__ = ("price", "side", "head", "tail", "total_quantity", "active")
-
     def __init__(self, price: float, side: str):
         self.price = float(price)
-        self.side = side  # 'buy' or 'sell'
-        self.head: Optional[OrderNode] = None
-        self.tail: Optional[OrderNode] = None
-        self.total_quantity: int = 0
-        self.active: bool = True
-
-    def append(self, node: OrderNode) -> None:
-        node.prev = self.tail
-        node.next = None
-        node.level = self
-        if self.tail:
-            self.tail.next = node
-            self.tail = node
-        else:
-            self.head = self.tail = node
-        self.total_quantity += int(node.order.quantity)
-
-    def remove(self, node: OrderNode) -> None:
-        if node.prev:
-            node.prev.next = node.next
-        else:
-            self.head = node.next
-        if node.next:
-            node.next.prev = node.prev
-        else:
-            self.tail = node.prev
-        self.total_quantity -= int(node.order.quantity)
-        node.prev = node.next = None
-        node.level = None
-
-    def consume_from_head(self, quantity: int) -> OrderNode:
-        node = self.head
-        if node is None:
-            raise RuntimeError("Attempted to consume from an empty price level")
-        node.order.quantity -= quantity
-        self.total_quantity -= quantity
-        if node.order.quantity <= 0:
-            node.order.quantity = 0
-            self.remove(node)
-        return node
-
-    def top_node(self) -> Optional[OrderNode]:
-        return self.head
-
-    def is_empty(self) -> bool:
-        return self.head is None
-
-
-class OrderHeap:
-    """Heap of price levels maintaining best price first."""
-
-    def __init__(self, side: str):
-        if side not in ("buy", "sell"):
-            raise ValueError("side must be 'buy' or 'sell'")
         self.side = side
-        self._heap: List[Tuple[float, int, PriceLevel]] = []
-        self._price_map: Dict[float, PriceLevel] = {}
-        self._counter = itertools.count()
+        self.orders: Deque[LimitOrder] = deque()
+        self.total_volume: int = 0
 
-    def _heap_price(self, price: float) -> float:
-        return -price if self.side == "buy" else price
+    def append(self, order: LimitOrder) -> None:
+        self.orders.append(order)
+        self.total_volume += int(order.quantity)
 
-    def ensure_level(self, price: float) -> PriceLevel:
-        level = self._price_map.get(price)
-        if level is None or not level.active:
-            level = PriceLevel(price, self.side)
-            self._price_map[price] = level
-            heapq.heappush(self._heap, (self._heap_price(price), next(self._counter), level))
-        return level
+    def pop_front(self) -> LimitOrder:
+        order = self.orders.popleft()
+        self.total_volume -= int(order.quantity)
+        return order
 
-    def best_level(self) -> Optional[PriceLevel]:
-        while self._heap:
-            _, _, level = self._heap[0]
-            if level.active and not level.is_empty():
-                return level
-            heapq.heappop(self._heap)
-            if level.price in self._price_map and (not level.active or level.is_empty()):
-                self._price_map.pop(level.price, None)
-        return None
+    def front(self) -> Optional[LimitOrder]:
+        return self.orders[0] if self.orders else None
 
-    def remove_level(self, level: PriceLevel) -> None:
-        level.active = False
-        self._price_map.pop(level.price, None)
+    def remove(self, order: LimitOrder) -> bool:
+        for idx, existing in enumerate(self.orders):
+            if existing is order:
+                self.total_volume -= int(existing.quantity)
+                del self.orders[idx]
+                return True
+        return False
 
-    def prices(self) -> Iterable[float]:
-        return list(self._price_map.keys())
-
-    def get_level(self, price: float) -> Optional[PriceLevel]:
-        level = self._price_map.get(price)
-        if level and level.active and not level.is_empty():
-            return level
-        return None
+    def empty(self) -> bool:
+        return not self.orders
 
 
 class LimitOrderBook:
-    """Price-level order book with FIFO queues per price and heap-based best-price access."""
+    """Price/time priority book with behaviour aligned to MAXE's PriceTimeBook."""
 
     def __init__(self, symbol: Optional[str]):
         self.symbol = symbol
-        self.bids = OrderHeap("buy")
-        self.asks = OrderHeap("sell")
-        self._order_index: Dict[str, OrderNode] = {}
+        self.buy_prices: List[float] = []
+        self.sell_prices: List[float] = []
+        self.buy_levels: Dict[float, PriceLevel] = {}
+        self.sell_levels: Dict[float, PriceLevel] = {}
+        self._order_index: Dict[str, OrderEntry] = {}
+
         self.history_log: List[dict] = []
         self.last_trade_price: Optional[float] = None
         self.ohlc = {
@@ -140,63 +73,98 @@ class LimitOrderBook:
             "close": None,
             "volume": 0,
         }
-        # Track rolling statistics for downstream analytics
         self.total_traded_volume: int = 0
 
-    # --- Public API ---
+    # ------------------------------------------------------------------ #
+    # Public entry points
+    # ------------------------------------------------------------------ #
     def add_order(self, order: Order) -> List[dict]:
         if order.side not in ("buy", "sell"):
             raise ValueError("order.side must be 'buy' or 'sell'")
-        trades = self._match(order)
-        if isinstance(order, LimitOrder) and order.quantity > 0:
-            self._rest(order)
+        trades: List[dict] = []
+        if isinstance(order, LimitOrder):
+            trades = self._match_limit(order)
+            if order.quantity > 0:
+                self._rest(order)
+        else:
+            trades = self._match_market(order)
         self.history_log.extend(trades)
         return trades
 
-    def cancel_order(self, order_id) -> bool:
-        node = self._order_index.pop(order_id, None)
-        if not node:
-            return False
-        level = node.level
-        if level:
-            level.remove(node)
-            if level.is_empty():
-                heap = self.bids if level.side == "buy" else self.asks
-                heap.remove_level(level)
-        return True
+    def cancel_order(self, order_id, quantity: Optional[int] = None) -> int:
+        entry = self._order_index.get(order_id)
+        if entry is None:
+            return 0
+        level = self._get_level(entry.price, entry.side)
+        if level is None:
+            self._order_index.pop(order_id, None)
+            return 0
+        order = entry.order
+        remaining = int(order.quantity)
+        if remaining <= 0:
+            level.remove(order)
+            self._order_index.pop(order_id, None)
+            self._remove_level_if_empty(level)
+            return 0
+        if quantity is None or quantity >= remaining:
+            level.remove(order)
+            self._order_index.pop(order_id, None)
+            self._remove_level_if_empty(level)
+            return remaining
+        removed = max(int(quantity), 0)
+        order.quantity = remaining - removed
+        level.total_volume -= removed
+        if order.quantity <= 0:
+            level.remove(order)
+            self._order_index.pop(order_id, None)
+            self._remove_level_if_empty(level)
+            return remaining
+        return removed
 
     def cancel_by_price(self, side: str, price: float, quantity: int) -> int:
         if quantity <= 0:
             return 0
-        heap = self.bids if side == "buy" else self.asks
-        level = heap.get_level(float(price))
+        level = self._get_level(float(price), side)
         if level is None:
             return 0
         removed = 0
-        while quantity > 0:
-            node = level.top_node()
-            if node is None:
-                heap.remove_level(level)
+        while quantity > 0 and not level.empty():
+            order = level.front()
+            if order is None:
                 break
-            remaining = int(node.order.quantity)
+            remaining = int(order.quantity)
             if remaining <= quantity:
                 quantity -= remaining
                 removed += remaining
-                level.remove(node)
-                self._order_index.pop(node.order.id, None)
+                level.pop_front()
+                self._order_index.pop(order.id, None)
             else:
-                node.order.quantity -= quantity
-                level.total_quantity -= quantity
+                order.quantity = remaining - quantity
                 removed += quantity
+                level.total_volume -= quantity
                 quantity = 0
-        if level.is_empty():
-            heap.remove_level(level)
+        self._remove_level_if_empty(level)
         return removed
 
     def snapshot_top_n(self, n: int = 5) -> Dict[str, List[Tuple[float, int]]]:
-        top_buys = self._top_levels(self.bids, n, reverse=True)
-        top_sells = self._top_levels(self.asks, n, reverse=False)
-        return {"buy": top_buys, "sell": top_sells}
+        depth = max(int(n), 1)
+        asks: List[Tuple[float, int]] = []
+        bids: List[Tuple[float, int]] = []
+        for price in self.sell_prices:
+            level = self.sell_levels[price]
+            vol = int(level.total_volume)
+            if vol > 0:
+                asks.append((price, vol))
+            if len(asks) >= depth:
+                break
+        for price in reversed(self.buy_prices):
+            level = self.buy_levels[price]
+            vol = int(level.total_volume)
+            if vol > 0:
+                bids.append((price, vol))
+            if len(bids) >= depth:
+                break
+        return {"sell": asks, "buy": bids}
 
     def format_snapshot_csv(self, n: int = 5) -> str:
         snap = self.snapshot_top_n(n)
@@ -221,32 +189,35 @@ class LimitOrderBook:
         agent_id: str = "InitAgent",
         timestamp: str = "1970-01-01T00:00:00",
     ) -> None:
+        ts = pd.Timestamp(timestamp)
         for price, volume in bids:
+            volume = int(volume)
             if volume <= 0:
                 continue
             order = LimitOrder(
                 agent_id=agent_id,
-                symbol=self.symbol or "",
-                timestamp=timestamp,
+                timestamp=str(ts),
                 side="buy",
-                quantity=int(volume),
+                quantity=volume,
                 price=float(price),
-                id=f"init_bid_{self.symbol}_{price}_{volume}",
+                symbol=self.symbol or "",
+                id=f"INIT_BID_{price}_{volume}",
             )
-            self._rest(order)
+            self.add_order(order)
         for price, volume in asks:
+            volume = int(volume)
             if volume <= 0:
                 continue
             order = LimitOrder(
                 agent_id=agent_id,
-                symbol=self.symbol or "",
-                timestamp=timestamp,
+                timestamp=str(ts),
                 side="sell",
-                quantity=int(volume),
+                quantity=volume,
                 price=float(price),
-                id=f"init_ask_{self.symbol}_{price}_{volume}",
+                symbol=self.symbol or "",
+                id=f"INIT_ASK_{price}_{volume}",
             )
-            self._rest(order)
+            self.add_order(order)
 
     def initialize_from_csv(
         self,
@@ -262,7 +233,7 @@ class LimitOrderBook:
             for row in reader:
                 try:
                     bid_price = float(row.get("bid_price"))
-                    bid_volume = int(row.get("bid_volume", 0))
+                    bid_volume = int(float(row.get("bid_volume", 0)))
                 except (TypeError, ValueError):
                     bid_volume = 0
                 else:
@@ -270,7 +241,7 @@ class LimitOrderBook:
                         bids.append((bid_price, bid_volume))
                 try:
                     ask_price = float(row.get("ask_price"))
-                    ask_volume = int(row.get("ask_volume", 0))
+                    ask_volume = int(float(row.get("ask_volume", 0)))
                 except (TypeError, ValueError):
                     ask_volume = 0
                 else:
@@ -306,99 +277,179 @@ class LimitOrderBook:
         return "\n".join(lines)
 
     @property
-    def order_map(self) -> Dict[str, OrderNode]:
+    def order_map(self) -> Dict[str, OrderEntry]:
         return self._order_index
 
-    # --- Internal helpers ---
-    def _match(self, incoming: Order) -> List[dict]:
-        trades: List[dict] = []
-        opposite = self.asks if incoming.side == "buy" else self.bids
-        market_depth: Optional[int] = None
-        if isinstance(incoming, MarketOrder):
-            market_depth = incoming.market_depth if incoming.market_depth else None
-        levels_remaining = market_depth
-        active_price = None
+    def traded_volume(self) -> int:
+        return int(self.total_traded_volume)
 
-        while incoming.quantity > 0:
-            level = opposite.best_level()
+    def resting_volume(self, side: str, depth: Optional[int] = None) -> int:
+        depth = int(depth) if depth is not None else None
+        prices = (
+            list(reversed(self.buy_prices)) if side == "buy" else list(self.sell_prices)
+        )
+        total = 0
+        for idx, price in enumerate(prices):
+            level = self._get_level(price, side)
             if not level:
+                continue
+            total += int(level.total_volume)
+            if depth is not None and idx + 1 >= depth:
                 break
-            best_price = level.price
+        return total
 
-            if isinstance(incoming, LimitOrder):
-                if incoming.side == "buy" and incoming.price < best_price:
-                    break
-                if incoming.side == "sell" and incoming.price > best_price:
-                    break
+    # ------------------------------------------------------------------ #
+    # Internal helpers
+    # ------------------------------------------------------------------ #
+    def _get_level(self, price: float, side: str) -> Optional[PriceLevel]:
+        if side == "buy":
+            return self.buy_levels.get(price)
+        return self.sell_levels.get(price)
 
-            if levels_remaining is not None:
-                if active_price is None or best_price != active_price:
+    def _ensure_level(self, price: float, side: str) -> PriceLevel:
+        level = self._get_level(price, side)
+        if level is not None:
+            return level
+        level = PriceLevel(price, side)
+        if side == "buy":
+            self.buy_levels[price] = level
+            self._insert_price(self.buy_prices, price)
+        else:
+            self.sell_levels[price] = level
+            self._insert_price(self.sell_prices, price)
+        return level
+
+    @staticmethod
+    def _insert_price(prices: List[float], price: float) -> None:
+        from bisect import bisect_left
+
+        idx = bisect_left(prices, price)
+        if idx >= len(prices) or prices[idx] != price:
+            prices.insert(idx, price)
+
+    def _remove_level_if_empty(self, level: PriceLevel) -> None:
+        if not level.empty():
+            return
+        price = level.price
+        if level.side == "buy":
+            self.buy_levels.pop(price, None)
+            try:
+                self.buy_prices.remove(price)
+            except ValueError:
+                pass
+        else:
+            self.sell_levels.pop(price, None)
+            try:
+                self.sell_prices.remove(price)
+            except ValueError:
+                pass
+
+    def _best_buy_price(self) -> Optional[float]:
+        return self.buy_prices[-1] if self.buy_prices else None
+
+    def _best_sell_price(self) -> Optional[float]:
+        return self.sell_prices[0] if self.sell_prices else None
+
+    def _match_limit(self, order: LimitOrder) -> List[dict]:
+        trades: List[dict] = []
+        if order.side == "buy":
+            while order.quantity > 0:
+                best_price = self._best_sell_price()
+                if best_price is None or best_price > order.price:
+                    break
+                level = self.sell_levels[best_price]
+                trades.extend(self._consume_level(order, level, "sell"))
+                self._remove_level_if_empty(level)
+        else:
+            while order.quantity > 0:
+                best_price = self._best_buy_price()
+                if best_price is None or best_price < order.price:
+                    break
+                level = self.buy_levels[best_price]
+                trades.extend(self._consume_level(order, level, "buy"))
+                self._remove_level_if_empty(level)
+        return trades
+
+    def _match_market(self, order: MarketOrder) -> List[dict]:
+        trades: List[dict] = []
+        levels_remaining = (
+            int(order.market_depth) if order.market_depth is not None else None
+        )
+        if order.side == "buy":
+            while order.quantity > 0:
+                best_price = self._best_sell_price()
+                if best_price is None:
+                    break
+                if levels_remaining is not None:
                     if levels_remaining <= 0:
                         break
-                    active_price = best_price
                     levels_remaining -= 1
+                level = self.sell_levels[best_price]
+                trades.extend(self._consume_level(order, level, "sell"))
+                self._remove_level_if_empty(level)
+                if levels_remaining is not None and order.quantity > 0:
+                    continue
+        else:
+            while order.quantity > 0:
+                best_price = self._best_buy_price()
+                if best_price is None:
+                    break
+                if levels_remaining is not None:
+                    if levels_remaining <= 0:
+                        break
+                    levels_remaining -= 1
+                level = self.buy_levels[best_price]
+                trades.extend(self._consume_level(order, level, "buy"))
+                self._remove_level_if_empty(level)
+                if levels_remaining is not None and order.quantity > 0:
+                    continue
+        return trades
 
-            head = level.top_node()
-            if head is None:
-                opposite.remove_level(level)
-                active_price = None
-                continue
-
-            resting = head.order
-            traded_qty = min(incoming.quantity, resting.quantity)
-            trade_price = best_price
-            trade_time = self._normalize_time(incoming.timestamp)
+    def _consume_level(
+        self, incoming: Order, level: PriceLevel, opposing_side: str
+    ) -> List[dict]:
+        trades: List[dict] = []
+        while incoming.quantity > 0 and not level.empty():
+            resting = level.front()
+            if resting is None:
+                break
+            traded_qty = min(int(incoming.quantity), int(resting.quantity))
+            incoming.quantity -= traded_qty
+            resting.quantity -= traded_qty
+            level.total_volume -= traded_qty
 
             buyer = incoming.agent_id if incoming.side == "buy" else resting.agent_id
             seller = resting.agent_id if incoming.side == "buy" else incoming.agent_id
-
             trade = {
                 "symbol": self.symbol,
-                "price": round(float(trade_price), 6),
+                "price": round(float(level.price), 6),
                 "quantity": int(traded_qty),
-                "timestamp": trade_time,
+                "timestamp": self._normalize_time(incoming.timestamp),
                 "buy": buyer,
                 "sell": seller,
             }
             trades.append(trade)
             self._record_trade(trade)
 
-            incoming.quantity -= traded_qty
-            level.consume_from_head(traded_qty)
-
-            if resting.quantity == 0:
+            if resting.quantity <= 0:
+                level.pop_front()
                 self._order_index.pop(resting.id, None)
-
-            if level.is_empty():
-                opposite.remove_level(level)
-                active_price = None
-
+            if incoming.quantity <= 0:
+                break
         return trades
 
     def _rest(self, order: LimitOrder) -> None:
-        heap = self.bids if order.side == "buy" else self.asks
-        level = heap.ensure_level(order.price)
-        node = OrderNode(order=order)
-        level.append(node)
-        self._order_index[order.id] = node
-
-    def _top_levels(self, heap: OrderHeap, n: int, *, reverse: bool) -> List[Tuple[float, int]]:
-        prices = sorted(heap.prices(), reverse=reverse)
-        result: List[Tuple[float, int]] = []
-        for price in prices:
-            level = heap.get_level(price)
-            if not level:
-                continue
-            qty = level.total_quantity
-            if qty > 0:
-                result.append((price, qty))
-            if len(result) >= n:
-                break
-        return result
+        level = self._ensure_level(float(order.price), order.side)
+        level.append(order)
+        self._order_index[order.id] = OrderEntry(
+            order=order,
+            side=order.side,
+            price=float(order.price),
+        )
 
     def _record_trade(self, trade: dict) -> None:
-        price = trade["price"]
-        qty = trade["quantity"]
+        price = float(trade["price"])
+        qty = int(trade["quantity"])
         self.last_trade_price = price
         if self.ohlc["open"] is None:
             self.ohlc["open"] = price
@@ -408,7 +459,7 @@ class LimitOrderBook:
         self.ohlc["high"] = max(self.ohlc["high"], price)
         self.ohlc["low"] = min(self.ohlc["low"], price)
         self.ohlc["volume"] += qty
-        self.total_traded_volume += int(qty)
+        self.total_traded_volume += qty
 
     @staticmethod
     def _normalize_time(ts) -> str:
@@ -416,53 +467,3 @@ class LimitOrderBook:
             return str(pd.Timestamp(ts))
         except Exception:
             return str(ts)
-
-    # --- Derived analytics helpers ---
-    def traded_volume(self) -> int:
-        """Return cumulative traded volume observed by this book."""
-        return int(self.total_traded_volume)
-
-    def resting_volume(self, side: str, depth: Optional[int] = None) -> int:
-        """Aggregate resting volume for the given side up to `depth` price levels."""
-        if side not in ("buy", "sell"):
-            return 0
-        heap = self.bids if side == "buy" else self.asks
-        prices = sorted(
-            heap.prices(),
-            reverse=True if side == "buy" else False,
-        )
-        total = 0
-        counted = 0
-        max_levels = None
-        if depth is not None:
-            try:
-                max_levels = max(1, int(depth))
-            except Exception:
-                max_levels = None
-        for price in prices:
-            level = heap.get_level(price)
-            if not level:
-                continue
-            total += int(level.total_quantity)
-            counted += 1
-            if max_levels is not None and counted >= max_levels:
-                break
-        return total
-
-    def spread(self) -> Optional[float]:
-        """Return the best ask - best bid spread when both are available."""
-        best_bid = self.bids.best_level()
-        best_ask = self.asks.best_level()
-        if best_bid and best_ask:
-            return float(best_ask.price) - float(best_bid.price)
-        return None
-
-    def book_imbalance(self, depth: int = 5) -> float:
-        """Compute bid/ask imbalance within the given depth."""
-        depth = max(1, int(depth))
-        bid_vol = self.resting_volume("buy", depth)
-        ask_vol = self.resting_volume("sell", depth)
-        total = bid_vol + ask_vol
-        if total <= 0:
-            return 0.0
-        return (bid_vol - ask_vol) / total

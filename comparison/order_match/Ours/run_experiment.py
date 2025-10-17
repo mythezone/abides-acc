@@ -50,14 +50,6 @@ def run_replay(config_path: str, max_steps: int = 500_000) -> Tuple[Path, Path]:
     kernel = Kernel.from_config(str(cfg_path))
     try:
         result = kernel.run(max_steps=max_steps)
-        while True:
-            extra = kernel.process_messages(max_steps=max_steps)
-            if extra.get("processed", 0) == 0:
-                break
-            result["processed"] = result.get("processed", 0) + extra["processed"]
-            result["steps"] = result.get("steps", 0) + extra["processed"]
-            if extra.get("last_time") is not None:
-                result["end_time"] = extra["last_time"]
         print(f"Kernel run complete. Steps processed: {result.get('steps', 0)}")
     finally:
         kernel.shutdown()

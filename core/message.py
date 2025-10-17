@@ -52,6 +52,7 @@ class MessageType(Enum):
     LOG_TICK = 42
     SELECT_SYMBOLS_REQUEST = 43
     SELECT_SYMBOLS_RESPONSE = 44
+    MKT_DATA_SUBSCRIPTION_TICK = 45
 
     # Oracle related
     ORACLE_QUERY_LOB = 50

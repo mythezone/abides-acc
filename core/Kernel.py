@@ -274,20 +274,6 @@ class Kernel:
         processed = 0
         current_time = start_time
 
-        # Determine kernel heartbeat period for LOG_TICKs when idle
-        try:
-            ohlc_td = pd.Timedelta(self.exchange.ohlc_freq)
-        except Exception:
-            ohlc_td = pd.Timedelta(seconds=1)
-        lob_td = (
-            self.exchange.lob_log_delta
-            if getattr(self.exchange, "_lob_tick_mode", False) is False
-            else pd.Timedelta(milliseconds=200)
-        )
-        if lob_td is None:
-            lob_td = pd.Timedelta(milliseconds=200)
-        tick_delta = min(ohlc_td, lob_td)
-
         # Optional time-based stop
         stop_at = None
         if max_sim_seconds is not None and isinstance(max_sim_seconds, int):
@@ -302,24 +288,6 @@ class Kernel:
                 try:
                     self.in_box.put(self.message_queue.get_nowait_raw())
                 except Exception:
-                    break
-
-            if self.in_box.empty():
-                # If a time horizon is set, drive periodic logs until stop time
-                if stop_at is not None and current_time < stop_at:
-                    next_t = min(current_time + tick_delta, stop_at)
-                    tick = new_message(
-                        message_type=MessageType.LOG_TICK,
-                        sender_id="Kernel",
-                        recipient_id="Exchange",
-                        send_time=next_t,
-                        recive_time=next_t,
-                        content={},
-                    )
-                    self.logger.kernel_message_log(tick, stage="SEND")
-                    self.message_queue.put(tick)
-                    self.in_box.put(tick)
-                else:
                     break
 
             # Pop next event by time
