@@ -17,7 +17,7 @@ from core.agent.replay import HistoricalOrderReplayAgent
 # from agent.execution.POVExecutionAgent import POVExecutionAgent
 
 
-agents = {
+AGENTS = {
     "base": BaseAgent,
     "zero_intelligence": ZeroIntelligenceAgent,
     "oracle": OracleAgent,
@@ -34,7 +34,7 @@ agents = {
 }
 
 __all__ = [
-    "agents",
+    "AGENTS",
     "BaseAgent",
     "ZeroIntelligenceAgent",
     "OracleAgent",

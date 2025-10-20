@@ -8,7 +8,7 @@ from rich.progress import Progress
 from types import SimpleNamespace
 
 from core.message import MessageBox, MessageType, Message, MessageQueue, new_message
-from core.agent import agents
+from core.agent import AGENTS
 from core.clock import KernelClock
 from core.exchange import new_exchange
 from core.logger import Logger
@@ -86,7 +86,7 @@ class Kernel:
         for config in agent_config:
             # accept either 'type' or legacy 'name'
             agent_type = config.get("type") or config.get("name")
-            agent_class = agents[agent_type]
+            agent_class = AGENTS[agent_type]
             agent_num = config.get("num", 1)
             # accept either 'params' or legacy 'args'
             args: Dict = config.get("params") or config.get("args") or {}
@@ -478,7 +478,7 @@ class Kernel:
             for a in agent_defs:
                 atype = a.get("type") or a.get("name") or "zero_intelligence"
                 # Validate against registered agents registry
-                if atype not in agents:
+                if atype not in AGENTS:
                     atype = "zero_intelligence"
                 params = a.get("params") or a.get("args") or {}
                 if atype == "zero_intelligence" and "initial_symbols" not in params:
