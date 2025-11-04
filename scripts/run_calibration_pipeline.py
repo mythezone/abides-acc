@@ -94,8 +94,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--symbols", nargs="*", help="Explicit symbol list for evaluation.")
     parser.add_argument("--price-weight", type=float, default=0.5, help="Weight for price MSE in combined score.")
     parser.add_argument("--volume-weight", type=float, default=0.5, help="Weight for volume MSE in combined score.")
-    parser.add_argument("--price-norm", default="max", choices=["max", "mean", "std", "none"], help="Normalization method for price columns.")
-    parser.add_argument("--volume-norm", default="max", choices=["max", "mean", "std", "none"], help="Normalization method for volume columns.")
+    parser.add_argument("--normalization-mode", default="col_wise", choices=["none", "col_wise", "pv"], help="Normalization mode (z-score) before computing MSE.")
     parser.add_argument("--result-json", type=Path, help="Optional path to write metrics JSON.")
     parser.add_argument("--result-csv", type=Path, help="Optional path to write per-symbol metrics CSV.")
     parser.add_argument("--tag", default=now_tag, help="Run tag appended to default log dir if overrides not provided.")
@@ -162,8 +161,7 @@ def main() -> int:
     cfg = LOBMSEConfig(
         price_weight=args.price_weight,
         volume_weight=args.volume_weight,
-        price_norm=args.price_norm,
-        volume_norm=args.volume_norm,
+        normalization_mode=args.normalization_mode,
     )
     metrics = evaluate_directories(str(baseline_log), str(calibrated_log), symbols, config=cfg)
     summary = summarize_metrics(metrics)

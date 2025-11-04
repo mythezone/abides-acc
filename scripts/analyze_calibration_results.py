@@ -129,14 +129,9 @@ def parse_args() -> argparse.Namespace:
         help="Weight for volume MSE in combined score (overrides config).",
     )
     parser.add_argument(
-        "--price-norm",
-        choices=["max", "mean", "std", "none"],
-        help="Normalization for price columns (overrides config).",
-    )
-    parser.add_argument(
-        "--volume-norm",
-        choices=["max", "mean", "std", "none"],
-        help="Normalization for volume columns (overrides config).",
+        "--normalization-mode",
+        choices=["none", "col_wise", "pv"],
+        help="Normalization mode applied before MSE (z-score).",
     )
     return parser.parse_args()
 
@@ -161,14 +156,12 @@ def main() -> int:
     volume_weight = (
         args.volume_weight if args.volume_weight is not None else mse_cfg.get("volume_weight", 0.5)
     )
-    price_norm = args.price_norm or mse_cfg.get("price_norm", "max")
-    volume_norm = args.volume_norm or mse_cfg.get("volume_norm", "max")
+    normalization_mode = args.normalization_mode or mse_cfg.get("normalization_mode", "col_wise")
 
     cfg = LOBMSEConfig(
         price_weight=price_weight,
         volume_weight=volume_weight,
-        price_norm=price_norm,
-        volume_norm=volume_norm,
+        normalization_mode=normalization_mode,
     )
 
     explicit_symbols = normalize_symbols(args.symbols) if args.symbols else normalize_symbols(

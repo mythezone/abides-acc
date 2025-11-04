@@ -8,12 +8,6 @@ import numpy as np
 import pandas as pd
 
 
-LOB_COL_TEMPLATE = {
-    "price": [f"AskPrice{i}" for i in range(10)] + [f"BidPrice{i}" for i in range(10)],
-    "volume": [f"AskVolume{i}" for i in range(10)] + [f"BidVolume{i}" for i in range(10)],
-}
-
-
 def _resolve_columns(level: int = 10) -> Dict[str, List[str]]:
     cols = {"price": [], "volume": []}
     for i in range(level):
@@ -37,25 +31,6 @@ def load_lob_series(log_dir: str, symbol: str) -> Optional[pd.DataFrame]:
     df["kernel_time"] = pd.to_datetime(df["kernel_time"])
     df = df.sort_values("kernel_time").reset_index(drop=True)
     return df
-
-
-def _normalization_scale(values: pd.DataFrame, method: str) -> pd.Series:
-    method = (method or "max").lower()
-    if method == "none":
-        return pd.Series(1.0, index=values.columns)
-    if method == "mean":
-        scale = values.abs().mean()
-    elif method == "std":
-        scale = values.std().replace(0, np.nan)
-    else:
-        scale = values.abs().max()
-    scale = scale.replace(0, np.nan).fillna(1.0)
-    return scale
-
-
-def _normalize(values: pd.DataFrame, scale: pd.Series) -> pd.DataFrame:
-    shared = scale.reindex(values.columns).fillna(1.0)
-    return values.divide(shared, axis=1)
 
 
 def align_lob_frames(
@@ -88,9 +63,8 @@ def align_lob_frames(
 class LOBMSEConfig:
     price_weight: float = 0.5
     volume_weight: float = 0.5
-    price_norm: str = "max"
-    volume_norm: str = "max"
     levels: int = 10
+    normalization_mode: str = "col_wise"
 
     def normalized_weights(self) -> Tuple[float, float]:
         total = float(self.price_weight) + float(self.volume_weight)
@@ -128,16 +102,27 @@ def compute_lob_mse(
     base_df = base_df.fillna(0.0)
     calibrated_df = calibrated_df.fillna(0.0)
 
-    price_scale = _normalization_scale(base_df[price_cols], cfg.price_norm)
-    volume_scale = _normalization_scale(base_df[volume_cols], cfg.volume_norm)
+    mode = (cfg.normalization_mode or "col_wise").lower()
 
-    base_price_norm = _normalize(base_df[price_cols], price_scale)
-    cal_price_norm = _normalize(calibrated_df[price_cols], price_scale)
-    base_volume_norm = _normalize(base_df[volume_cols], volume_scale)
-    cal_volume_norm = _normalize(calibrated_df[volume_cols], volume_scale)
+    if mode == "none":
+        base_price_norm = base_df[price_cols].to_numpy(dtype=float)
+        cal_price_norm = calibrated_df[price_cols].to_numpy(dtype=float)
+        base_volume_norm = base_df[volume_cols].to_numpy(dtype=float)
+        cal_volume_norm = calibrated_df[volume_cols].to_numpy(dtype=float)
+    else:
+        base_price_norm, cal_price_norm = _apply_normalization(
+            base_df[price_cols], calibrated_df[price_cols], mode
+        )
+        base_volume_norm, cal_volume_norm = _apply_normalization(
+            base_df[volume_cols], calibrated_df[volume_cols], mode
+        )
+        base_price_norm = base_price_norm.values
+        cal_price_norm = cal_price_norm.values
+        base_volume_norm = base_volume_norm.values
+        cal_volume_norm = cal_volume_norm.values
 
-    price_diff = (cal_price_norm.values - base_price_norm.values) ** 2
-    volume_diff = (cal_volume_norm.values - base_volume_norm.values) ** 2
+    price_diff = (cal_price_norm - base_price_norm) ** 2
+    volume_diff = (cal_volume_norm - base_volume_norm) ** 2
 
     price_mse = float(np.nanmean(price_diff))
     volume_mse = float(np.nanmean(volume_diff))
@@ -186,3 +171,27 @@ def summarize_metrics(metrics: Iterable[Dict[str, float]]) -> Dict[str, Dict[str
                 "variance": float(series.var(ddof=0)),
             }
     return stats
+
+
+def _apply_normalization(
+    base: pd.DataFrame, calibrated: pd.DataFrame, mode: str
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    mode = mode.lower()
+    if mode == "none":
+        return base.copy(), calibrated.copy()
+    if mode == "col_wise":
+        means = base.mean(axis=0)
+        stds = base.std(axis=0, ddof=0).replace(0.0, np.nan).fillna(1.0)
+        base_norm = (base - means) / stds
+        cal_norm = (calibrated - means) / stds
+        return base_norm, cal_norm
+    if mode == "pv":
+        values = base.values.astype(float)
+        mean = float(values.mean())
+        std = float(values.std())
+        if std == 0.0:
+            std = 1.0
+        base_norm = (base - mean) / std
+        cal_norm = (calibrated - mean) / std
+        return base_norm, cal_norm
+    raise ValueError(f"Unknown normalization_mode: {mode}")

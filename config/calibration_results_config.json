@@ -6,8 +6,7 @@
   "mse": {
     "price_weight": 0.5,
     "volume_weight": 0.5,
-    "price_norm": "max",
-    "volume_norm": "max"
+    "normalization_mode": "col_wise"
   },
   "notes": "Use these paths with scripts/run_calibration_pipeline.py via --result-json and --result-csv."
 }
