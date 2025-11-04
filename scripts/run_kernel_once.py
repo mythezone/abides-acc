@@ -17,6 +17,7 @@ import argparse
 import json
 import os
 import shutil
+import time
 from typing import Optional
 
 from core.kernel import Kernel
@@ -68,12 +69,21 @@ def main():
             print(f"[run_kernel_once] Removed existing log directory {log_dir}")
 
     kernel = Kernel.from_config(args.config)
+    start = time.perf_counter()
     if args.sim_seconds is not None:
-        kernel.run(
+        result = kernel.run(
             max_steps=max(1, args.max_steps), max_sim_seconds=int(args.sim_seconds)
         )
     else:
-        kernel.run(max_steps=args.max_steps)
+        result = kernel.run(max_steps=args.max_steps)
+    elapsed = time.perf_counter() - start
+    processed = result.get("processed")
+    end_time = result.get("end_time")
+    steps = result.get("steps")
+    print(
+        f"[run_kernel_once] Finished in {elapsed:.2f}s | processed={processed} steps={steps} end_time={end_time} | "
+        f"kernel.total_processed={kernel.total_processed_messages}"
+    )
     kernel.shutdown()
 
 

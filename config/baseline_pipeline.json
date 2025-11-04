@@ -6,7 +6,7 @@
   },
   "kernel": {
     "name": "BaselinePipeline",
-    "log_dir": "log/baseline_pipeline",
+    "log_dir": "log/baseline_pipeline_1",
     "exchange_params": {
       "ohlc_freq": "3s",
       "lob_log_freq": "3s",

@@ -55,7 +55,7 @@ def run_replay(config_path: str, max_steps: int = 500_000) -> Tuple[Path, Path]:
         kernel.shutdown()
 
     symbol = str(cfg["symbols"][0])
-    lob_path = EXPERIMENT_DIR / symbol / "lob.csv"
+    lob_path = Path(cfg["calibration"]["output_dir"]).expanduser().resolve() / symbol / "lob.csv"
     if not lob_path.exists():
         raise FileNotFoundError(f"LOB file not found at expected location: {lob_path}")
 

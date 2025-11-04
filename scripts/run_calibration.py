@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -45,12 +46,20 @@ def main() -> int:
             print(f"[run_calibration] Removed log directory {log_dir}")
 
     kernel = Kernel.from_config(str(cfg_path))
+    start = time.perf_counter()
     if args.sim_seconds is not None:
         res = kernel.run(max_steps=max(1, args.max_steps), max_sim_seconds=int(args.sim_seconds))
     else:
         res = kernel.run(max_steps=args.max_steps)
+    elapsed = time.perf_counter() - start
     kernel.shutdown()
-    print("Calibration finished:", res)
+    processed = res.get("processed")
+    end_time = res.get("end_time")
+    steps = res.get("steps")
+    print(
+        f"[run_calibration] Finished in {elapsed:.2f}s | processed={processed} steps={steps} end_time={end_time} | "
+        f"kernel.total_processed={kernel.total_processed_messages}"
+    )
     return 0
 
 

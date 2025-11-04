@@ -22,6 +22,7 @@ class Kernel:
     def __init__(self, config: Dict = {}):
         self.config = config
         self.agents = {}
+        self.total_processed_messages: int = 0
 
     def initialize(self):
         self.name = self.config["name"]
@@ -290,6 +291,7 @@ class Kernel:
 
         # Flush batched logs
         self.logger.save_log_to_file()
+        self.total_processed_messages += processed
         return {"processed": processed, "last_time": last_time}
 
     def _compute_simulation_end_time(self) -> Optional[pd.Timestamp]:
@@ -483,6 +485,7 @@ class Kernel:
                 self.exchange.shutdown(wait=True)
             except Exception:
                 pass
+        self.total_processed_messages += processed
         return {"processed": processed, "steps": steps, "end_time": current_time}
 
     @classmethod
