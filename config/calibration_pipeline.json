@@ -28,7 +28,7 @@
   },
   "agents": [
     {
-      "num": 2,
+      "num": 20,
       "type": "zero_intelligence",
       "params": {
         "wakeup_ms_range": [50, 120],
@@ -36,7 +36,7 @@
       }
     },
     {
-      "num": 6,
+      "num": 20,
       "type": "background",
       "params": {
         "wakeup_ms_range": [30, 80],
@@ -44,7 +44,7 @@
       }
     },
     {
-      "num": 4,
+      "num": 40,
       "type": "base",
       "params": {}
     }
@@ -56,22 +56,22 @@
     "trigger_offset_ms": 10,
     "max_levels": 10,
     "agent_specs": [
-      {"name": "Large", "max_order_qty": 5000, "min_order_qty": 1000},
-      {"name": "Medium", "max_order_qty": 1500, "min_order_qty": 300},
-      {"name": "Small", "max_order_qty": 300, "min_order_qty": 1}
+      { "name": "Large", "max_order_qty": 5000, "min_order_qty": 1000 },
+      { "name": "Medium", "max_order_qty": 1500, "min_order_qty": 300 },
+      { "name": "Small", "max_order_qty": 300, "min_order_qty": 1 }
     ],
     "output_dir": "log/calibration_pipeline"
   },
   "symbols": [
-    {"symbol": "000001", "market_cap": 350000000000},
-    {"symbol": "000002", "market_cap": 210000000000},
-    {"symbol": "000004", "market_cap": 145000000000},
-    {"symbol": "000006", "market_cap": 120000000000},
-    {"symbol": "000008", "market_cap": 80000000000},
-    {"symbol": "000009", "market_cap": 95000000000},
-    {"symbol": "000010", "market_cap": 150000000000},
-    {"symbol": "000011", "market_cap": 60000000000},
-    {"symbol": "000012", "market_cap": 50000000000},
-    {"symbol": "000016", "market_cap": 400000000000}
+    { "symbol": "000001", "market_cap": 350000000000 },
+    { "symbol": "000002", "market_cap": 210000000000 },
+    { "symbol": "000004", "market_cap": 145000000000 },
+    { "symbol": "000006", "market_cap": 120000000000 },
+    { "symbol": "000008", "market_cap": 80000000000 },
+    { "symbol": "000009", "market_cap": 95000000000 },
+    { "symbol": "000010", "market_cap": 150000000000 },
+    { "symbol": "000011", "market_cap": 60000000000 },
+    { "symbol": "000012", "market_cap": 50000000000 },
+    { "symbol": "000016", "market_cap": 400000000000 }
   ]
 }
