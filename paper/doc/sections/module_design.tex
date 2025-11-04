@@ -54,6 +54,8 @@
         \item \verb|dispatch_message(message)|：将消息插入调度器。
       \end{itemize}
   \end{itemize}
+  \item[\textbf{Oracle Integration}] Oracle Agent 提供真实 LOB 查询接口，与校准模块共享\footnote{详见校准章节。}
+  \item[\textbf{Calibration Pipeline}] 引入 AgentGroup、差异算法和校准消息，详见校准章节。
 \end{description}
 
 \subsubsection{技术路线与实现}
@@ -727,14 +729,22 @@ API 层可使用 FastAPI 或 gRPC 实现，高并发场景下可部署在异步 
   \item \verb|query_metric(name, time_range)|：查询历史指标。
 \end{itemize}
 
+\subsection{自校准模块\label{subsec:calibration}}
+
+自校准模块监测仿真过程中的市场统计特征，并自动调整背景代理行为以逼近预定指标。
+
 \subsection{模块间关系与整体协作}
 
 各模块之间通过消息和接口协作：仿真内核调度代理和市场环境执行事件；市场环境将成交信息反馈给代理；数据管理和监控模块为代理及自校准模块提供数据支持；自校准模块动态调整背景代理行为；配置与实验管理负责初始化并控制仿真；接口模块则是用户与系统的桥梁。通过上述明确的分工和接口设计，系统结构清晰、易于维护和扩展。
 模块间的关系如图~\ref{fig:uml_interaction}所示。
 
-\begin{figure}[htbp]
+\begin{figure}[h!]
   \centering
   \resizebox{0.9\linewidth}{!}{\input{figures/uml/uml_interaction.tex}}
   \caption{模块间关系 UML 类图}
   \label{fig:uml_interaction}
 \end{figure}
+
+
+\input{sections/calibration.tex}
+

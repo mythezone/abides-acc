@@ -1,0 +1,61 @@
+\subsection{校准与真实对齐模块}
+
+本章介绍仿真系统的自校准流程，用于在历史订单回放或在线模拟时，让仿真结果贴近真实市场数据。整体过程中引入 Oracle、订单补齐代理组、L2 档位差异计算等组件。
+
+\subsubsection{功能概览}
+\begin{itemize}
+    \item 利用 \textbf{Oracle Agent} 提供历史真实 LOB 快照和指标（如真实中间价）。
+    \item 在每个 LOB 记录周期（默认 3 秒）前，通过 \textbf{AgentGroup} 对仿真订单簿进行补齐，使之与真实 LOB 接近。
+    \item 支持差异量的计算、批量下单补齐（包含最大订单尺寸优先的贪心策略），最终输出校准后的仿真 LOB。
+    \item 支持记录仿真与真实 LOB 的差异（如均方误差 MSE），为后续模型调参提供量化指标。
+\end{itemize}
+
+\subsubsection{系统消息流}
+\begin{enumerate}
+    \item Kernel 驱动代理及交易所按照时间轴推进；当到达下一个“整数秒”之前，\textbf{OrderBook Logger} 会向消息队列插入即将记录 LOB 的时间戳（例如 $t=3s$）。
+    \item 在日志时间到来之前 \textbf{0.01s}，Kernel 插入校准唤醒消息：\verb|CALIBRATE_TRIGGER|。该消息由 Exchange 转发给 AgentGroup。
+    \item AgentGroup 请求 Oracle 获取真实 LOB 快照（精确到 10 档）。随后对仿真 LOB 与真实 LOB 进行差异计算，生成一系列“校准订单”（\verb|CALIBRATE_ORDER| 消息）。Exchange 接收到该消息后立即执行补齐撮合，无额外时延。
+    \item 当 LOB 日志时间到达，OrderBook Logger 记录此时的仿真 LOB（已补齐），并与真实 LOB 计算指标（如 MSE、每档差异）。
+    \item 仿真继续运行，进入下一个周期。
+\end{enumerate}
+
+\subsubsection{组件设计}
+\paragraph{Oracle Agent}
+Oracle 用于读取真实 LOB 数据（可来自历史文件或实时数据源），暴露查询接口：\verb|get_lob(symbol, time)|，返回 10 档买卖价量以及相关指标。仿真运行时，Oracle 会被 AgentGroup 轮询，也可响应其他代理的历史查询。\footnote{Oracle 实现详见先前章节；此处强调其与校准流程的协同。}
+
+\paragraph{AgentGroup}
+\begin{itemize}
+    \item \textbf{结构}：组内包含多个校准 Agent，每个 Agent 定义最小/最大下单数量、下单侧（买/卖均可）以及延迟策略。按“最小订单量”从大到小排列，用于贪心补齐。
+    \item \textbf{触发}：接收到 \verb|CALIBRATE_TRIGGER| 消息后，依次执行以下步骤：
+        \begin{enumerate}
+            \item 请求 Oracle 获取真实 LOB。
+            \item 从 Exchange 获取当前仿真 LOB（或通过共享 OrderBook 快照）。
+            \item 调用 LOB 差异算法，生成每个价位的差量列表（以价位为 key，买价取负值、卖价取正值；量为整数）。
+            \item 使用贪心策略，各 Agent 轮流补齐差量：先由能够下最大订单的 Agent 处理，每档下最大数量；若剩余差量小于其最小订单量，则跳过；若处理后仍有剩余，则由下一 Agent 继续，直至补齐。
+            \item 将最终订单列表封装为 \verb|CALIBRATE_ORDER| 消息发送给 Exchange。
+        \end{enumerate}
+    \item \textbf{可扩展性}：AgentGroup 抽象提供 \verb|register_agent(agent)|、\verb|calibrate(lob_diff)| 等接口，允许不同策略（如风控限制）扩展。
+\end{itemize}
+
+\paragraph{Exchange 支持}
+\begin{itemize}
+    \item Exchange 需新增消息类型 \verb|CALIBRATE_ORDER|，处理逻辑类似 \verb|SUBMIT_ORDER|，但无延迟、优先执行。
+    \item 在校准周期内禁止普通代理操作被阻塞；校准订单与 Agent 下单共享撮合流水。
+    \item Exchange 在 LOB 记录前保证所有校准订单已经被撮合，才能输出最终 LOB。
+\end{itemize}
+
+\paragraph{LOB 差异计算}
+\begin{itemize}
+    \item 真实 LOB 与仿真 LOB 均截取 10 档，转化为统一的价-量字典：买单价格转负号，卖单价格保持正号；量为整数。
+    \item 对齐所有价位，差量 = 仿真量 - 真实量；若差量为正，表示仿真多余，需要校准 Agent 下反向单削减；若差量为负，表示仿真缺少，需要校准 Agent 下同向单补齐。
+    \item 额外处理：若真实第 10 档卖价低于仿真第 10 档买价（或反之），意味着簿中有跨价位空缺，需要在差异计算中额外补齐这些价位。
+    \item 提供 \verb|compute_lob_diff(real_lob, sim_lob)| 函数，返回差量字典与 MSE 指标。
+\end{itemize}
+
+\subsubsection{设计要点总结}
+\begin{itemize}
+    \item \textbf{时间驱动}：校准与 LOB 记录均由内核消息调度，确保顺序一致。
+    \item \textbf{无缝扩展}：新消息类型、AgentGroup、Oracle 均通过 handler/注册机制接入，无需改动核心 Exchange 逻辑。
+    \item \textbf{安全防护}：校准 Agent 可配置风控、避免在极端情况下下发超额订单。
+    \item \textbf{对齐指标}：通过 MSE 等指标量化校准效果，为自动参数调节与模型评估提供依据。
+\end{itemize}
