@@ -1,0 +1,67 @@
+{
+  "simulation": {
+    "start_date": "2005-05-09 09:20:00",
+    "end_date": "2005-05-09 10:30:00",
+    "exchange_type": "SZSE"
+  },
+  "kernel": {
+    "name": "BaselinePipeline",
+    "log_dir": "log/baseline_pipeline",
+    "exchange_params": {
+      "ohlc_freq": "3s",
+      "lob_log_freq": "3s",
+      "lob_log_level": 10,
+      "workers": 0,
+      "fee_rate": 0.0003,
+      "t_plus_one": true,
+      "price_limit_pct": 0.1,
+      "initial_positions": {},
+      "opening_call": true
+    },
+    "agent_positions": {
+      "mode": "random",
+      "min_shares": 100,
+      "max_shares": 2000,
+      "min_cash": 100000,
+      "max_cash": 1000000
+    }
+  },
+  "agents": [
+    {
+      "num": 2,
+      "type": "zero_intelligence",
+      "params": {
+        "wakeup_ms_range": [50, 120],
+        "auction_wakeup_ms_range": [400, 800]
+      }
+    },
+    {
+      "num": 6,
+      "type": "background",
+      "params": {
+        "wakeup_ms_range": [30, 80],
+        "auction_wakeup_ms_range": [300, 600]
+      }
+    },
+    {
+      "num": 4,
+      "type": "base",
+      "params": {}
+    }
+  ],
+  "calibration": {
+    "enabled": false
+  },
+  "symbols": [
+    { "symbol": "000001", "market_cap": 350000000000 },
+    { "symbol": "000002", "market_cap": 210000000000 },
+    { "symbol": "000004", "market_cap": 145000000000 },
+    { "symbol": "000006", "market_cap": 120000000000 },
+    { "symbol": "000008", "market_cap": 80000000000 },
+    { "symbol": "000009", "market_cap": 95000000000 },
+    { "symbol": "000010", "market_cap": 150000000000 },
+    { "symbol": "000011", "market_cap": 60000000000 },
+    { "symbol": "000012", "market_cap": 50000000000 },
+    { "symbol": "000016", "market_cap": 400000000000 }
+  ]
+}

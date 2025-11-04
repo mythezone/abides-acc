@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Sequence, Tuple
+from typing import Dict, Iterable, List, Sequence, Tuple, Optional
 
 import pandas as pd
 
@@ -97,15 +97,23 @@ class AgentGroup:
         agents: Sequence[CalibratingAgentSpec],
         *,
         max_levels: int = 10,
+        symbols: Optional[Sequence[str]] = None,
     ) -> None:
         self.exchange = exchange
         self.oracle = oracle
         self.agents = sorted(agents, key=lambda a: a.max_order_qty, reverse=True)
         self.max_levels = max_levels
+        self._symbol_filter = set(str(s) for s in symbols) if symbols else None
 
     def calibrate(self, current_time: pd.Timestamp) -> List[Dict]:
         orders: List[Dict] = []
-        for symbol in list(self.exchange.lob_dict.keys()):
+        if self._symbol_filter is not None:
+            symbols = [sym for sym in self._symbol_filter if sym in self.exchange.lob_dict]
+        else:
+            symbols = list(self.exchange.lob_dict.keys())
+        for symbol in symbols:
+            if hasattr(self.oracle, "has_lob") and not self.oracle.has_lob(symbol):
+                continue
             real_lob = self.oracle.get_lob(symbol, current_time)
             if real_lob is None:
                 continue

@@ -3,7 +3,7 @@ import pandas as pd
 
 import time
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Optional
 from rich.progress import Progress
 from types import SimpleNamespace
 
@@ -52,28 +52,62 @@ class Kernel:
             exchange_params=ex_params,
             out_queue=self.message_queue,
         )
+        self.simulation_end_time = None
+        self._end_event_scheduled = False
         # Oracle agent in calibration mode
         calib = self.config.get("calibration", {})
         self.oracle = None
+        self.calibration_context = None
         if calib.get("enabled", False):
             try:
                 from core.agent.oracle import OracleAgent
+                from core.calibration import CalibrationContext
 
-                src_dir = calib.get("source_log_dir")
+                src_dir = (
+                    calib.get("source_log_dir")
+                    or calib.get("lob_data_dir")
+                    or calib.get("data_dir")
+                )
+                if not src_dir:
+                    raise ValueError("Calibration source_log_dir/lob_data_dir is required.")
                 self.oracle = OracleAgent(
                     id="Oracle",
                     message_queue=self.message_queue,
                     logger=self.logger,
                     source_log_dir=src_dir,
+                    lob_levels=int(calib.get("lob_levels", 10)),
                 )
+                specs = calib.get("agent_specs") or []
+                symbol_filter = calib.get("symbols")
+                if isinstance(symbol_filter, list):
+                    symbol_filter = [str(s) for s in symbol_filter]
+                trigger_offset = (
+                    calib.get("trigger_offset")
+                    or calib.get("trigger_offset_ms")
+                    or "10ms"
+                )
+                max_levels = int(calib.get("max_levels", 10))
+                self.calibration_context = CalibrationContext(
+                    exchange=self.exchange,
+                    oracle=self.oracle,
+                    agent_specs=specs,
+                    symbols=symbol_filter,
+                    max_levels=max_levels,
+                    trigger_offset=trigger_offset,
+                )
+                if hasattr(self.exchange, "enable_calibration"):
+                    self.exchange.enable_calibration(self.calibration_context)
             except Exception:
                 self.oracle = None
+                self.calibration_context = None
+        self.enforce_step_limit = bool(self.config.get("enforce_step_limit", False))
+        self.simulation_end_time = self._compute_simulation_end_time()
 
     def init_agent(
         self,
         agent_config: List,
-        agent_panel: AgentPanel | None = None,
-        progress: Progress | None = None,
+        agent_panel: Optional[AgentPanel] = None,
+        progress: Optional[Progress] = None,
         task=None,
     ):
         agent_log_freq = self.config.get("agent_log_freq", "tick")
@@ -185,6 +219,7 @@ class Kernel:
         processed = 0
         steps = 0
         last_time = None
+        self._schedule_simulation_end()
 
         # Drain cross-process queue to local inbox (non-blocking)
         while True:
@@ -241,6 +276,11 @@ class Kernel:
                 if self.oracle and rid == "Oracle":
                     self.logger.kernel_message_log(msg, stage="PROC")
                     self.oracle.receive(msg)
+                elif rid == "Kernel" and msg.message_type == MessageType.SIMULATION_END:
+                    self.logger.kernel_message_log(msg, stage="PROC")
+                    last_time = msg.recive_time
+                    self._handle_simulation_end(msg)
+                    break
                 else:
                     # Unknown recipient; ignore or log
                     pass
@@ -252,9 +292,86 @@ class Kernel:
         self.logger.save_log_to_file()
         return {"processed": processed, "last_time": last_time}
 
-    def run(self, max_steps: int = 10000, max_sim_seconds: int | None = None):
+    def _compute_simulation_end_time(self) -> Optional[pd.Timestamp]:
+        end_spec = self.config.get("end_date")
+        if not end_spec:
+            return None
+        try:
+            has_time = isinstance(end_spec, str) and (":" in end_spec)
+            end_ts = pd.to_datetime(end_spec)
+        except Exception:
+            return None
+        start_spec = self.config.get("start_date") or self.clock.now()
+        try:
+            start_ts = pd.to_datetime(start_spec)
+        except Exception:
+            start_ts = self.clock.now()
+        if not has_time:
+            # Default to the last trading session end on the final trading day
+            target_date = end_ts.date()
+            try:
+                if self.clock.trading_days:
+                    target_date = self.clock.trading_days[-1]
+            except Exception:
+                pass
+            sessions = getattr(self.clock, "sessions", [])
+            if sessions:
+                last_end = sessions[-1][1]
+                end_ts = pd.Timestamp.combine(target_date, last_end)
+        if end_ts <= start_ts:
+            return None
+        return end_ts
+
+    def _schedule_simulation_end(self):
+        if self.simulation_end_time is None or self._end_event_scheduled:
+            return
+        stop_msg = new_message(
+            message_type=MessageType.SIMULATION_END,
+            sender_id="Kernel",
+            recipient_id="Kernel",
+            send_time=self.simulation_end_time,
+            recive_time=self.simulation_end_time,
+            content={},
+        )
+        self.message_queue.put(stop_msg)
+        self._end_event_scheduled = True
+
+    def _handle_simulation_end(self, msg: Message):
+        end_time = msg.recive_time
+        # Notify agents
+        for agent in self.agents.values():
+            try:
+                agent.receive(
+                    new_message(
+                        message_type=MessageType.SIMULATION_END,
+                        sender_id="Kernel",
+                        recipient_id=agent.id,
+                        send_time=end_time,
+                        recive_time=end_time,
+                        content={},
+                    )
+                )
+            except Exception:
+                pass
+        # Notify exchange (best-effort)
+        try:
+            end_msg = new_message(
+                message_type=MessageType.SIMULATION_END,
+                sender_id="Kernel",
+                recipient_id="Exchange",
+                send_time=end_time,
+                recive_time=end_time,
+                content={},
+            )
+            self.exchange.handle_message(end_msg)
+        except Exception:
+            pass
+
+    def run(self, max_steps: int = 10000, max_sim_seconds: Optional[int] = None):
         # Seed first wakeups for all agents
         start_time = self.clock.now()
+        self._end_event_scheduled = False
+        self._schedule_simulation_end()
         for agent_id in self.agents.keys():
             wake = new_message(
                 message_type=MessageType.WAKEUP,
@@ -280,9 +397,12 @@ class Kernel:
             stop_at = start_time + pd.Timedelta(seconds=int(max_sim_seconds))
 
         while True:
-            # If no time horizon, enforce step cap
-            if stop_at is None and steps >= max_steps:
-                break
+            # If no time horizon, enforce step cap unless disabled by configuration
+            if stop_at is None and max_steps is not None and steps >= max_steps:
+                if self.simulation_end_time is not None and not self.enforce_step_limit:
+                    pass
+                else:
+                    break
             # Drain inter-process queue into local box (non-blocking)
             while True:
                 try:
@@ -342,6 +462,11 @@ class Kernel:
                     # Let oracle handle
                     self.logger.kernel_message_log(msg, stage="PROC")
                     self.oracle.receive(msg)
+                elif rid == "Kernel" and msg.message_type == MessageType.SIMULATION_END:
+                    self.logger.kernel_message_log(msg, stage="PROC")
+                    current_time = msg.recive_time
+                    self._handle_simulation_end(msg)
+                    break
                 else:
                     # Unknown recipient; drop or log
                     pass
@@ -437,14 +562,19 @@ class Kernel:
                     resolved[sym] = path
             ep["initial_snapshots"] = resolved
 
+        symbols_raw = getattr(cm, "symbols", [])
+        log_dir_override = getattr(kcfg, "log_dir", None)
         cfg = {
             "name": kname,
             "start_date": _normalize_start(start_date),
             "trading_days": days,
             "exchange_type": exchange_type,
-            "log_dir": f"log/{kname}",
+            "log_dir": str(log_dir_override) if log_dir_override else f"log/{kname}",
             "exchange_params": ep,
             "calibration": {},
+            "symbols": symbols_raw,
+            "end_date": str(end_date) if end_date is not None else None,
+            "enforce_step_limit": bool(getattr(kcfg, "enforce_step_limit", False)),
         }
         # Optional calibration settings embedded in config
         try:
@@ -465,9 +595,17 @@ class Kernel:
         try:
             symbols = getattr(cm, "symbols", [])
             for sym in symbols:
-                if sym not in kernel.exchange.lob_dict:
-
-                    kernel.exchange.lob_dict[sym] = LimitOrderBook(sym)
+                if isinstance(sym, dict):
+                    sym_name = sym.get("symbol")
+                else:
+                    sym_name = sym
+                if not sym_name:
+                    continue
+                sym_name = str(sym_name)
+                try:
+                    kernel.exchange._ensure_lob(sym_name)
+                except Exception:
+                    pass
         except Exception:
             pass
         # Build agents from config

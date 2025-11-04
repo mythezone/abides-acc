@@ -9,7 +9,15 @@ class ZeroIntelligenceAgent(BaseAgent):
 
     def __init__(self, id, *args, message_queue: MessageQueue = None, initial_symbols: List[str] = None, **kwargs):
         super().__init__(id, *args, message_queue=message_queue, **kwargs)
-        self.subscribed_symbols: List[str] = (initial_symbols or [])[:]
+        self.subscribed_symbols: List[str] = []
+        if initial_symbols:
+            for sym in initial_symbols:
+                if isinstance(sym, str):
+                    self.subscribed_symbols.append(sym)
+                elif isinstance(sym, dict):
+                    val = sym.get("symbol")
+                    if val:
+                        self.subscribed_symbols.append(str(val))
 
     def action(self):
         # Detect SZSE pre-open auction window (09:15-09:25)
@@ -116,14 +124,32 @@ class ZeroIntelligenceAgent(BaseAgent):
         # First apply base processing (portfolio updates)
         super().process_inbox()
         # Then pick up symbol list if provided
-        new_symbols = []
+        new_symbols: List[str] = []
         keep = []
+
+        def _normalize_symbol(value):
+            if isinstance(value, str):
+                return value
+            if isinstance(value, dict):
+                sym = value.get("symbol")
+                if sym is not None:
+                    return str(sym)
+            return None
+
         for m in self.inbox:
             if m.message_type == MessageType.MKT_DATA and isinstance(m.content, dict):
                 if "symbols" in m.content:
-                    new_symbols.extend(m.content.get("symbols", []))
-            elif m.message_type == MessageType.ORACLE_RESPONSE_LOB and isinstance(m.content, dict):
-                data = m.content.get("lob")
+                    for item in m.content.get("symbols", []):
+                        sym = _normalize_symbol(item)
+                        if sym:
+                            new_symbols.append(sym)
+            elif (
+                m.message_type == MessageType.ORACLE_RESPONSE_LOB
+                and isinstance(m.content, dict)
+            ):
+                data = m.content.get("lob") or {}
+                if not isinstance(data, dict) or not data:
+                    continue
                 symbol = m.content.get("symbol")
                 # build simple heuristic orders near oracle best levels
                 reqs = []
@@ -218,6 +244,9 @@ class ZeroIntelligenceAgent(BaseAgent):
                 keep.append(m)
         self.inbox = keep
         if new_symbols:
-            # Deduplicate
-            uniq = list(dict.fromkeys(new_symbols))
+            # Deduplicate and ensure all entries are strings
+            uniq = []
+            for sym in new_symbols:
+                if sym not in uniq:
+                    uniq.append(sym)
             self.subscribed_symbols = uniq

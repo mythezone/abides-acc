@@ -2,18 +2,47 @@ import numpy as np
 import pandas as pd
 from contextlib import contextmanager
 import warnings
-from scipy.spatial.distance import pdist, squareform
-from core.logger import Logger
 import heapq
 import random
 import math
 
-from typing import List, Dict, TYPE_CHECKING, Iterable, Tuple
+try:
+    from scipy.spatial.distance import pdist, squareform
+except ImportError:  # Provide lightweight fallbacks if SciPy is unavailable
+    def pdist(values, metric="euclidean"):
+        array = np.asarray(values, dtype=float)
+        if array.ndim != 2:
+            array = array.reshape(-1, 1)
+        n = array.shape[0]
+        dists = []
+        for i in range(n - 1):
+            diff = array[i + 1 :] - array[i]
+            if metric == "euclidean":
+                dist = np.sqrt(np.sum(diff ** 2, axis=1))
+            else:
+                raise ValueError(f"Unsupported metric '{metric}' without SciPy.")
+            dists.extend(dist.tolist())
+        return np.asarray(dists, dtype=float)
+
+    def squareform(dists):
+        dists = np.asarray(dists, dtype=float)
+        if dists.ndim != 1:
+            raise ValueError("squareform fallback expects a 1-D condensed distance array.")
+        length = dists.size
+        # Solve n(n-1)/2 = length for n
+        n = int((1 + math.sqrt(1 + 8 * length)) / 2)
+        mat = np.zeros((n, n), dtype=float)
+        idx = 0
+        for i in range(n - 1):
+            for j in range(i + 1, n):
+                mat[i, j] = mat[j, i] = dists[idx]
+                idx += 1
+        return mat
+
+from typing import List, Dict, TYPE_CHECKING, Iterable, Tuple, Optional
 
 # if TYPE_CHECKING:
 #     from order.base import Order
-
-logger = Logger()
 
 # General purpose utility functions for the simulator, attached to no particular class.
 # Available to any agent or other module/utility.  Should not require references to
@@ -209,7 +238,7 @@ _CITY_DISTRIBUTION: List[Tuple[float, float, float]] = [
 ]
 
 
-def random_china_location(seed: int | None = None) -> Tuple[float, float]:
+def random_china_location(seed: Optional[int] = None) -> Tuple[float, float]:
     """Sample a latitude/longitude pair within China, weighted by major population centers.
 
     The distribution is approximated by selecting from a list of major cities using their
@@ -228,8 +257,8 @@ def random_china_location(seed: int | None = None) -> Tuple[float, float]:
 
 
 def network_latency_ms(
-    location_a: Iterable[float] | None,
-    location_b: Iterable[float] | None,
+    location_a: Optional[Iterable[float]],
+    location_b: Optional[Iterable[float]],
     *,
     speed_km_per_ms: float = 200.0,
     jitter_std: float = 0.15,

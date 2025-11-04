@@ -4,7 +4,7 @@ import csv
 from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Deque, Dict, Iterable, List, Optional, Tuple
+from typing import Deque, Dict, Iterable, List, Optional, Tuple, Union
 
 import pandas as pd
 
@@ -221,7 +221,7 @@ class LimitOrderBook:
 
     def initialize_from_csv(
         self,
-        path: str | Path,
+        path: Union[str, Path],
         *,
         agent_id: str = "InitAgent",
         timestamp: str = "1970-01-01T00:00:00",

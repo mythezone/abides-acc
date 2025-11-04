@@ -1,0 +1,13 @@
+{
+  "output": {
+    "result_json": "results/calibration/metrics_summary.json",
+    "result_csv": "results/calibration/metrics_detail.csv"
+  },
+  "mse": {
+    "price_weight": 0.5,
+    "volume_weight": 0.5,
+    "price_norm": "max",
+    "volume_norm": "max"
+  },
+  "notes": "Use these paths with scripts/run_calibration_pipeline.py via --result-json and --result-csv."
+}

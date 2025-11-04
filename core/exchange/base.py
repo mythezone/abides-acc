@@ -100,6 +100,8 @@ class Exchange:
         self._trade_log_writer = None
         self._trade_log_base_time: Optional[pd.Timestamp] = None
         self._trade_log_counter: int = 0
+        self.calibration_context = None
+        self._calibration_offset = pd.Timedelta(milliseconds=10)
         if self.trade_log_enabled:
             if not trade_log_path:
                 raise ValueError("trade_log_path must be provided when trade logging is enabled.")
@@ -171,6 +173,8 @@ class Exchange:
         if self.out_queue is None or self.lob_log_delta is None:
             return
         self._next_lob_log_time = when
+        if self.calibration_context is not None:
+            self._schedule_calibration_trigger(when)
         msg = new_message(
             message_type=MessageType.LOG_TICK,
             sender_id="Exchange",
@@ -185,6 +189,40 @@ class Exchange:
             except Exception:
                 pass
         self.out_queue.put(msg)
+
+    def _schedule_calibration_trigger(self, log_time: pd.Timestamp) -> None:
+        if self.out_queue is None or self.calibration_context is None:
+            return
+        cal_time = log_time - self._calibration_offset
+        if cal_time >= log_time:
+            cal_time = log_time
+        msg = new_message(
+            message_type=MessageType.CALIBRATION_TRIGGER,
+            sender_id="Exchange",
+            recipient_id="Exchange",
+            send_time=cal_time,
+            recive_time=cal_time,
+            content={"log_time": log_time},
+        )
+        if self.logger is not None:
+            try:
+                self.logger.kernel_message_log(msg, stage="SEND")
+            except Exception:
+                pass
+        self.out_queue.put(msg)
+
+    def enable_calibration(self, context) -> None:
+        self.calibration_context = context
+        if context is None:
+            return
+        try:
+            offset = getattr(context, "trigger_offset", None)
+            if offset is not None:
+                if not isinstance(offset, pd.Timedelta):
+                    offset = pd.Timedelta(offset)
+                self._calibration_offset = offset
+        except Exception:
+            self._calibration_offset = pd.Timedelta(milliseconds=10)
 
     def _schedule_subscription_tick(
         self, agent_id: str, symbol: str, when: pd.Timestamp
@@ -231,6 +269,9 @@ class Exchange:
         self._ensure_lob_scheduler(now)
         if self.logger is not None:
             self.logger.kernel_message_log(message, stage="PROC")
+        if message.message_type == MessageType.CALIBRATION_TRIGGER:
+            self._handle_calibration_trigger(now, message)
+            return []
         return self.handler_manager.handle(self, message, now)
 
 
@@ -649,6 +690,39 @@ class Exchange:
                 )
             self.ohlc_by_symbol[sym].update(now, price, volume=float(order.quantity))
             self._last_price[sym] = float(price)
+
+    def _handle_calibration_trigger(self, now: pd.Timestamp, message: Message) -> None:
+        if self.calibration_context is None:
+            return
+        try:
+            orders = self.calibration_context.calibrate(now)
+        except Exception:
+            orders = []
+        if not orders:
+            return
+        for req in orders:
+            try:
+                self._process_calibration_request(req, now)
+            except Exception:
+                continue
+
+    def _process_calibration_request(self, req: Dict, now: pd.Timestamp) -> None:
+        symbol = req.get("symbol")
+        if not symbol:
+            return
+        self._ensure_lob(symbol)
+        otype = req.get("type", "limit_order")
+        if otype == "limit_order":
+            order = LimitOrder.from_dict(req)
+        elif otype == "market_order":
+            order = MarketOrder.from_dict(req)
+        else:
+            order = Order.from_dict(req)
+        setattr(order, "_symbol", symbol)
+        setattr(order, "_exempt_t1", True)
+        if not getattr(order, "agent_id", None):
+            order.agent_id = "CalibrationAgent"
+        self._process_order(now, order)
     def _log_trades(self, trades: List[dict], now: pd.Timestamp) -> None:
         if not self.trade_log_enabled or self._trade_log_writer is None:
             return

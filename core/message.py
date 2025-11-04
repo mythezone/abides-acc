@@ -61,6 +61,10 @@ class MessageType(Enum):
     ORACLE_RESPONSE_LOB = 52
     ORACLE_RESPONSE_OHLC = 53
 
+    # Calibration related
+    CALIBRATION_TRIGGER = 60
+    CALIBRATION_ORDER = 61
+
 
 @total_ordering
 @dataclass

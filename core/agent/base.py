@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 
-from typing import List, TYPE_CHECKING, Optional, Dict, Tuple
+from typing import List, TYPE_CHECKING, Optional, Dict, Tuple, Union
 from core.message import Message, MessageType, MessageQueue, new_message
 from core.logger import Logger
 from core.portfolio import Portfolio
@@ -18,9 +18,9 @@ class BaseAgent:
         self,
         id,
         *args,
-        logger: Optional[Logger] | None = None,
-        location: List[float] | Tuple[float, float] | None = None,
-        message_queue: MessageQueue | None = None,
+        logger: Optional[Logger] = None,
+        location: Optional[Union[List[float], Tuple[float, float]]] = None,
+        message_queue: Optional[MessageQueue] = None,
         **kwargs,
     ):
         self.id = id
@@ -59,7 +59,7 @@ class BaseAgent:
             "exchange_location", None
         )
         self._peer_locations: Dict[str, Tuple[float, float]] = {}
-        self._latest_symbol_response: Dict[str, object] | None = None
+        self._latest_symbol_response: Optional[Dict[str, object]] = None
         # Calibration flags
         self.calibration_mode: bool = bool(kwargs.pop("calibration_mode", False))
         self.oracle_id: Optional[str] = kwargs.pop("oracle_id", None)
