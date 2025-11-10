@@ -1,0 +1,61 @@
+
+
+\documentclass[tikz,svgnames,border={10 10},convert={density=300, outext=.png}]{standalone}
+
+% 若需要中文，请用 xelatex 编译并取消下面两行注释：
+\usepackage{xeCJK}
+% \setCJKmainfont{Noto Sans CJK SC}
+
+\usetikzlibrary{positioning,arrows,fit}
+
+\begin{document}
+\begin{tikzpicture}[
+    box/.style={rectangle,draw,fill=DarkGray!20,rounded corners,
+                node distance=1cm,text width=18em,text centered,
+                minimum height=2.4em,thick},
+    arrow/.style={draw,-latex',thick},
+  ]
+
+  % === 主体流程节点（与参考示例一致风格，不加外框） ===
+  \node[box,fill=PeachPuff!60,text width=22em] (input)
+    {接收监控指标输入：spread、volume、volatility 等};
+
+  \node[box,below=0.6 of input] (calc)
+    {计算与更新当前指标（update\_metrics / 采样统计）};
+
+  \node[box,below=0.5 of calc] (compare)
+    {与目标指标对比（target\_metrics / 误差计算）};
+
+  \node[box,below=0.5 of compare] (adjust)
+    {计算参数调整量（run\_calibration\_step / 优化策略）};
+
+  \node[box,below=0.5 of adjust] (dispatch)
+    {向 BackgroundAgent 下发参数更新命令};
+
+  \node[box,below=0.5 of dispatch] (crit)
+    {校准收敛 / 达标？};
+
+  % 底部输出
+  \node[box,below=1.8 of crit,fill=LightSteelBlue!60,text width=24em] (output)
+    {输出：参数更新命令、校准日志、对比报告};
+
+  % === 箭头（直连 + Yes/No 回路） ===
+  \path[arrow] (input) -- (calc);
+  \path[arrow] (calc) -- (compare);
+  \path[arrow] (compare) -- (adjust);
+  \path[arrow] (adjust) -- (dispatch);
+  \path[arrow] (dispatch) -- (crit);
+
+  % Yes 分支：直达输出
+  \path[arrow] (crit) -- (output)
+    node[midway,left=0.1,draw,outer sep=0pt,fill=white] {Yes};
+
+  % No 分支：先竖直向下，再水平右移（No 在水平段下方），最后折返到“计算与更新指标”节点
+  \path[draw,thick] (crit.south) ++(0,-1em) coordinate(novert);
+  \draw[thick] (novert) -- ++(4,0) coordinate(nojump)
+        node[midway,below=2pt,draw,outer sep=0pt,fill=white] {No};
+  \draw[arrow] (nojump) |- (calc.east);
+
+\end{tikzpicture}
+
+\end{document}

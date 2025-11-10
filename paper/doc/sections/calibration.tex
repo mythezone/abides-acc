@@ -21,7 +21,7 @@
 
 \subsubsection{组件设计}
 \paragraph{Oracle Agent}
-Oracle 用于读取真实 LOB 数据（可来自历史文件或实时数据源），暴露查询接口：\verb|get_lob(symbol, time)|，返回 10 档买卖价量以及相关指标。仿真运行时，Oracle 会被 AgentGroup 轮询，也可响应其他代理的历史查询。\footnote{Oracle 实现详见先前章节；此处强调其与校准流程的协同。}
+Oracle 用于读取真实 LOB 数据（可来自历史文件或实时数据源），暴露查询接口：\verb|get_lob(symbol, time)|，返回 10 档买卖价量以及相关指标。仿真运行时，Oracle 会被 AgentGroup 轮询，也可响应其他代理的历史查询。
 
 \paragraph{AgentGroup}
 \begin{itemize}

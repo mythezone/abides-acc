@@ -1,0 +1,59 @@
+\documentclass[tikz,svgnames,border={10 10},convert={density=300, outext=.png}]{standalone}
+
+% 若需要中文，请用 xelatex 编译并取消下面两行注释：
+\usepackage{xeCJK}
+% \setCJKmainfont{Noto Sans CJK SC}
+
+\usetikzlibrary{positioning,arrows,fit}
+
+\begin{document}
+\begin{tikzpicture}[
+    box/.style={rectangle,draw,fill=DarkGray!20,rounded corners,
+                node distance=1cm,text width=18em,text centered,
+                minimum height=2.4em,thick},
+    arrow/.style={draw,-latex',thick},
+  ]
+
+  % === 主体流程节点（与参考示例一致风格，不加外框） ===
+  \node[box,fill=PeachPuff!60,text width=22em] (input)
+    {接收市场输入：MKT\_DATA / 查询响应、配置与策略参数、随机种子};
+
+  \node[box,below=0.6 of input] (init)
+    {代理初始化与注册（register\_agent / 载入策略 / 建立状态）};
+
+  \node[box,below=0.5 of init] (observe)
+    {消息接收与视图更新（on\_message / observe\_market）};
+
+  \node[box,below=0.5 of observe] (decide)
+    {策略决策（decide\_actions / 风控检查）};
+
+  \node[box,below=0.5 of decide] (act)
+    {下单/撤单与资产更新（place\_order / cancel\_order / update\_portfolio）};
+
+  \node[box,below=0.5 of act] (crit)
+    {本轮/交易窗口结束？};
+
+  % 底部输出
+  \node[box,below=1.8 of crit,fill=LightSteelBlue!60,text width=24em] (output)
+    {输出：SUBMIT\_ORDER / CANCEL\_ORDER、资产变更日志、性能快照};
+
+  % === 箭头（直连 + Yes/No 回路） ===
+  \path[arrow] (input) -- (init);
+  \path[arrow] (init) -- (observe);
+  \path[arrow] (observe) -- (decide);
+  \path[arrow] (decide) -- (act);
+  \path[arrow] (act) -- (crit);
+
+  % Yes 分支：直达输出
+  \path[arrow] (crit) -- (output)
+    node[midway,left=0.1,draw,outer sep=0pt,fill=white] {Yes};
+
+  % No 分支：先竖直向下，再水平右移（No 在水平段下方），最后折返到观察节点
+  \path[draw,thick] (crit.south) ++(0,-1em) coordinate(novert);
+  \draw[thick] (novert) -- ++(4,0) coordinate(nojump)
+        node[midway,below=2pt,draw,outer sep=0pt,fill=white] {No};
+  \draw[arrow] (nojump) |- (observe.east);
+
+\end{tikzpicture}
+
+\end{document}

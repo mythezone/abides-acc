@@ -1,0 +1,845 @@
+\section{模块功能和接口设计}
+
+本节采用模块契约（Module Contract）风格，对平台关键子系统进行规范化说明。每个模块以目的、主要职责、对外接口、输入/输出数据、关键数据结构、持久化/日志、以及异常/边界情况等要点呈现，便于评审与审查人员快速理解模块职责与交互契约，并作为实施与测试的依据。
+
+下面各节在保留现有实现细节的同时，统一加入“模块规范（概要）”小节，便于用于软件著作权所需的规范化技术说明。
+
+\subsection{核心仿真内核模块}
+
+\paragraph{模块规范（概要）}
+\begin{itemize}
+  \item 目的：提供事件驱动的仿真调度与时间管理，保证消息路由与仿真语义一致性。
+  \item 主要职责：事件排期与执行、全局虚拟时间（GVT）维护、消息总线管理、调度策略切换。
+  \item 输入：来自代理与外部接口的事件/消息（Message 对象、时间戳、优先级）。
+  \item 输出：执行结果、事件回执、撮合/成交消息、日志与监控指标。
+  \item 对外接口：$post\_event(event)$、$send\_message(target,message)$、$query\_time()$ 等公开调用约定。
+  \item 关键数据结构：时间优先级队列、线程池/任务队列、订阅表（subscribers）。
+  \item 错误与异常：事件处理失败需记录异常日志并向上层返回错误码；并行模式下需检测并处理时间不一致/回滚情形。
+  \item 持久化/日志：消息入队/出队与重要事件写入运行日志，支持按运行 ID 的归档。
+\end{itemize}
+
+核心仿真内核负责统一协调事件的调度、时间推进和消息传递，是系统的运行核心。本模块的设计目标是保证仿真精确性、可并行性和高吞吐量。
+内核UML如图~\ref{fig:uml_core}所示。
+
+\begin{figure}[H]
+  \centering
+  \resizebox{0.7\linewidth}{!}{\input{../doc/figures/uml/uml_core.tex}}
+  \caption{核心仿真层 UML 类图}
+  \label{fig:uml_core}
+\end{figure}
+
+\subsubsection{功能描述}
+\begin{itemize}
+  \item 维护全局虚拟时间（GVT），按照时间戳顺序调度事件。
+  \item 提供统一的消息队列和路由机制，负责代理、市场环境等组件之间的消息传递。
+  \item 支持多线程或异步事件调度，使不同资产或代理能并行执行。
+  \item 提供时间同步策略和回溯机制，确保并行执行不引入逻辑错误。
+\end{itemize}
+
+\subsubsection{主要类及属性方法}
+\begin{description}
+  \item[EventScheduler] \emph{事件调度器}：管理事件队列和全局虚拟时间。
+  \begin{itemize}
+    \item \textbf{属性：}优先队列 \verb|event_queue|，当前时间 \verb|current_time|。
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|schedule(event)|：按事件时间入队。
+        \item \verb|run_until(time)|：逐个弹出并执行事件直到给定时间。
+        \item \verb|advance_time(delta)|：推进全局时间并处理挂起事件。
+      \end{itemize}
+  \end{itemize}
+  \item[MessageBus] \emph{消息总线}：负责不同组件之间的消息发布与订阅。
+  \begin{itemize}
+    \item \textbf{属性：}订阅表 \verb|subscribers|。
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|subscribe(agent, topic)|：代理订阅某类消息。
+        \item \verb|publish(topic, message)|：向订阅者广播消息。
+        \item \verb|send(target, message)|：定向发送消息。
+      \end{itemize}
+  \end{itemize}
+  \item[SimulationKernel] \emph{仿真内核}：整合调度器和消息总线。
+  \begin{itemize}
+    \item \textbf{属性：}调度器实例、消息总线实例、线程池。
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|register_component(component)|：注册代理或市场组件。
+        \item \verb|start_simulation(start_time, end_time)|：启动仿真循环。
+        \item \verb|dispatch_message(message)|：将消息插入调度器。
+      \end{itemize}
+  \end{itemize}
+  \item[\textbf{Oracle Integration}] Oracle Agent 提供真实 LOB 查询接口，与校准模块共享。
+  \item[\textbf{Calibration Pipeline}] 引入 AgentGroup、差异算法和校准消息，详见校准章节。
+\end{description}
+
+\subsubsection{技术路线与实现}
+内核可采用 \textbf{事件驱动} + \textbf{多线程池} 的架构。核心数据结构为线程安全的时间优先队列，可使用 \verb|concurrent.futures|、\verb|asyncio| 或第三方并行框架加速事件调度。时间同步可采用“时间窗分区”方法：将仿真时间划分为多个窗口，各窗口在独立线程中处理，然后在窗口边界进行同步，从而减少线程间锁争用。
+
+\subsubsection{接口设计}
+内核向外提供以下接口：
+\begin{itemize}
+  \item \verb|post_event(event)|：向调度器插入自定义事件。
+  \item \verb|send_message(target, message)|：向特定组件发送消息。
+  \item \verb|broadcast(topic, message)|：广播事件。
+  \item \verb|query_time()|：查询当前仿真时间。
+\end{itemize}
+代理和市场组件需要实现统一的 \verb|on_message(message)| 回调，以接收和处理消息。
+
+\subsection{市场环境模块}
+
+\paragraph{模块规范（概要）}
+\begin{itemize}
+  \item 目的：对外提供订单簿语义、撮合规则与行情推送接口，保证市场规则的可配置与可替换性。
+  \item 主要职责：订单接收与入簿、撮合执行、行情聚合与订阅、集合竞价与连续竞价切换、跨资产同步。
+  \item 输入：SUBMIT\_ORDER/CANCEL\_ORDER/MODIFY\_ORDER 等消息、配置参数、初始化快照（可选 CSV）。
+  \item 输出：ORDER\_ACCEPTED/ORDER\_EXECUTED、MKT\_DATA 推送、LOB/OHLC 快照、撮合统计。
+  \item 对外接口：submit(order)、cancel(order\_id)、get\_order\_book(asset)、register\_listener(listener) 等。
+  \item 关键数据结构：价格层级堆 + 层内链表、order\_index 哈希表、拍卖候选集合。
+  \item 错误与异常：无效订单格式/越权操作需返回错误回执；并发撤单与撮合冲突需保证幂等性与日志记录。
+  \item 持久化/日志：LOB 与 OHLC 定期写盘，预开盘快照单独存储于 preopen.csv。
+\end{itemize}
+
+市场环境模块模拟现实交易场所，包括交易所、订单簿、撮合引擎及跨资产协调。
+
+\subsubsection{功能描述}
+\begin{itemize}
+  \item 支持多交易所和多资产的挂牌与撮合。
+  \item 实现限价单、市场单、撤单、隐藏单等多种订单类型。
+  \item 提供连续竞价和集合竞价机制，并在不同交易阶段切换。
+  \item 处理跨资产订单的同步和延迟，保证统一的时间轴。
+\end{itemize}
+
+\subsubsection{主要类及属性方法}
+\begin{description}
+  \item[ExchangeManager] \emph{交易所管理器}：管理多交易所实例。
+  \begin{itemize}
+    \item \textbf{属性：}交易所列表 \verb|exchanges|，交易日历 \verb|trading_calendar|。
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|add_exchange(exchange)|：注册交易所。
+        \item \verb|get_exchange(name)|：查询交易所实例。
+        \item \verb|is_trading(time)|：判断某时间是否在交易时段。
+      \end{itemize}
+  \end{itemize}
+  \item[Exchange] \emph{交易所}：封装单个交易所的订单簿和撮合逻辑。
+  \begin{itemize}
+    \item \textbf{属性：}资产列表、订单簿字典 \verb|order_books|、撮合引擎 \verb|matching_engine|，以及标的元数据字典 \verb|symbol_metadata|（记录市值等基础指标，并在未配置时按 \verb|market_cap_range| 自动生成）。
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|place_order(order)|：接收并入簿订单。
+        \item \verb|cancel_order(order_id)|：撤销指定订单。
+        \item \verb|match_orders()|：调用撮合引擎进行撮合。
+      \end{itemize}
+  \end{itemize}
+  \item[OrderBook] \emph{订单簿}：维护某资产的买卖挂单。
+  \begin{itemize}
+    \item \textbf{属性：}买单堆 \verb|bids|（最大堆）卖单堆 \verb|asks|（最小堆），堆节点对应单个价格；每个价格节点维护按时间顺序串联的订单链表；order\_index 哈希表用于撤单/改单定位。
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|add_order(order)|：撮合对手盘后，将剩余限价单插入相应价格节点的 FIFO 队列。
+        \item \verb|remove_order(order_id)|：借助 \verb|order_index| 常数时间定位并从链表中移除订单，必要时回收价格节点。
+        \item \verb|snapshot_top_n(n)|：返回前 \verb|n| 档的价格与聚合量，供日志与行情订阅使用。
+        \item \verb|traded_volume()|：返回自仿真开始以来的累计成交量，供量能型策略使用。
+        \item \verb|resting_volume(side, depth)|：统计指定方向前 \verb|depth| 档的挂单量，刻画流动性。
+        \item \verb|spread()|：计算当前盘口最优买卖价差，用于紧凑价差筛选。
+        \item \verb|book_imbalance(depth)|：给出买卖盘不平衡度（$[-1,1]$），用于压力/动量策略。
+      \end{itemize}
+  \end{itemize}
+  \item[MatchingEngine] \emph{撮合引擎}：实现具体撮合算法。
+  \begin{itemize}
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|match(order_book)|：处理订单簿内可能成交的挂单。
+        \item \verb|run_auction(order_book, type)|：进行集合竞价，\verb|type| 指明开盘、收盘或临时停盘拍卖。
+      \end{itemize}
+  \end{itemize}
+  \item[AuctionMechanism] \emph{拍卖机制}：抽象不同类型集合竞价。
+  \begin{itemize}
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|calculate_clearing_price(order_book)|：根据买卖盘确定单一成交价。
+        \item \verb|allocate_trades(order_book, clearing_price)|：按时间优先为订单分配成交量。
+      \end{itemize}
+  \end{itemize}
+  \item[CrossAssetCoordinator] \emph{跨资产协调器}：处理跨资产延迟与同步。
+  \begin{itemize}
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|synchronize(time)|：在给定时间点同步不同订单簿的状态。
+        \item \verb|coordinate_orders(orders)|：在跨资产策略中调整订单优先级。
+      \end{itemize}
+  \end{itemize}
+\end{description}
+
+\subsubsection{技术路线与实现}
+订单簿内部使用 \textbf{堆 + 链表} 结构：价格层级通过最大堆/最小堆在 O(log n) 时间内取得最优价，节点下的订单以双向链表保证价优时优遵循。撮合时直接消费堆顶链表的首单，成交量更新后若链表为空即可惰性回收该价格节点。集合竞价使用最大成交量算法确定单一价格。跨资产协调需要同步不同线程的撮合进度，采用时间戳屏障 (barrier) 或分布式锁避免竞态。
+
+\subsubsection{接口设计}
+市场环境暴露以下接口供外部调用：
+\begin{itemize}
+  \item \verb|submit(order)|：提交订单。
+  \item \verb|cancel(order_id)|：撤销订单。
+  \item \verb|get_order_book(asset)|：查询某资产订单簿快照。
+  \item \verb|get_trade_feed(asset, since)|：返回某时间以来的成交记录。
+  \item \verb|register_listener(listener)|：注册监听器以接收市场事件（如成交、行情变化）。
+\end{itemize}
+
+\subsubsection{交易所消息协议（Exchange Message Protocol）}
+
+\paragraph{概述}
+
+交易所（Exchange）遵循 ABIDES 风格的消息体，支持\emph{按代理批量多标的下单}、\emph{开盘前集合竞价}与\emph{行情订阅}。协议沿用当前 \verb|core.lob.LimitOrderBook| 与 \verb|core.logger.Logger| 的数据与日志格式。
+
+\paragraph{订单流程}
+\textbf{提交订单}：发送 \verb|MessageType.SUBMIT_ORDER|，\verb|content.requests| 为字典列表，每个请求包含：
+\begin{itemize}
+  \item \texttt{type}：\verb|limit_order| 或 \verb|market_order|
+  \item \texttt{symbol}：标的代码（字符串）
+  \item \texttt{agent\_id}, \texttt{timestamp}, \texttt{side}, \texttt{quantity}
+  \item \texttt{price}：限价单必填
+\end{itemize}
+
+\noindent\textbf{修改订单}：发送 \verb|MessageType.MODIFY_ORDER|，\verb|content.requests| 中每项包含：
+\begin{itemize}
+  \item \texttt{symbol}, \texttt{order\_id}, \texttt{new\_order}（结构与提交时一致）
+\end{itemize}
+
+\noindent\textbf{撤销订单}：发送 \verb|MessageType.CANCEL_ORDER|，\verb|content.requests| 中每项包含：
+\begin{itemize}
+  \item \texttt{symbol}, \texttt{order\_id}
+\end{itemize}
+
+\noindent\textbf{回执与成交}：
+\begin{itemize}
+  \item \verb|ORDER_ACCEPTED|：每笔被接收的订单都会发送至 \verb|order.agent_id|
+  \item \verb|ORDER_EXECUTED|：在发生成交时发送，\verb|content.trades| 与 \verb|content.fees| 给出成交与费用明细
+\end{itemize}
+
+\paragraph{查询接口}
+\begin{itemize}
+  \item \verb|QUERY_LAST_TRADE|：\verb|content.symbol| $\rightarrow$ 回复 \verb|data|（最新成交价）与 \verb|mkt_closed| 标记。
+  \item \verb|QUERY_SPREAD|：\verb|content.symbol|, \verb|content.depth| $\rightarrow$ 回复 \verb|bids|, \verb|asks| 与 \verb|data|（含最新成交）。注意：枚举名按历史兼容保留拼写错误 \verb|QUERY_SPREAD|。
+  \item \verb|QUERY_ORDER_STREAM|：\verb|content.symbol|, \verb|content.length| $\rightarrow$ 回复最近的成交条目。
+  \item \verb|QUERY_TRANSACTED_VOLUME|：\verb|content.symbol|, \verb|content.lookback_period|（如 \verb|"60s"|）$\rightarrow$ 回复区间成交量汇总。
+  \item \verb|QUERY_FUNDAMENTAL|：\verb|content.requests| 支持按列表一次查询多个 \verb|symbol|；当前返回值为订单簿中间价（后续以 TODO 标记替换为真实基本面数据），并附带 \verb|mkt_closed| 状态。
+  \item \verb|QUERY_TOP_OF_BOOK|：\verb|content.requests| 中每项包含 \verb|{symbol, depth}|，返回对应标的的最优买卖价（\verb|best_bid|/\verb|best_ask|）及前 \verb|depth| 档 \verb|bids|/\verb|asks|。
+  \item \verb|SELECT_SYMBOLS_REQUEST|：\verb|content.strategy| 指定选股策略，\verb|content.count| 为期望标的数，\verb|content.exclude| 用于排除指定标的。交易所把请求交由 \verb|SymbolSelectionManager|，后者基于最新刷新得到的市值、成交量、均匀等多维权重进行抽样。回复 \verb|SELECT_SYMBOLS_RESPONSE|，包含采样到的 \verb|symbols| 及策略说明；刷新周期可在配置中通过 \verb|selector_update_freq| 指定（默认 60 秒）。
+\end{itemize}
+
+\paragraph{SymbolSelectionManager}
+选股模块以独立的 \verb|SymbolSelectionManager| 维护权重分布，包括市值、成交量及均匀分布三大基线。模块在初始化时立即刷新一次权重，并按 \verb|selector_update_freq| 周期向内核消息队列投递 \verb|SYMBOL_SELECTOR_UPDATE| 定时消息，仿真时间推进到该时刻后模块会拉取最新的市场数据（市值来自 \verb|symbol_metadata|，成交量来自交易所统计/订单簿），重新归一化权重并登记下一次刷新。当收到选股请求时，只需调用 \verb|sample(params, now)| 即可返回符合策略的标的列表，而无需在请求路径上重建分布，从而显著降低选股的时延和耦合度。
+
+配置文件中的 \verb|symbols| 数组支持直接为每个元素提供 \verb|{symbol, market_cap, ...}| 结构。若未显式给出市值，交易所会基于 \verb|exchange_params.market_cap_range|（默认 $[5\times10^9, 5\times10^{11}]$）随机生成，保证市值型策略在任意市场组合下均可使用。
+
+\paragraph{行情订阅}
+\textbf{请求}：\verb|MKT_DATA_SUBSCRIPTION_REQUEST|，\verb|content.subscriptions| 为条目列表：
+\begin{itemize}
+  \item \texttt{symbol}, \texttt{depth}（档位）, \texttt{freq\_ms}（最小推送间隔，毫秒）
+\end{itemize}
+\textbf{取消}：\verb|MKT_DATA_SUBSCRIPTION_CANCELLATION|，可选 \verb|content.symbols| 指定取消的标的；为空表示取消全部。
+\textbf{推送}：交易所按订阅以 \verb|MKT_DATA| 推送 \verb|{symbol, depth, bids, asks, ts}|。每个订阅项独立维护下一次触发时刻，通过定时消息 \verb|MKT_DATA_SUBSCRIPTION_TICK| 驱动，仿真时间到达后生成快照并自动重排后续触发。预开盘期间推送来自	extbf{集合竞价盘}，其余时段来自	extbf{连续竞价订单簿}。
+
+\paragraph{开盘前集合竞价（SZSE）}
+当 SZSE 交易所启用 \verb|opening_call=True| 时：
+\begin{itemize}
+  \item \textbf{时段与撤单规则}：09:15--09:20 可申报且可撤；09:20--09:25 可申报不可撤；09:25 集合竞价形成开盘价；09:30 起进入连续竞价（午间休市等分段沿用 \verb|EXCHANGE_SESSIONS|）。
+  \item \textbf{报单归集}：集合竞价窗口内，订单进入\emph{预开盘订单簿}（不计入连续竞价 LOB）；撤单仅 09:15--09:20 允许。
+  \item \textbf{定价与撮合}：09:25 对各标的在限价集合上枚举候选价，选取\emph{最大可成交量}价格；并列时优先\emph{最小不平衡度}。在该价按“价高/价低优先 + 时间优先”撮合；未成交的限价单转入连续竞价 LOB。
+  \item \textbf{费用与限制}：成交收取 \verb|fee_rate|；继续支持 T+1 与涨跌幅限制（有参考价时对限价进行校验）。
+  \item \textbf{预开盘快照日志}：将预开盘 LOB 快照写入 \verb|log/<run>/<symbol>/preopen.csv|，采用与 \verb|lob.csv| 一致的 5 档列式 CSV 架构，便于对齐比对。
+  \item \textbf{初始订单簿加载}：支持在配置中为每个标的指定初始化 CSV。仿真启动时，交易所将这些静态挂单注入 LOB，作为“InitAgent”提交的最高优先级订单，不会被撤销，可用于复现真实市场的开盘深度；若缺省则默认从空簿面开始。
+  \item \textbf{地理位置与链路延迟}：交易所和代理均带有经纬度属性（默认使用中国境内高人口密度点采样；SZSE 交易所默认落在深圳）。消息收发默认根据交易所与代理之间的地理距离估算传播时延，并加入高斯扰动，以模拟网络延迟。
+\end{itemize}
+
+\paragraph{日志对齐}
+为避免文档重复，本协议的 OHLC、LOB 与核心流转日志沿用“\S~\ref{fig:uml_monitoring} 监控与日志模块”与“MVP 日志与消息格式”中的定义与路径约定；字段与频率保持一致（可通过配置降低高吞吐阶段的记录密度）。
+
+\subsection{智能体框架模块}
+
+\paragraph{模块规范（概要）}
+\begin{itemize}
+  \item 目的：定义代理生命周期与行为接口，统一代理状态管理与消息处理契约。
+  \item 主要职责：代理注册/初始化、消息接收回调(on\_message)、下单/撤单接口、资产与日志管理、策略加载与注入。
+  \item 输入：市场推送（MKT\_DATA）、查询响应、配置与策略参数、随机种子。
+  \item 输出：$SUBMIT\_ORDER/CANCEL_ORDER$、资产变更日志、性能快照。
+  \item 对外接口：register\_agent(agent)、get\_agent\_state(agent\_id)、place\_order(order)、cancel\_order(order\_id) 等。
+  \item 关键数据结构：Portfolio/持仓结构、订单记录表、策略参数集 (strategy\_params)。
+  \item 错误与异常：策略异常时应安全降级（如暂停下单并记录日志）；持仓/现金不足需产生拒单回执或替代行为。
+  \item 持久化/日志：代理资产文件与行为日志按 agent\_id 存储于 log 目录。
+\end{itemize}
+
+智能体框架提供一套抽象基类和工具，支持用户实现多种交易策略并参与仿真。
+智能体框架的UML类图如图~\ref{fig:uml_agent}所示。
+
+\begin{figure}[H]
+  \centering
+  \resizebox{\linewidth}{!}{\input{../doc/figures/uml/uml_agent.tex}}
+  \caption{智能体框架 UML 类图}
+  \label{fig:uml_agent}
+\end{figure}
+
+\subsubsection{功能描述}
+\begin{itemize}
+  \item 定义统一的代理生命周期和消息处理接口。
+  \item 支持多种内置代理（零智商、造市、趋势跟随、套利、强化学习等）。
+  \item 为自定义代理提供便捷的继承和注册机制。
+  \item 管理代理的状态（如持仓、资金、订单列表），并提供基础的风险控制和日志功能。
+\end{itemize}
+
+\subsubsection{主要类及属性方法}
+\begin{description}
+  \item[BaseAgent] \emph{基类代理}：所有代理的父类。
+  \begin{itemize}
+    \item \textbf{属性：}代理 ID、持仓 \verb|positions|、现金余额 \verb|cash|、订单记录 \verb|orders|，以及可选的表现追踪开关 \verb|track_performance|（默认关闭）。
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|on_start(kernel)|：仿真开始前初始化。
+        \item \verb|on_message(message)|：处理来自内核或市场的消息。
+        \item \verb|place_order(order)|：创建并发送订单。
+        \item \verb|cancel_order(order_id)|：撤销订单。
+        \item \verb|current_total_value|、\verb|get_profit|、\verb|performance_snapshot|：在开启 \verb|track_performance| 时用于计算净值/收益并生成日志快照。
+        \item \verb|log_performance(timestamp, price_map)|：显式写入代理现金、持仓与收益日志；若开启 \verb|track_performance|，\verb|wakeup| 时会自动调用。
+        \item \verb|request_symbols(strategy, count, **params)|：向交易所请求符合策略（随机、市值权重、成交量、流动性/盘口压力、紧凑价差等）的标的列表，可通过 \verb|params| 指定深度、排除集合或其他策略参数。
+      \end{itemize}
+  \end{itemize}
+  \item[TraderAgent] \emph{交易代理基类}：扩展 BaseAgent，增加市场状态感知。
+  \begin{itemize}
+    \item \textbf{属性：}策略参数 \verb|strategy_params|、行情缓存 \verb|market_view|。
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|observe_market(snapshot)|：更新行情视图。
+        \item \verb|decide_actions()|：根据策略产生订单或取消指令。
+        \item \verb|update_portfolio(report)|：根据执行报告更新持仓和现金。
+      \end{itemize}
+  \end{itemize}
+  \item[MarketMaker] \emph{做市商代理}：保持买卖挂单，提供流动性。
+  \begin{itemize}
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|update_quotes()|：根据市场波动调整挂单价差和数量。
+        \item \verb|manage_inventory()|：控制库存风险，必要时通过交易平衡持仓。
+      \end{itemize}
+  \end{itemize}
+  \item[RLAgent] \emph{强化学习代理}：利用训练好的模型或在线学习策略决策。
+  \begin{itemize}
+    \item \textbf{属性：}策略网络 \verb|policy_network|、记忆库 \verb|replay_buffer|。
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|select_action(state)|：根据当前状态输出动作。
+        \item \verb|train_on_batch(batch)|：执行一次策略更新。
+      \end{itemize}
+  \end{itemize}
+  \item[BackgroundAgent] \emph{背景代理}：用于生成真实感的订单流并参与自校准。
+  \begin{itemize}
+    \item \textbf{属性：}到达率分布、订单量分布、价格偏好。
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|generate_order()|：按照统计分布生成订单。
+        \item \verb|adjust_parameters(new_params)|：按自校准系统指令调整分布参数。
+      \end{itemize}
+  \end{itemize}
+\end{description}
+
+\paragraph{ABIDES 代理适配与动作逻辑}
+我们在 \verb|core/agent| 中提供了若干与 ABIDES 行为对齐的适配器，并按当前消息协议重写了动作：
+\begin{itemize}
+  \item \textbf{NoiseAgent}：在 \verb|initial_symbols| 中随机选择 $1\sim K$ 个标的（不放回），对每个标的随机生成买/卖与数量；若卖出且库存不足则转为买入；订单类型在限价/市价中随机；使用单条 \verb|SUBMIT_ORDER| 批量发送。时间戳使用代理当前内核时间（若空则回退到 \verb|now()|，保证类型安全）。
+  \item \textbf{OrderBookImbalanceAgent}：先查询 \verb|QUERY_SPERAD| 获取最优一档，然后按买/卖盘量能不平衡（默认 $\sum bid\_vol \le \sum ask\_vol$ 偏买）选择方向；若卖出但库存不足则改为买入；价格取对应方向最佳价，若不存在回退另一侧最佳价；以限价单提交。
+  \item \textbf{HBL（近似）}：先查询盘口，随后在买/卖之间交替选择方向以分散；若卖出无库存则改为买入；锚定最优价发送小额限价单。
+  \item \textbf{ValueAgent}：若启用 Oracle，查询 \verb|ORACLE_QUERY_OHLC| 获取参考收盘价，并在参考价上下各布一笔小额限价单；否则以随机参考价代替。
+  \item \textbf{FundamentalTrackingAgent}：与 ValueAgent 类似，但更强调均值回归（买价略低于参考，卖价略高于参考）。
+\end{itemize}
+
+\subsubsection{ABIDES 代理适配实现}
+为兼容 ABIDES 生态中已有的策略代理，我们在 \verb|core/agent| 下新增了若干适配器，复用统一的 BaseAgent 生命周期、消息协议与我方交易所接口：
+\begin{itemize}
+  \item NoiseAgent（\verb|core/agent/noise.py|）：在已订阅标的上随机生成小额限价/市价单，批量提交（\verb|SUBMIT_ORDER|），用于噪声流量与撮合压力测试。
+  \item ValueAgent（\verb|core/agent/value.py|）：如开启校准模式（\verb|calibration_mode|）则通过ORACLE\_QUERY\_OHLC 获取“基本面”收盘价，围绕参考价在两侧布置小额限价单；否则退化为基于随机参考价的简化价值单。
+  \item OrderBookImbalanceAgent（\verb|core/agent/obi.py|）：先发出 \verb|QUERY_SPERAD| 获取盘口深度，再依据买卖盘量能不平衡决定交易方向，并在最优价附近下单。
+  \item HeuristicBeliefLearningAgent（\verb|core/agent/hbl.py|）：简化的 HBL 近似实现，交替在买/卖方向上围绕最优价布置小单以实现探索与分散。
+  \item FundamentalTrackingAgent（\verb|core/agent/fundamental.py|）：通过 \verb|ORACLE_QUERY_OHLC| 追踪“基本面”价格，向均值回归方向提交买卖单；在无 Oracle 时退化为随机参考价。
+  \item BDIAgent（\verb|core/agent/bdi.py|）：引入信念-愿望-意图（BDI）框架，利用 22 项技术指标与现金/仓位阈值更新信念，依据基因组参数化的目标强度调整价格让步，在成交后重置买卖侧让步幅度，适合研究认知驱动的限价行为。
+  \item Chartist（\verb|core/agent/chartist.py|）：计算价格与移动均线的偏离度，若向上突破则以随机上浮价限价买入，若向下偏离则降价卖出，体现经典动量/趋势跟随策略。
+  \item FCNAgent（\verb|core/agent/fcn.py|）：将基本面价格建模为几何布朗运动，结合历史收益率与噪声估计预测未来价格；当预测价偏离当前价时按方向提交限价单，价差容忍度由参数 \verb|k| 控制。
+  \item GPAgent（\verb|core/agent/gp.py|）：围绕股息/价格历史运行简化遗传程序以拟合期望收益与方差，得到保留价后在不同盘口情况下选择市价或限价出入场，支持策略自适应演化。
+  \item InformedAgent（\verb|core/agent/informed_or_not.py|）：融合私有估值与盘口中价生成提交价，按目标头寸与风险厌恶参数计算需求量，依据盘口是否跨价决定市价或限价提交，可用于研究信息优势对库存调节的影响。
+  \item LiquidityProviderAgent（\verb|core/agent/liquidity_provider.py|）：基于流动性需求模拟（\verb|q_taker|）和指数族随机变量生成价差让步，控制在买卖两侧提供限价流动性，反映做市行为对价差的反馈。
+  \item LiquidityTakerAgent（\verb|core/agent/liquidity_taker.py|）：按照演化的 \verb|q_taker| 序列决定买卖方向，直接以市价单消耗流动性，用于测试对手方交易压力。
+  \item NearZeroIntelligenceAgent（\verb|core/agent/nero_zero_intelligence.py|）：在 Zero-Intelligence 基础上加入期内成交价记忆与买卖概率衰减，并通过基本面查询校准报价，兼顾随机性与温和理性约束。
+\end{itemize}
+
+上述代理完全使用我方消息协议：下单统一采用 \verb|SUBMIT_ORDER| 批量格式；依赖行情/盘口的场景使用 \verb|MKT_DATA| 推送或 \verb|QUERY_SPERAD| 查询；成交与资金/持仓更新通过基础框架在 \verb|ORDER_EXECUTED| 中统一处理，记录到代理日志文件中。
+
+\paragraph{从 ABIDES 迁移指南}
+将 ABIDES 代理迁移到当前平台需完成以下替换：
+\begin{enumerate}
+  \item 生命周期与基类：ABIDES \verb|FinancialAgent/TradingAgent| $\rightarrow$ 我方 core.agent.base.BaseAgent；
+  将 \verb|kernelInitializing/receiveMessage| 改写为 \verb|wakeup/receive|。
+  \item 时间与调度：移除 ABIDES 内核回调与 pipeline delay 直接调用；
+  使用 BaseAgent.set\_next\_wakeup 控制节奏，必要时在wakeup\_delay中自定义随机区间。
+  \item 消息协议：将 ABIDES 文本消息（如 \verb|"LIMIT_ORDER"|）映射为枚举 \verb|MessageType.SUBMIT_ORDER|，采用批量 \verb|requests| 列表；撤单/改单分别映射为 \verb|CANCEL_ORDER/MODIFY_ORDER|。行情查询使用 \verb|MKT_DATA| 与 \verb|QUERY_*| 枚举。
+  \item 订单/持仓：订单结构体使用我方字典格式；成交回报通过 \verb|ORDER_EXECUTED| 中的 \verb|trades| 与 \verb|fees| 由 \verb|BaseAgent| 自动计入 \verb|Portfolio|。
+  \item 日志与监控：调试打印替换为我方 \verb|Logger|；必要的 LOB/OHLC 快照由交易所模块按频率落盘，无需代理手工输出。
+\end{enumerate}
+
+迁移时可先以“轻量近似”验证端到端可用性，随后再逐步补齐各策略在 ABIDES 中的特定细节（如信念更新、风控限额、细粒度延迟模型等），以降低改造风险与集成成本。
+
+\subsubsection{技术路线与实现}
+代理框架采用面向对象设计，基于组合和继承实现代码复用。状态管理可使用 Dataclass 或 Pydantic 结构，确保类型安全。强化学习代理可集成深度学习框架（如 PyTorch 或 TensorFlow），通过异步模式实现在线训练。
+
+\subsubsection{接口设计}
+代理框架提供以下接口：
+\begin{itemize}
+  \item \verb|register_agent(agent)|：向系统注册代理。
+  \item \verb|get_agent_state(agent_id)|：查询代理当前持仓、现金等状态。
+  \item \verb|broadcast_market_update(snapshot)|：向所有代理推送市场快照。
+\end{itemize}
+
+\subsection{自校准模块}
+
+\paragraph{模块规范（概要）}
+\begin{itemize}
+  \item 目的：根据目标统计特征自动调整背景代理参数，缩小仿真输出与目标分布的差距。
+  \item 主要职责：指标计算与监控、调整量计算、向 BackgroundAgent 下发参数更新指令、保留历史对比结果。
+  \item 输入：监控模块的实时指标（spread、volume、volatility 等）、目标指标配置、历史 Oracle 数据（可选）。
+  \item 输出：参数调整命令、校准日志、对比报告文件。
+  \item 对外接口：set\_target(metric,value)、run\_calibration\_step()、update\_metrics(data)。
+  \item 关键数据结构：target\_metrics、current\_metrics、调整历史记录表。
+  \item 错误与异常：若指标采样异常或优化失败，需回退到最后已知稳定参数并报警。
+  \item 持久化/日志：校准迭代日志、输出对比数据写入 $calibration.output\_dir$。
+\end{itemize}
+
+自校准模块监测仿真过程中的市场统计特征，并自动调整背景代理行为以逼近预定指标。
+内核UML如图~\ref{fig:uml_calibration}所示。
+
+\paragraph{Oracle Agent（权威信息源）}
+OracleAgent 负责读取上一轮仿真生成的历史日志，在校准模式下应答来自其它代理的查询请求，从而提供“已知未来”的参考路径。消息接口：
+\begin{itemize}
+  \item \verb|ORACLE_QUERY_LOB|/\verb|ORACLE_QUERY_OHLC|：请求给定 \verb|symbol| 在 \verb|time|（或其后最近时间）处的 LOB/OHLC 快照。
+  \item \verb|ORACLE_RESPONSE_LOB|/\verb|ORACLE_RESPONSE_OHLC|：返回查询结果。
+\end{itemize}
+
+\paragraph{校准模式}
+内核在读取配置（见 \verb|config/calibration.json|）后，若 \verb|calibration.enabled=true|，则：
+\begin{itemize}
+  \item 初始化 OracleAgent，并将 \verb|oracle_id| 传递给所有代理；
+  \item 所有代理在校准模式下可选择性地向 Oracle 请求下一时刻的 LOB/OHLC；
+  \item 代理可据此在最佳价/中间价附近生成订单，促使撮合结果逼近历史轨迹；
+  \item 本轮仿真的输出写入 \verb|calibration.output_dir| 以便后续对比。
+\end{itemize}
+
+\paragraph{对比与评估}
+基于两轮仿真日志，可比较价格路径、点差、成交量等指标，计算误差并绘制对比曲线。可新增脚本以加载两轮 \verb|ohlc.csv|/\verb|lob.csv|，按时间对齐后输出误差统计，绘图采用 matplotlib（可选）。
+
+\subsection{MVP 日志与消息格式}
+
+为支持快速调试与可观测性，本版本实现了细粒度的消息流转日志：
+
+\begin{itemize}
+  \item \textbf{日志颗粒度：}
+    记录每一条消息的接收时间 \texttt{recive\_time}、阶段 \texttt{stage}（SEND/RECV/PROC）、类型 \texttt{message\_type}、发送方 \texttt{sender\_id}、接收方 \texttt{recipient\_id} 以及消息体摘要（摘要可以是 JSON/简短字符串或哈希）。
+  \item \textbf{输出格式：}
+    核心日志文件 \texttt{log/log.csv} 每行一条，示例如下（单独一行，便于阅读与复制）：
+\begin{verbatim}
+2025-01-01T09:30:00.000000 - RECV - SUBMIT_ORDER - from A to Exchange \\
+- {"order_id":"O123","symbol":"XYZ","side":"BUY","qty":100}
+\end{verbatim}
+  \item \textbf{接入点：}
+    \begin{itemize}
+      \item 内核在消息入队（SEND）、出队（RECV）以及交易所处理生成响应时（SEND）记录；
+      \item 代理在主动发送消息时（SEND）记录。
+    \end{itemize}
+  \item \textbf{持久化：}
+    使用内存缓冲（batch buffer），仿真结束或达到写入阈值时统一刷写到 \texttt{log/} 目录下的运行子目录（例如 \texttt{log/run\_2025-01-01\_001/}）。
+\end{itemize}
+
+\paragraph{时间推进与交易时段}
+内核在取出下一条事件前将当前时间推进到该事件的 \verb|recive_time|，若此时不处于交易时段（如午休、收市或非交易日），内核将调用 \verb|skip_break()| 将当前时间跳转至下一个合法交易时段起点，并将该事件的 \verb|recive_time| 同步推前，以保持事件的时间一致性。多交易日由 \verb|trading_days| 控制，来源于配置中的 \verb|simulation.start\_date| 与 \verb|end\_date| 范围。
+
+\paragraph{OHLC 与 LOB 日志}
+交易所为每只股票维护基于频率的 OHLC 聚合器（默认 \verb|1s|），在发生成交或有可用中间价（mid）时更新并在切换窗口时输出开高低收；同时按指定频率（默认 \verb|3s|）记录 LOB 快照的前 \verb|N| 档（默认 \verb|N=5|）。两类日志合并写入核心日志文件，便于统一查看与解析。
+
+\paragraph{Agent 资产记录与记账策略}
+为每个代理维护独立的资产记录文件。表头包含$time,cash,total_value,positions$，其中positions为 JSON 字典（symbol→持仓股数）。
+
+记账策略采用 \textbf{执行时记账}（execution-based accounting）：
+\begin{itemize}
+  \item \textbf{下单时}不改变现金与持仓（不引入冻结/预占用）；
+  \item \textbf{订单被成交}（收到 \verb|ORDER_EXECUTED|）后，根据成交明细逐条调整现金与持仓：买入扣减现金并增加持仓，卖出增加现金并减少持仓；
+  \item \textbf{市值计算}采用最近成交价（last price）作为持仓的标记价格（MTM），在每次成交后更新；
+  \item \textbf{撤单}（\verb|ORDER_CANCELLED|）不做资产变动（因未预占用）。
+\end{itemize}
+
+该策略实现简单、易于审计，避免了缺少经纪侧撮合前冻结语义带来的复杂性；未来若引入经纪/清算层，可切换为 “预占用+结算释放” 模式。
+
+消息数据结构遵循 \texttt{Message} 定义，关键字段如下：
+\begin{itemize}
+  \item \texttt{id}
+  \item \texttt{message\_type}
+  \item \texttt{sender\_id}
+  \item \texttt{recipient\_id}
+  \item \texttt{send\_time}
+  \item \texttt{recive\_time}（事件调度优先级）
+  \item \texttt{content}（订单请求、行情快照等业务负载）
+\end{itemize}
+
+为便于统一构造，提供辅助函数（示例签名）：
+\begin{verbatim}
+new_message(message_type, sender_id, recipient_id, send_time, content, recive_time=None)
+\end{verbatim}
+该函数自动生成 \texttt{id}，若未传入 \texttt{recive\_time} 则默认 \texttt{recive\_time = send\_time}。
+
+\begin{figure}[H]
+  \centering
+  \resizebox{\linewidth}{!}{\input{../doc/figures/uml/uml_calibration.tex}}
+  \caption{自校准模块 UML 类图}
+  \label{fig:uml_calibration}
+\end{figure}
+
+\subsubsection{功能描述}
+\begin{itemize}
+  \item 设定目标市场指标，如波动率、价差、成交量等。
+  \item 在仿真过程中实时采集实际指标，与目标值比较。
+  \item 根据偏差程度调整背景代理的行为参数，使整体市场统计特征接近目标。
+  \item 提供灵活的优化算法接口，支持多种自校准方法（如 PID 控制、在线优化、强化学习）。
+\end{itemize}
+
+\subsubsection{主要类及属性方法}
+\begin{description}
+  \item[CalibrationManager] \emph{校准管理器}：协调自校准流程。
+  \begin{itemize}
+    \item \textbf{属性：}目标指标集合 \verb|target_metrics|、当前指标 \verb|current_metrics|。
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|collect_metrics()|：从监控模块获取实时市场指标。
+        \item \verb|compute_adjustments()|：根据指标偏差计算调整量。
+        \item \verb|apply_adjustments()|：向背景代理或系统参数发送调整指令。
+      \end{itemize}
+  \end{itemize}
+  \item[MetricMonitor] \emph{指标监控器}：负责计算市场统计指标。
+  \begin{itemize}
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|update(order_book, trades)|：根据订单簿和成交数据更新统计量。
+        \item \verb|get_metric(name)|：查询某个指标的当前值。
+      \end{itemize}
+  \end{itemize}
+  \item[ParameterController] \emph{参数控制器}：根据调整量修改背景代理或市场参数。
+  \begin{itemize}
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|adjust_arrival_rate(agent, delta)|：调整到达率。
+        \item \verb|adjust_order_size(agent, delta)|：调整订单量分布。
+        \item \verb|adjust_price_skew(agent, delta)|：调整价格偏好。
+      \end{itemize}
+  \end{itemize}
+\end{description}
+
+\subsubsection{技术路线与实现}
+基线自校准可采用简单的比例积分微分（PID）控制器：设误差$ e_t = target - current $，调节参数 $ \theta_{t+1} = \theta_t + \alpha\cdot e_t + \beta\cdot e_t^{int} + \gamma\cdot e_t^{der} $。复杂场景可引入贝叶斯优化或强化学习算法，在线学习最优调整策略。
+
+\subsubsection{接口设计}
+自校准模块主要接口：
+\begin{itemize}
+  \item \verb|update_metrics(data)|：接受监控模块传入的数据并更新指标。
+  \item \verb|run_calibration_step()|：执行一次校准周期。
+  \item \verb|set_target(metric, value)|：设定目标指标。
+\end{itemize}
+
+\subsection{数据管理模块}
+
+\paragraph{模块规范（概要）}
+\begin{itemize}
+  \item 目的：提供统一的数据接入、缓存与查询接口，保证数据一致性与高效读取。
+  \item 主要职责：历史数据导入、合成数据生成、缓存索引维护、数据访问权限与时间对齐服务。
+  \item 输入：CSV/Parquet/数据库数据源、实时数据流、合成数据参数配置。
+  \item 输出：按需的时间对齐快照、tick/ohlc 数据、数据访问 Future/回调。
+  \item 对外接口：load\_dataset(config)、get\_snapshot(time)、request\_data(agent\_id,params)、subscribe(stream,callback)。
+  \item 关键数据结构：数据源描述、缓存索引、内存映射/Parquet 文件布局。
+  \item 错误与异常：数据缺失/格式不匹配需抛出明确错误并支持缺失值补全策略；并发读取需保证线程安全。
+  \item 持久化/日志：数据源元信息与加载日志，合成数据生成记录。
+\end{itemize}
+
+数据管理模块提供历史数据、实时数据的加载和统一访问接口，还支持生成合成数据。
+数据管理模块的UML如图~\ref{fig:uml_data}所示。
+
+\begin{figure}[H]
+  \centering
+  \resizebox{\linewidth}{!}{\input{../doc/figures/uml/uml_data.tex}}
+  \caption{数据管理模块 UML 类图}
+  \label{fig:uml_data}
+\end{figure}
+
+
+\subsubsection{功能描述}
+\begin{itemize}
+  \item 管理不同来源的数据集（股票交易数据、行情快照、企业公告等）。
+  \item 提供高效的数据预处理和缓存机制，支持多进程/线程并发读取。
+  \item 支持合成数据生成，用于模拟极端场景或自定义实验。
+  \item 提供统一的查询接口，按时间索引或条件过滤返回所需数据。
+\end{itemize}
+
+\subsubsection{主要类及属性方法}
+\begin{description}
+  \item[DataSourceManager] \emph{数据源管理器}：管理多个数据源及其生命周期。
+  \begin{itemize}
+    \item \textbf{属性：}数据源字典 \verb|sources|。
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|register_source(name, datasource)|：注册数据源。
+        \item \verb|get_source(name)|：获取指定数据源实例。
+      \end{itemize}
+  \end{itemize}
+  \item[MarketDataSource] \emph{市场数据源}：封装单个历史数据集或实时数据接口。
+  \begin{itemize}
+    \item \textbf{属性：}数据格式说明、数据文件路径、缓存索引。
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|load_data(start, end)|：加载指定时间段的原始数据。
+        \item \verb|get_tick(time)|：返回给定时间点的行情或成交。
+      \end{itemize}
+  \end{itemize}
+  \item[SyntheticGenerator] \emph{合成数据生成器}：根据统计模型生成数据。
+  \begin{itemize}
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|generate_series(length, params)|：生成给定长度的价格或订单流序列。
+        \item \verb|generate_order_stream(params)|：生成订单事件流。
+      \end{itemize}
+  \end{itemize}
+  \item[DataInterface] \emph{数据访问接口}：向代理和其他模块提供统一的查询入口。
+  \begin{itemize}
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|query(asset, fields, start, end)|：查询特定资产的行情字段。
+        \item \verb|subscribe(stream, callback)|：订阅实时数据流。
+        \item \verb|get_event_history(asset, since)|：获取过去事件列表。
+      \end{itemize}
+  \end{itemize}
+\end{description}
+
+\subsubsection{技术路线与实现}
+数据加载使用内存映射 (mmap) 或列式存储 (Parquet) 来提升 I/O 性能；缓存机制可以采用 LRU 缓存。在实时场景下可对接消息队列（如 Kafka）或 WebSocket 流。合成数据生成器支持多种随机过程模型，例如 GBM、跳跃扩散、ARCH/GARCH 模型。
+
+\subsubsection{接口设计}
+主要接口包括：
+\begin{itemize}
+  \item \verb|load_dataset(config)|：根据配置载入或生成数据。
+  \item \verb|get_snapshot(time)|：返回多资产的市场快照。
+  \item \verb|request_data(agent_id, params)|：代理异步请求数据，返回一个 \verb|Future|。
+\end{itemize}
+
+\subsection{配置与实验管理模块}
+
+\paragraph{模块规范（概要）}
+\begin{itemize}
+  \item 目的：解析并管理实验配置，负责仿真初始化、运行控制与结果归档。
+  \item 主要职责：配置解析、实验生命周期管理、参数扫描与结果存档、失败恢复。
+  \item 输入：YAML/JSON 配置文件、命令行覆盖参数、参数扫描定义。
+  \item 输出：实验运行上下文、日志目录结构、实验结果索引与归档包。
+  \item 对外接口：run\_experiment(config\_path)、run\_sweep(sweep\_config)、get\_results(experiment\_id)。
+  \item 关键数据结构：统一配置对象（类型验证）、Experiment 元信息、参数扫描表。
+  \item 错误与异常：配置解析错误需中止并返回可读错误信息；运行中断需保存当前状态并可安全重试。
+  \item 持久化/日志：实验运行目录、配置快照、依赖锁文件与随机种子记录。
+\end{itemize}
+
+配置与实验管理模块负责读取实验配置、初始化仿真环境以及管理实验运行。
+配置与实验管理模块的UML如图~\ref{fig:uml_config}所示。
+
+\begin{figure}[H]
+  \centering
+  \resizebox{0.25\linewidth}{!}{\input{../doc/figures/uml/uml_config.tex}}
+  \caption{配置与实验管理模块 UML 类图}
+  \label{fig:uml_config}
+\end{figure}
+
+\subsubsection{功能描述}
+\begin{itemize}
+  \item 解析外部配置文件和命令行参数，生成统一的配置对象。
+  \item 管理实验生命周期，包括初始化、运行、监控和结束。
+  \item 支持参数扫描和自动化实验调度，用于进行敏感性分析。
+  \item 管理实验结果的输出和归档。
+\end{itemize}
+
+\subsubsection{主要类及属性方法}
+\begin{description}
+  \item[ConfigParser] \emph{配置解析器}：
+  \begin{itemize}
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|parse(file_path)|：解析 YAML/JSON 配置文件。
+        \item \verb|override(cli_args)|：根据命令行参数覆盖部分配置项。
+      \end{itemize}
+  \end{itemize}
+  \item[ExperimentManager] \emph{实验管理器}：
+  \begin{itemize}
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|setup_experiment(config)|：根据配置初始化仿真环境。
+        \item \verb|run()|：执行仿真，自动记录日志。
+        \item \verb|teardown()|：结束实验，保存结果。
+      \end{itemize}
+  \end{itemize}
+  \item[ParameterSweeper] \emph{参数扫描器}：
+  \begin{itemize}
+    \item \textbf{属性：}参数范围定义、实验列表。
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|generate_experiments()|：根据参数组合生成实验配置。
+        \item \verb|submit_jobs(manager)|：批量提交实验到管理器。
+      \end{itemize}
+  \end{itemize}
+\end{description}
+
+\subsubsection{技术路线与实现}
+配置解析可借助 \verb|pydantic| 或 \verb|omegaconf| 提供类型验证。实验管理器可以内置状态机，区分不同阶段并支持失败恢复。参数扫描支持并行调度，可与分布式执行框架（如 Dask、Ray）结合。
+
+\subsubsection{接口设计}
+实验模块对外暴露：
+\begin{itemize}
+  \item \verb|run_experiment(config_path)|：启动单次实验。
+  \item \verb|run_sweep(sweep_config)|：运行参数扫描。
+  \item \verb|get_results(experiment_id)|：获取指定实验的结果和指标。
+\end{itemize}
+
+\subsection{接口模块}
+
+\paragraph{模块规范（概要）}
+\begin{itemize}
+  \item 目的：为外部用户与系统提供受控的访问入口，保证操作的安全性与幂等性。
+  \item 主要职责：API 服务（HTTP/gRPC）、命令行工具、Web/UI 实时推送、策略注入与远程控制。
+  \item 输入：外部请求（提交订单/查询/注入策略）、认证凭证、API 速率限制配置。
+  \item 输出：请求响应、事件注入、错误码、权限相关拒绝信息。
+  \item 对外接口：submit\_order(request)、get\_market\_snapshot(query)、inject\_strategy(agent\_id,strategy\_spec)、CLI 命令集。
+  \item 关键数据结构：API 请求/响应 schema、身份与权限模型、WebSocket 消息格式。
+  \item 错误与异常：鉴权失败/参数校验错误返回标准化错误码；对外暴露接口应做速率限制与输入消毒。
+  \item 持久化/日志：API 访问日志、操作审计记录与异常追踪。
+\end{itemize}
+
+接口模块包括程序化 API、命令行和可视化界面，使用户和外部系统能够与仿真器交互。
+
+\subsubsection{功能描述}
+\begin{itemize}
+  \item 提供 HTTP/REST 或 gRPC API，支持策略注入、市场状态查询、订单提交等。
+  \item 提供命令行工具，可配置仿真参数、启动/停止仿真、查看统计信息。
+  \item 提供 Web 界面或桌面 UI，用于实时观察订单簿、行情曲线、代理持仓，并支持交互操作。
+\end{itemize}
+
+\subsubsection{主要类及属性方法}
+\begin{description}
+  \item[APIService] \emph{API 服务}：
+  \begin{itemize}
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|submit_order(request)|：接收订单请求并转换为仿真事件。
+        \item \verb|get_market_snapshot(query)|：返回当前市场快照。
+        \item \verb|inject_strategy(agent_id, strategy_spec)|：将策略注入指定代理。
+      \end{itemize}
+  \end{itemize}
+  \item[CLI] \emph{命令行工具}：
+  \begin{itemize}
+    \item \textbf{命令：}
+      \begin{itemize}
+        \item \verb|sim run --config path|：运行仿真实验。
+        \item \verb|sim status|：查看仿真状态。
+        \item \verb|sim inject --agent A --policy file|：向代理注入策略。
+      \end{itemize}
+  \end{itemize}
+  \item[WebUI] \emph{可视化界面}：
+  \begin{itemize}
+    \item 采用前后端分离架构，前端用 React/Vue，后端通过 APIService 提供数据接口。
+    \item 提供实时图表组件（价格、深度、成交量）、代理面板和控制台。
+  \end{itemize}
+\end{description}
+
+\subsubsection{技术路线与实现}
+API 层可使用 FastAPI 或 gRPC 实现，高并发场景下可部署在异步 WSGI/ASGI 服务器上。命令行工具使用 \verb|click| 或 \verb|argparse| 构建。WebUI 用现代前端框架，并通过 WebSocket 实现实时数据推送。
+
+\subsubsection{接口设计}
+开放的接口文档可使用 OpenAPI/Swagger 自动生成，定义请求、响应格式和错误码。
+
+\subsection{监控与日志模块}
+
+\paragraph{模块规范（概要）}
+\begin{itemize}
+  \item 目的：采集并持久化仿真过程的事件与性能指标，支持在线监控與离线分析。
+  \item 主要职责：事件日志记录、性能指标采集、指标导出与告警、为自校准与运维提供数据接口。
+  \item 输入：内核与交易所的事件流、性能采样点（CPU/内存/IO）、自定义指标采样请求。
+  \item 输出：结构化日志文件、监控指标（可导出为 Prometheus 格式）、告警消息。
+  \item 对外接口：subscribe\_metrics(callback)、export\_logs(path)、query\_metric(name,time\_range)。
+  \item 关键数据结构：事件日志格式（CSV/Protobuf）、指标时序存储、批量写入缓冲。
+  \item 错误与异常：写入失败需重试并降级为本地缓存；长期存储满时需触发清理或上报策略。
+  \item 持久化/日志：按运行 ID 组织的 log 目录，包含 log.csv、lob.csv、ohlc.csv 与 agent 资产记录。
+\end{itemize}
+
+该模块用于记录仿真过程中的事件和性能信息，并提供可视化。
+监控与日志模块的UML如图~\ref{fig:uml_monitoring}所示。
+
+\begin{figure}[H]
+  \centering
+  \resizebox{0.8\linewidth}{!}{\input{../doc/figures/uml/uml_monitoring.tex}}
+  \caption{监控与日志模块 UML 类图}
+  \label{fig:uml_monitoring}
+\end{figure}
+
+\subsubsection{功能描述}
+\begin{itemize}
+  \item 收集并存储仿真过程中产生的事件、成交记录、订单簿快照等日志。
+  \item 实时监控系统性能指标，如每秒事件数、内存占用、线程状态。
+  \item 提供日志分析工具和指标统计结果给自校准模块及用户。
+\end{itemize}
+
+\subsubsection{主要类及属性方法}
+\begin{description}
+  \item[EventLogger] \emph{事件记录器}：
+  \begin{itemize}
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|log_event(event)|：记录事件并写入日志文件或数据库。
+        \item \verb|flush()|：定期将缓冲日志刷新到持久存储。
+      \end{itemize}
+  \end{itemize}
+  \item[PerformanceMonitor] \emph{性能监视器}：
+  \begin{itemize}
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|start_monitoring()|：启动性能采集线程。
+        \item \verb|get_metrics()|：返回实时 CPU、内存、I/O 使用情况。
+      \end{itemize}
+  \end{itemize}
+  \item[MetricCollector] \emph{指标收集器}：
+  \begin{itemize}
+    \item \textbf{方法：}
+      \begin{itemize}
+        \item \verb|collect(order_book, trades)|：计算市场微观结构指标。
+        \item \verb|report(target)|：向自校准或外部系统推送统计信息。
+      \end{itemize}
+  \end{itemize}
+\end{description}
+
+\subsubsection{技术路线与实现}
+事件日志可以使用二进制格式（如 Protobuf、Avro）高效存储，或写入轻量级数据库（如 SQLite、LevelDB）。性能监控可基于 \verb|psutil| 等库实现，结果以 Prometheus 格式导出供 Grafana 展示。
+
+\subsubsection{接口设计}
+监控与日志模块对外暴露：
+\begin{itemize}
+  \item \verb|subscribe_metrics(callback)|：在指标更新时回调函数。
+  \item \verb|export_logs(path)|：将日志导出到指定路径。
+  \item \verb|query_metric(name, time_range)|：查询历史指标。
+\end{itemize}
+
+\subsection{自校准模块\label{subsec:calibration}}
+
+自校准模块监测仿真过程中的市场统计特征，并自动调整背景代理行为以逼近预定指标。
+
+\subsection{模块间关系与整体协作}
+
+各模块之间通过消息和接口协作：仿真内核调度代理和市场环境执行事件；市场环境将成交信息反馈给代理；数据管理和监控模块为代理及自校准模块提供数据支持；自校准模块动态调整背景代理行为；配置与实验管理负责初始化并控制仿真；接口模块则是用户与系统的桥梁。通过上述明确的分工和接口设计，系统结构清晰、易于维护和扩展。
+模块间的关系如图~\ref{fig:uml_interaction}所示。
+
+\begin{figure}[H]
+  \centering
+  \resizebox{0.9\linewidth}{!}{\input{../doc/figures/uml/uml_interaction.tex}}
+  \caption{模块间关系 UML 类图}
+  \label{fig:uml_interaction}
+\end{figure}

@@ -1,0 +1,55 @@
+\documentclass[tikz,svgnames,border={10 10},convert={density=300, outext=.png}]{standalone}
+
+% 若需要中文，请用 xelatex 编译并取消下面两行注释：
+\usepackage{xeCJK}
+% \setCJKmainfont{Noto Sans CJK SC}
+
+\usetikzlibrary{positioning,arrows,fit}
+
+\begin{document}
+\begin{tikzpicture}[
+    box/.style={rectangle,draw,fill=DarkGray!20,rounded corners,
+                node distance=1cm,text width=18em,text centered,
+                minimum height=2.4em,thick},
+    arrow/.style={draw,-latex',thick},
+  ]
+
+  % === 主体流程节点（参考示例风格，不加外框） ===
+  \node[box,fill=PeachPuff!60,text width=22em] (input)
+    {接收市场输入：订单（SUBMIT / CANCEL / MODIFY）、配置参数、初始化快照};
+
+  \node[box,below=0.6 of input] (orderbook)
+    {订单入簿（校验 / 索引 / 队列）};
+
+  \node[box,below=0.5 of orderbook] (matching)
+    {撮合执行（连续竞价 / 集合竞价）};
+
+  \node[box,below=0.5 of matching] (marketdata)
+    {行情聚合与推送（MKT\_DATA / LOB / OHLC）};
+
+  \node[box,below=0.5 of marketdata] (crit)
+    {竞价阶段结束？};
+
+  % 底部输出
+  \node[box,below=1.8 of crit,fill=LightSteelBlue!60,text width=24em] (output)
+    {输出：ORDER\_ACCEPTED / ORDER\_EXECUTED、MKT\_DATA 推送、撮合统计};
+
+  % === 箭头（直连 + Yes/No 回路） ===
+  \path[arrow] (input) -- (orderbook);
+  \path[arrow] (orderbook) -- (matching);
+  \path[arrow] (matching) -- (marketdata);
+  \path[arrow] (marketdata) -- (crit);
+
+  % Yes 分支：直达输出
+  \path[arrow] (crit) -- (output)
+    node[midway,left=0.1,draw,outer sep=0pt,fill=white] {Yes};
+
+  % No 分支：先竖直向下，再水平右移（No 在水平段下方），最后折返到撮合执行节点
+  \path[draw,thick] (crit.south) ++(0,-1em) coordinate(novert);
+  \draw[thick] (novert) -- ++(4,0) coordinate(nojump)
+        node[midway,below=2pt,draw,outer sep=0pt,fill=white] {No};
+  \draw[arrow] (nojump) |- (matching.east);
+
+\end{tikzpicture}
+
+\end{document}

@@ -1,0 +1,543 @@
+\documentclass{mancls}
+\title{SUSTech-fiBiD 中国证券市场全尺度数字“风洞”  V1.0}
+\usepackage{float}
+\usepackage{booktabs}
+
+% 需要 UML/TikZ 图形时加载项目内的 tikz-uml
+\makeatletter
+\def\input@path{{../doc/}{../doc/figures/}{../doc/figures/uml/}}
+\makeatother
+\IfFileExists{../doc/tikz-uml.sty}{\usepackage{../doc/tikz-uml}}{\usepackage{tikz}}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\setlist[itemize]{noitemsep, topsep=2pt, parsep=0pt, partopsep=0pt, leftmargin=*}
+\setlist[enumerate]{noitemsep, topsep=2pt, parsep=0pt, partopsep=0pt, leftmargin=*}
+
+\begin{document}
+
+\section{软件概述}
+金融市场仿真器是金融研究和量化交易实践的重要工具，它能够在不影响真实市场的情况下模拟交易行为、市场机制以及政策干预的影响，为策略验证、风险评估和政策制定提供可控的实验环境。传统的研究方法包括实盘检验和实验室小市场试验，但受限于数据隐私、实验成本和可控性，这些方法往往难以观察个体交易者的行为或进行大规模的“假设分析”。计算机仿真弥补了这一不足，使研究者能够完全控制市场规则、观察每个代理的动作，并且重复实验以评估不同假设的影响。
+
+现有的金融市场仿真器在模拟单一股票的连续双向拍卖及多智能体交互方面表现优秀，并提供了丰富的基础代理类和示例策略。然而，这些仿真器仍存在以下局限：
+\begin{itemize}
+  \item \textbf{单资产限制：} 交易所和订单簿按单个股票设计，缺乏跨股票或跨资产的统一市场架构，使得无法研究资产间的联动效应。
+  \item \textbf{缺乏跨日机制：}现有系统主要支持日内连续竞价交易，尚未实现开盘集合竞价等跨日场景。
+  \item \textbf{依赖外部校准：}背景代理的行为参数需要人工或外部算法反复调节，缺乏内置的自校准机制，难以在保持高效的同时逼近真实市场统计特征。
+  \item \textbf{性能瓶颈：}由于采用单线程实现，尽管可以模拟百万次事件，但在多标的和海量代理场景下难以满足全市场仿真的吞吐需求。
+\end{itemize}
+
+本新一代全尺寸金融市场仿真器克服了上述不足，实现以下目标：
+\begin{enumerate}
+  \item \textbf{跨资产交互：}支持多个交易品种和交易所的统一仿真，允许代理同时在多只股票或品类上发单，模拟现实中的跨资产套利、行业传播等现象。
+  \item \textbf{跨日模拟：}引入连续竞价与集合竞价的切换机制，支持多日交易的状态传递、隔夜持仓以及开盘价形成过程。
+  \item \textbf{动态自校准：}设计内置的自校准模块，使背景代理能够根据历史数据或实时统计指标自动调整行为，无需大量外部迭代即可逼近真实市场的波动和流动性特征。
+  \item \textbf{高效可扩展：}改进订单簿数据结构和撮合算法，引入多线程和异步架构，提升在千股级别和万级代理下的仿真吞吐量。
+  \item \textbf{易用性与可视化：}提供灵活的配置系统和交互接口，支持用户实时插入策略、修改政策参数，并通过可视化界面监控市场动态和代理表现。
+\end{enumerate}
+
+
+\newpage
+\section{运行环境与依赖}
+本节给出项目的推荐运行环境、如何使用 `uv` 包管理器创建和管理运行环境、以及项目主要第三方依赖的说明与安装示例。下文中列出的第三方库基于项目根目录下的 `pyproject.toml`（注：在发布或打包时请以该文件为准）。
+
+\subsection{推荐系统环境}
+\begin{itemize}
+  \item 操作系统：Windows / macOS / Linux（推荐使用 UNIX-like 系统进行开发与部署）
+  \item Python 版本：建议使用 Python 3.12 或以上。
+  \item 建议硬件：对大型仿真建议使用多核 CPU（8 核以上）、至少 32GB 内存。
+\end{itemize}
+
+\subsection{使用 \texttt{uv} 包管理器创建环境（推荐）}
+本项目推荐使用团队内统一的轻量包管理工具 \texttt{uv} 来创建与管理开发/运行环境（下列命令示例以 \texttt{uv} 为示范）。若您没有 \texttt{uv}，可使用 \texttt{pip} 或 \texttt{venv}/\texttt{conda} 完成等效操作。
+
+示例：在项目根目录下执行（假设已安装 \texttt{uv} 客户端）：
+\begin{verbatim}
+# 创建并激活环境（env-name 可自定义）
+uv env create -n abides-acc --python 3.12
+uv env activate abides-acc
+
+# 从 pyproject.toml 安装依赖（uv 支持直接解析项目文件）
+uv sync
+
+# 或者（若 uv 不支持直接 install）：
+uv pip install -r requirements.txt
+\end{verbatim}
+
+如果您更习惯使用 \texttt{pip} + 虚拟环境：
+\begin{verbatim}
+python -m venv .venv
+source .venv/bin/activate   # macOS / Linux
+.venv\Scripts\activate     # Windows (PowerShell)
+pip install --upgrade pip
+pip install -r requirements.txt
+\end{verbatim}
+
+\subsection{主要第三方库（节选）}
+以下为项目中若干核心依赖（完整列表见 `pyproject.toml`）：
+\begin{itemize}
+  \item \textbf{数值与数据处理}: \texttt{numpy}、\texttt{pandas}
+  \item \textbf{仿真与并发}: \texttt{textual}（终端 GUI）、\texttt{uvicorn}（ASGI）、\texttt{fastapi}
+  \item \textbf{机器学习}: \texttt{scikit-learn}、\texttt{scipy}、\texttt{lightning}
+  \item \textbf{可视化}: \texttt{matplotlib}、\texttt{plotly}、\texttt{seaborn}
+  \item \textbf{数据库与缓存}: \texttt{redis}、\texttt{pymongo}
+  \item \textbf{性能 / 工具}: \texttt{psutil}、\texttt{joblib}、\texttt{tqdm}
+  \item \textbf{网络 / HTTP}: \texttt{requests}
+  \item \textbf{金融数据 / 交互}: \texttt{akshare}
+\end{itemize}
+
+\subsection{安装与配置要点}
+\begin{itemize}
+  \item 建议优先在隔离环境（如 uv 环境或 venv）中安装依赖，避免系统包冲突。
+  \item 若启用 Redis 或 MongoDB：请根据本机平台安装并启动对应服务，或使用容器（Docker）。示例：\verb|docker run -d -p 6379:6379 redis|。
+  \item 将环境变量写入项目根目录的 `.env` 文件（例如数据库 URL、日志目录等），并在程序中通过 `dotenv` 加载以确保可移植性。
+\end{itemize}
+
+\subsection{运行示例}
+在激活环境后，可按照下列顺序快速验证项目运行：
+\begin{enumerate}
+  \item 运行内核单次试跑（检查日志结构）：
+  \begin{verbatim}
+  python scripts/run_kernel_once.py
+  \end{verbatim}
+  \item 运行演示（包含 GUI / Web）：
+  \begin{verbatim}
+  python scripts/run_demo.py
+  \end{verbatim}
+  \item 批量校准/实验：
+  \begin{verbatim}
+  python scripts/run_calibration_pipeline.py -c config/calibration_pipeline.json
+  \end{verbatim}
+\end{enumerate}
+
+
+\section{总体设计}
+本章给出系统总体设计的结构化导读与要点概览：首先说明设计目标与原则，随后呈现模块划分与各模块的职责与对外接口；接着梳理核心的数据与消息流、仿真内核与撮合引擎的关键逻辑；然后讨论性能设计、可扩展性以及部署与运维要点；最后列出安全、权限、测试与可观测性方面的关注项。文中所用的架构与消息流示意图将直接复用项目插图，并在本节按需调整相对位置以配合叙述。
+
+\subsection{设计目标与原则}
+本系统设计的目标是构建一个高保真、可扩展、可复现且易维护的金融市场仿真平台，满足学术研究与行业实验的需求。在此目标下，我们遵循以下原则：
+\begin{itemize}
+  \item \textbf{正确性优先：}仿真逻辑应忠实反映市场规则与撮合机制，保证微观事件（订单、撮合、成交）的一致性，便于科学实验与因果推断。
+  \item \textbf{模块化与分层：}系统被划分为清晰的层次（内核、市场环境、服务支撑、交互/监控），各模块通过标准化接口交互，降低耦合并支持并行开发。
+  \item \textbf{可复现性：}实验应在相同配置和随机数种子下复现结果；日志与环境信息需完整记录，便于审计与对比。
+  \item \textbf{性能与可扩展性：}在保证正确性的前提下，设计支持单机高吞吐与分布式横向扩展策略，满足千股/万代理级别的仿真负载。
+  \item \textbf{可观测性：}提供全面的日志、监控与指标采集接口，支持在线与离线分析，为自校准与策略评估提供数据支撑。
+\end{itemize}
+
+\subsection{模块划分与职责概览}
+本软件的整体架构图如图~\ref{fig:architecture_overview} 所示，系统按功能与依赖关系划分为六个层次：\emph{交互与展示层}、\emph{数据与存储层}、\emph{仿真与校准层}、\emph{市场与投资层}、\emph{智能体层} 与 \emph{内核与基础设施层}。各层职责与相互作用如下（括号内为图中对应模块）：
+
+\paragraph{一）交互与展示层（用户界面：终端界面 / 网页界面）}
+\begin{itemize}
+  \item 提供仿真的\textbf{启动、暂停、步进与参数热更新}能力；支持实验模板选择与参数扫描的批量启动。
+  \item 实时\textbf{可视化与监控}：展示 LOB 深度、成交流、指标趋势、代理持仓等信息。
+  \item 向下经由\emph{仿真控制}（内核）与\emph{消息模块}发送控制指令，订阅关键事件与指标；从\emph{数据库系统/文件系统}载入与导出配置、日志与快照。
+\end{itemize}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\linewidth]{figures/architecture.png}
+  \caption{系统总体架构图}
+  \label{fig:architecture_overview}
+\end{figure}
+
+\paragraph{二）数据与存储层（数据库系统 / 文件系统）}
+\begin{itemize}
+  \item 统一\textbf{持久化}仿真运行的结构化数据（订单/成交、OHLC、指标、代理资产）与非结构化产物（图表、快照、配置）。
+  \item 向上为\emph{校准模块}、\emph{投资组合模块}与\emph{智能体模块}提供\textbf{历史/合成数据访问}接口；向\emph{日志模块}与\emph{消息模块}提供高吞吐写入能力。
+  \item 支持\textbf{可复现性}：保存运行 ID、依赖锁文件、随机种子与配置快照，保证结果可追溯。
+\end{itemize}
+
+\paragraph{三）仿真与校准层（仿真模块 / 校准模块）}
+\begin{itemize}
+  \item \textbf{仿真模块}协调\emph{市场与投资层}与\emph{智能体层}的事件执行，保证时间推进与因果顺序；在需要时调用\emph{多进程加速功能}进行并行推进。
+  \item \textbf{校准模块}定义目标统计（如点差、波动率、成交量分布、深度曲线），\textbf{在线监测}实际指标并生成参数更新：
+    \begin{itemize}
+      \item 通过\emph{校准智能体}下发对\emph{背景代理}的行为参数调整（到达率、订单量、价格偏好等）。
+      \item 必要时\textbf{调整市场机制参数}（如集合竞价窗口、最小变动价位）并与\emph{交易所模块}协同。
+      \item 读取\emph{数据库系统}中的历史参考与上一轮运行的统计结果，实现闭环优化。
+    \end{itemize}
+\end{itemize}
+
+\paragraph{四）市场与投资层（交易所模块 / 限价订单簿（LOB）/ 订单 / 投资组合模块 / Stocks）}
+\begin{itemize}
+  \item \textbf{交易所模块}实现市场规则与撮合入口，向下依赖\emph{LOB}与\emph{订单}，向上为\emph{智能体}与\emph{投资组合}提供统一的提交/撤单/查询接口。包含四类扩展能力：
+    \begin{itemize}
+      \item \emph{跨日交易功能}：维护日界切换、集合竞价与隔夜持仓的\textbf{状态延续}与规则衔接。
+      \item \emph{跨股票交易功能}：统一时间轴与路由，支持\textbf{跨标的撮合与一揽子订单}，为跨品种策略与冲击传播研究提供基础。
+      \item \emph{A股特有规则}：支持\textbf{T+1、涨跌幅限制、集合竞价定价}等本地化约束，并暴露为\textbf{可配置政策}供实验切换。
+      \item \emph{多进程加速功能}：在\emph{内核时钟/消息}保障下，对不同标的/簿或时间窗并行执行，提升吞吐。
+    \end{itemize}
+  \item \textbf{限价订单簿（LOB）}提供价格层级与层内 FIFO 的\textbf{撮合核心数据结构}；向\emph{交易所模块}暴露插入/删除/撮合与快照接口，并向\emph{消息模块}推送行情增量。
+  \item \textbf{订单}为一等公民实体，承载生命周期（提交、排队、部分成交、撤单、过期）与审计信息（时间戳、来源、因果链）。
+  \item \textbf{投资组合模块}面向策略评估与风险控制：维护\textbf{资产、现金、保证金、风险度量}；订阅成交回报与行情，回写到\emph{数据库系统}；与\emph{股票模块}（资产目录/元数据）对接实现\textbf{标的信息管理}。
+\end{itemize}
+
+\paragraph{五）智能体层（智能体模块：交易智能体 / 信息源智能体 / 校准智能体）}
+\begin{itemize}
+  \item \textbf{交易智能体}依据策略（噪声、做市、动量、基本面、RL 等）\textbf{生成订单}，通过\emph{消息模块}与\emph{交易所模块}交互；订阅市场数据与自身成交回报，更新内部状态与\emph{投资组合}。
+  \item \textbf{信息源智能体（Oracle）}统一外部/历史数据接入：向\emph{交易智能体}与\emph{校准模块}提供\textbf{对齐后的行情/事件流}；必要时\textbf{回放}历史路径对标真实统计。
+  \item \textbf{校准智能体}承载校准策略的执行，将\emph{校准模块}的调整指令\textbf{落地到代理与市场参数}，形成闭环。
+\end{itemize}
+
+\paragraph{六）内核与基础设施层（内核模块：时钟模块 / 消息模块 / 仿真控制模块 / 日志模块）}
+\begin{itemize}
+  \item \textbf{时钟模块}维护全局虚拟时间（GVT）与安全窗口，支持\textbf{顺序/并行推进}与跨资产同步。
+  \item \textbf{消息模块}提供可靠消息总线与订阅机制：路由\emph{代理 $\leftrightarrow$ 交易所 $\leftrightarrow$ 投资组合}的命令、回报与行情；向\emph{用户界面}与\emph{日志模块}广播观测流。
+  \item \textbf{仿真控制模块}作为统一\textbf{运行时编排器}：接收 UI/脚本指令，装配并启动各模块，管理生命周期、错误处理与资源释放。
+  \item \textbf{日志模块}高频采集关键事件与指标，支持\textbf{批量/压缩写入}到\emph{数据库系统/文件系统}，为\emph{校准}与复现实验提供证据链。
+\end{itemize}
+
+\paragraph{模块间的支持与服务关系}
+\begin{enumerate}
+  \item \textbf{控制流：}用户界面 $\rightarrow$ 仿真控制模块（启动/暂停/参数）$\rightarrow$ 时钟/消息/交易所/智能体；异常与告警自下而上传回 UI。
+  \item \textbf{交易流：}交易智能体提交订单 $\rightarrow$ 消息模块路由 $\rightarrow$ 交易所模块 $\rightarrow$ LOB 撮合 $\rightarrow$ 成交回报/行情增量 $\rightarrow$ 智能体与投资组合。
+  \item \textbf{数据流：}信息源智能体/数据库系统向上提供历史/实时数据；日志模块将事件、快照与指标落盘；投资组合产出风控与绩效报表。
+  \item \textbf{校准闭环：}校准模块读取数据库与在线指标 $\rightarrow$ 生成参数更新 $\rightarrow$ 由校准智能体下发到交易智能体/市场规则 $\rightarrow$ 新一轮仿真输出反馈。
+  \item \textbf{性能与扩展：}多进程加速在内核时钟的安全窗口内对市场分片或时间窗并行推进；A股特有规则与跨日/跨股票能力以可配置策略注入交易所模块。
+\end{enumerate}
+
+综上，\emph{内核}提供时序与通信保障，\emph{市场与投资层}提供可配置的市场机制与账户度量，\emph{智能体层}产生行为并接受反馈，\emph{校准模块}形成数据驱动的闭环优化，\emph{数据与存储层}承载可复现的持久化，\emph{交互与展示层}贯穿始终提供操作与观测。这一分层与职责划分与图~\ref{fig:architecture_overview} 一致。
+
+
+
+
+\subsection{仿真内核（Kernel）}
+仿真内核是系统的心脏，负责事件调度、时间推进和消息传递，保证仿真过程中各代理之间的时序一致性。系统中的核心消息流如图~\ref{fig:message-flow} 所示。
+
+\begin{figure}[H]
+  \centering
+  \resizebox{0.9\linewidth}{!}{\input{../doc/figures/message_flow.tex}}
+  \caption{核心消息流（简要）}
+  \label{fig:message-flow}
+\end{figure}
+
+
+
+\begin{itemize}
+  \item \textbf{事件队列和时间管理：}内核维护一个基于时间戳的优先级队列存放所有待执行事件，实现纳秒级的时间分辨率。为支持多线程并行处理，可将不同的资产或代理映射到独立的事件处理线程，同时通过锁或无锁数据结构保证全局一致性。
+  \item \textbf{消息总线：}系统采用消息驱动模式，所有代理和系统组件之间通过标准化消息进行交互（类似于 ABIDES 中的消息传递机制）。消息总线负责路由、排队和分发消息，支持自定义消息类型和批量传输。
+  \item \textbf{调度策略：}支持顺序调度和并行调度两种方式。顺序模式用于调试和小规模实验；并行模式根据时间窗口或代理分区划分任务，以提高吞吐量。
+  \item \textbf{时间同步：}内核维护全局虚拟时间（GVT），并根据代理之间的依赖关系更新局部时间，避免因并行执行导致的“回溯”问题。
+\end{itemize}
+
+
+
+\subsection{市场环境与撮合引擎}
+\label{sec:matching-engine}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\linewidth]{figures/cda.png}
+  \caption{订单列表与撮合机制数据结构示意图}
+  \label{fig:cda_overview}
+\end{figure}
+
+
+本节结合图~\ref{fig:cda_overview}对\textbf{数据结构}与\textbf{撮合算法}作更为工程化的说明。我们的实现遵循“\emph{价格优先、时间优先}”的连续双向拍卖（CDA）机制，并在数据结构上采用\textbf{堆（price heap）+ 双端队列（price-level deque）}的二层结构，以在保持语义正确的同时获得近似最优的时间复杂度与良好的缓存局部性。
+
+\paragraph{核心数据结构（Heap + Deque）}
+\begin{itemize}
+  \item \textbf{价格层（Price Level）}：每一个可交易价格对应一个\emph{价格层}，其内部维护该价格下按到达时间排序的\textbf{双端队列}（\verb|deque|）。队头是最早到达、最优先撮合的订单。队列节点保存：\verb|order_id|、\verb|qty_remaining|、\verb|ts_arrival|、\verb|owner| 等。
+  \item \textbf{价格堆（Price Heap）}：买方使用\textbf{最大堆}维护所有\emph{有效买价}的价格层（best bid 位于堆顶），卖方使用\textbf{最小堆}维护所有\emph{有效卖价}的价格层（best ask 位于堆顶）。堆节点保存指向价格层的句柄与价格键。
+  \item \textbf{快速索引（Order Index）}：建立 \verb|order_id -> (side, price, iterator)| 的哈希索引，定位到\emph{具体价格层的队列节点}，从而实现\textbf{O(1)} 级取消/修改（从队列中间删除或减量），避免线性扫描。
+  \item \textbf{五档/行情聚合}：维护 \verb|top-of-book| 与\verb|L1..L5| 聚合缓存——每次队列或堆结构变更时\textbf{增量更新}，可 O(1) 代价生成五档快照（如图中“5 档价格”箭头所示）。
+\end{itemize}
+
+\paragraph{关键操作的复杂度}
+\begin{center}
+\begin{tabular}{lcc}
+\hline
+操作 & 时间复杂度 & 说明 \\
+\hline
+提交限价单 & $O(\log M)$ & $M$ 为已激活价格层数；堆插入或堆上浮 \\
+市场单提交 & 期望 $O(K + \log M)$ & $K$ 为跨越的价格层数；逐层吃单 \\
+最优价对敲 & 摊还 $O(1)$ / 层切换 $O(\log M)$ & 队列头撮合；层空时弹堆 \\
+撤单/改量 & $O(1)$（有索引） & 通过 \verb|order_id| 直接定位并删除/减量 \\
+价格层清空 & $O(1)$ & 清空队列并从堆中移除该层 \\
+\hline
+\end{tabular}
+\end{center}
+
+\paragraph{撮合流程（价格\,$\rightarrow$\,时间）}
+当\textbf{买单}到达时，与当前 \emph{best ask} 比较；若 \(\texttt{buy.price} \ge \texttt{best\_ask}\) 则发生撮合。卖单对称。每次撮合仅影响\emph{队头订单}，保证时间优先；若队头耗尽，弹出队头并继续；若价格层队列为空，从堆中弹出该价格层并移动到下一优先价格。伪代码如下：
+\begin{verbatim}
+function match(order):
+    while order.qty > 0 and crossing(order, best_price(opposite(order.side))):
+        lvl = heap_top(opposite(order.side))        # 取最优对手价层
+        while order.qty > 0 and not lvl.queue.empty():
+            head = lvl.queue.front()
+            traded = min(order.qty, head.qty)
+            fill(order, head, lvl.price, traded)    # 生成两侧成交回报
+            order.qty -= traded
+            head.qty  -= traded
+            if head.qty == 0:
+                lvl.queue.pop_front()
+        if lvl.queue.empty():
+            heap_pop(opposite(order.side))          # 价格层被吃空，堆弹出
+    if order.qty > 0 and order.type == LIMIT:
+        enqueue_to_level(order)                     # 未成交部分入簿并入堆
+\end{verbatim}
+
+\paragraph{取消与修改}
+图中“取消”案例体现为：通过 \verb|order_id| 哈希定位到\((\texttt{side}, \texttt{price}, \texttt{iterator})\)，在对应价格层队列中\textbf{O(1)} 删除或改量；若该层由非空变为空，需\textbf{同步维护堆}（堆内删除或延迟清理）。为降低堆中间删除成本，工程上可采用\emph{lazy deletion}：标记失效并在堆顶弹出时清理。
+
+\paragraph{价格步长、涨跌幅与有效性校验}
+在入簿/撮合前进行\textbf{价格规范化}（最小变动价位）、\textbf{涨跌幅/集合价有效性}与\textbf{最小成交量/最小订单量}检查；无效订单直接拒绝并返回错误码。该层检查与\emph{A 股特有规则}相容，可通过策略配置开关。
+
+\paragraph{部分成交、剩余入簿与优先级保持}
+如图中蓝色虚框“成交”所示，订单可能\emph{部分成交}。未成交余量按原到达时间入原价层队尾，\textbf{保持时间优先}不变。若订单是\emph{IOC/FOK}，则在一次撮合循环后分别丢弃余量或要求一次性满足。
+
+\paragraph{批量与并行}
+为兼顾性能与正确性，系统支持两种加速策略：
+\begin{itemize}
+  \item \textbf{批处理时间窗}：将极短时间窗内抵达的订单批量入簿/撮合，减少堆/队列操作次数；对外仍保持事件时间序的可观测一致性。
+  \item \textbf{价格分片并行}：在\emph{安全窗口}下对互不交叉的价格区间或不同标的独立并行；当跨区间形成\emph{价穿越}时，通过\emph{时钟屏障}合并。
+\end{itemize}
+
+\paragraph{与图示的对应关系}
+\begin{itemize}
+  \item 上方“订单列表”条带表示按到达时间排队的订单流；不同颜色对应买/卖，斜线纹理为\emph{可成交（crossing）}子集。
+  \item 左下横轴为价格，左侧绿色是\textbf{卖方限价队列}（每个方块表示一个价格层，箭头指队内 FIFO 方向）；右侧粉色为\textbf{买方限价队列}。
+  \item 蓝色虚框“成交”展示了\emph{跨价撮合}：新到订单与对手价层队头逐一撮合，价格层吃空则从堆中弹出，继续下一价层。
+  \item 右上角“堆 + 双端队列”示意我们的\emph{两层结构}：堆顶为最优价（节点 1），每个堆节点连接到一个队列（该价位的 FIFO）。
+\end{itemize}
+
+综上，\textbf{堆 + 价格层双端队列 + 哈希索引}的组合，在语义上完整实现价格/时间优先并支持集合竞价与连续竞价的统一建模；在工程上实现了\emph{提交/取消/撮合路径}的低复杂度与良好缓存友好性，为上层策略、投资组合与监控提供了稳定且高吞吐的撮合内核。
+
+
+
+\subsection{智能体框架（Agents）}
+智能体框架作为仿真系统的行为单元，需提供统一的生命周期与可配置的行为策略：
+
+\paragraph{基础代理模型}
+基础代理应包含：标识符、账户/持仓状态、消息处理回调、心跳/定时器接口、日志接口与保存/恢复能力（用于断点恢复或实验回放）。代理内部可维护局部 RNG（随机数发生器）以确保实验可重现。
+
+\paragraph{内置代理类型}
+提供若干基础代理用于快速搭建实验：
+\begin{itemize}
+  \item \textbf{噪声交易者（Noise Trader）}: 随机下单以提供基础流动性。
+  \item \textbf{做市商（Market Maker）}: 基于价差和深度做价并管理库存。
+  \item \textbf{趋势/动量代理}: 基于技术指标触发交易。
+  \item \textbf{强化学习代理（RL）}: 与外部学习模块联动，支持在线/离线训练与策略评估。
+\end{itemize}
+
+
+\subsection{自校准（Calibration）模块}
+自校准模块（Calibration Layer）负责在仿真运行过程中\textbf{在线修正背景订单流}，使仿真订单簿在统计或逐时结构上逼近真实市场，从而确保仿真环境具备高保真特性。该过程不改变核心撮合机制，而是以\emph{“控制输入”方式注入订单}，对背景流动性进行闭环调节。整体流程如图~\ref{fig:calib_timeline}、图~\ref{fig:calib_diff} 所示。
+
+\vspace{4pt}
+\paragraph{触发机制：LOB 校准消息驱动}
+仿真时间线上包含三类异步消息：订单信息、校准指令与 LOB 记录指令（图中分别以绿色、红色、黄色方块标记）。其中：
+\begin{itemize}
+  \item \textbf{LOB 记录消息（Record LOB Msg）}：指示系统必须在当前时刻写出（持久化）订单簿快照；
+  \item \textbf{LOB 校准消息（Calibrate LOB Msg）}：在记录前触发一次校准流程，用以修正当前仿真 LOB；
+  \item 校准消息到达时，仿真内核暂停推进未来消息，进入\emph{校准执行阶段}（蓝色流程框）。
+\end{itemize}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.97\linewidth]{figures/timeline.png}
+  \caption{自校准流程在仿真时间线中的触发与执行}
+  \label{fig:calib_timeline}
+\end{figure}
+
+\paragraph{差异计算：真实 LOB vs 仿真 LOB}
+当校准流程被触发时，系统同时从两侧获取订单簿：
+\begin{itemize}
+  \item \textbf{真实侧 LOB}：来自真实撮合系统或外部行情源（例如历史回放、实盘镜像）；
+  \item \textbf{仿真侧 LOB}：来自当前仿真交易所模块；
+\end{itemize}
+二者按价格轴对齐后逐价比较，得到\textbf{订单簿差异向量}（图~\ref{fig:calib_diff} 上半部分）。
+\begin{equation}
+  \Delta(q,p) = q_{real}(p) - q_{sim}(p), \quad p \in PricesLevels
+\end{equation}
+其中 $\Delta(q,p) > 0$ 表示真实侧在该价位存在\emph{缺失流动性}（需补单），$\Delta(q,p) < 0$ 表示仿真侧存在\emph{多余挂单}（需撤/吃单）。
+
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.97\linewidth]{figures/lob_diff.png}
+  \caption{订单簿差异与自校准代理组的补单/撤单}
+  \label{fig:calib_diff}
+\end{figure}
+
+\paragraph{校准执行：自校准 Agent 组的启发式下单}
+差异向量被发送至\textbf{自校准 Agent 组}，该组包含多类型代理，用以模拟真实市场中不同规模的流动性供给者：
+\begin{itemize}
+  \item 大型机构型校准 Agent：负责大额分层补单／批量撤单；
+  \item 中型机构型 Agent：用于细分价格区间的结构性调整；
+  \item 小型机构／散户型 Agent：用于补偿精细尾部流动性；
+  \item 取消 Agent：负责对仿真侧多余的挂单执行撤单动作。
+\end{itemize}
+
+这些 Agent 可选择不同的\textbf{启发式策略}（无需全局最优）：
+\begin{itemize}
+  \item 贪心（Greedy）：按 $\Delta(q,p)$ 的绝对值从大到小补单；
+  \item 分层补单（Tiered Fill）：先恢复最优 5 档，再恢复深度区；
+  \item 价格加权注入：价差越近，补单优先级越高；
+  \item 同步成交修正：若 $\Delta(q,p) < 0$，以市价单方式“吃掉”冗余流动性。
+\end{itemize}
+校准动作均通过系统统一 API 进入\texttt{exchange.submit\_order()}，保持与普通代理\textbf{完全一致的语义}，因此不会破坏撮合一致性。
+
+\paragraph{闭环与持久化}
+校准动作执行完成后，控制权返回至仿真流程，随后由\textbf{LOB 记录消息}触发状态快照写入数据库/文件系统。此时存储的订单簿是\textbf{已校准版本}，可作为：
+\begin{itemize}
+  \item 真实 LOB 重建验证；
+  \item 后续统计指标计算输入；
+  \item 多轮校准或离线复盘基准。
+\end{itemize}
+
+
+综上，该设计实现了一个\emph{事件驱动、逐步逼近的订单簿复制机制}：
+\begin{enumerate}
+  \item 真实 LOB $\rightarrow$ 差异检测；
+  \item 差异 $\rightarrow$ 自校准 Agent 生成补偿订单；
+  \item 校准动作 $\rightarrow$ 仿真 LOB 重构；
+  \item 持久化记录 $\rightarrow$ 下一周期累积逼近。
+\end{enumerate}
+其优点包括：
+\begin{itemize}
+  \item 无需直接覆盖仿真状态，保持市场微结构一致性；
+  \item 可插拔校准策略，允许强化学习/贝叶斯/可微优化替换启发式算法；
+  \item 支持不同时间尺度（毫秒级／秒级／分钟级）校准；
+  \item 兼容多标的并行校准与分布式仿真。
+\end{itemize}
+
+
+
+
+\subsection{数据管理、存储与接入}
+数据层负责历史数据、合成数据与仿真输出的管理：
+
+\paragraph{数据接口}
+提供统一的数据访问 API（按符号/时间/类型索引），支持批量查询、时间对齐与缺失值补全。历史数据导入支持 CSV、Parquet、数据库（Mongo/SQL）等格式。
+
+\paragraph{持久化与日志}
+仿真输出（消息日志、LOB 快照、OHLC、代理资产）按运行 ID 分目录持久化。为保证可重现性，每次运行同时记录环境信息（依赖锁文件、Python 版本、配置文件快照）。
+
+\paragraph{数据缩减与导出}
+为便于离线分析，系统支持按需导出统计摘要、子样本数据或聚合结果（CSV/Parquet），并支持与常见回测/分析工具兼容的数据格式。
+
+\subsection{交互接口与可视化}
+为满足不同用户群体需求，本系统提供多种接入方式：
+\begin{itemize}
+  \item \textbf{程序化 API}: 同步/异步调用，便于外挂策略、RL 训练器或评估器接入。
+  \item \textbf{命令行工具}: 支持脚本化实验调度与快速验证（见本手册的运行示例）。
+  \item \textbf{Web UI / Dashboard}: 实时监控市场快照、代理状态与指标，支持交互式策略注入与参数调优。
+  \item \textbf{终端界面（Text UI）}: 基于 \texttt{textual} 的轻量监控界面，适用于远程服务器或终端用户。
+\end{itemize}
+
+% End of expanded 总体设计 section
+
+
+\newpage 
+\input{module_design.tex}
+
+\newpage 
+\section{用户界面（UI）设计与交互能力}
+
+为了支持研究者、量化开发者与监管实验用户对仿真过程进行 \textbf{观察、控制与干预}，本系统提供了三类互补的用户界面：
+
+\begin{enumerate}
+  \item \textbf{Web 可视化界面}（面向策略调试与实验监控）； 
+  \item \textbf{实时市场监控界面}（同时展示真实市场与仿真市场对照）；  
+  \item \textbf{终端交互界面（TUI）}（适用于远程服务器及批量实验场景）。
+\end{enumerate}
+
+三类 UI 共用同一套消息与数据接口，可在不影响仿真进程的情况下并行运行，用于 \emph{观察 → 干预 → 反馈} 的闭环实验。
+
+\subsection{代理监控与策略调试界面（Agent Panel）}
+
+如图~\ref{fig:ui-agent} 所示，\textbf{Agent Panel} 提供逐策略级别的可视化调试能力：
+
+\begin{itemize}
+  \item \textbf{左侧策略列表}：对应所有已加载的策略/智能体，支持实时切换观察。
+  \item \textbf{持仓视图（Positions）}：展示当前代理在各标的上的仓位、均价等信息。
+  \item \textbf{订单视图（Orders）}：记录该代理最近提交与成交的订单状态，可用于观察下单行为与成交延迟。
+  \item \textbf{策略参数视图（Strategy Parameters）}：展示策略类型与超参数（如做市宽度、风控阈值、学习率等），支持在线调参扩展。
+  \item \textbf{盈亏与现金视图（P\&L / Cash）}：显示该代理当前收益曲线与现金余额，可用于评估策略好坏或作为 RL 回报信号。
+\end{itemize}
+
+该界面主要用于 \textbf{策略级实时观察}，支持开发者进行策略比较、异常定位与参数调优。
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.98\linewidth]{figures/web-agent.png}
+  \caption{代理调试与策略参数面板（Agent Panel）}
+  \label{fig:ui-agent}
+\end{figure}
+
+
+\subsection{真实市场对照与仿真验证界面（Market Panel）}
+
+如图~\ref{fig:ui-market} 所示，\textbf{Market Panel} 采用「真实市场 vs 仿真市场」双视图布局，用于验证仿真质量、监控 LOB 复现情况及校准效果：
+
+\begin{itemize}
+  \item \textbf{实时 K 线对照图}：上半部分展示真实市场行情，下半部分展示同步时刻的仿真行情，用于直观观察走势偏差。
+  \item \textbf{盘口深度（Market Depth）}：实时展示 Level-1/Level-5 买卖盘，监控流动性与价差。
+  \item \textbf{成交记录（Trade History）}：展示逐笔成交方向、价格、数量，可对比真实数据与仿真生成数据。
+  \item \textbf{股票切换面板}：左侧列表支持多标的快速切换，用于跨资产验证与校准测试。
+  \item \textbf{仿真时钟与状态栏}：右上角显示仿真时间、负载状态、电量图标式仿真进度提示等。
+\end{itemize}
+
+该界面主要用于 \textbf{仿真验证、模型校准与因果实验可视化}，也可作为最终用户演示模块。
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.98\linewidth]{figures/web-market.png}
+  \caption{真实市场与仿真市场对照监控界面（Market Panel）}
+  \label{fig:ui-market}
+\end{figure}
+
+
+\subsection{终端交互界面（Text UI / TUI）}
+
+对于需要在远程服务器、无桌面环境或批量仿真任务下运行系统的用户，本平台提供了如图~\ref{fig:ui-terminal} 的 \textbf{终端可视化界面}：
+
+\begin{itemize}
+  \item \textbf{系统信息区}：展示仿真版本、当前时钟、已执行步数。
+  \item \textbf{市场数据区}：显示 Top-5 活跃股票及行情摘要。
+  \item \textbf{逐笔成交流（Transaction Records）}：实时滚动记录代理之间的成交事件。
+  \item \textbf{LOB 快照窗口}：展示当前监控标的的盘口快照（买一卖一到深度 N）。
+  \item \textbf{全局代理监控墙}：以色块方式展示所有代理当前状态（wakeup/sleep）与 PnL 百分比变化。
+\end{itemize}
+
+TUI 适合 HPC 仿真、无 UI 的 Docker 部署、自动化回测与教学演示等场景，并提供键盘热键接口（暂停、步进、切换标的、退出等）。
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.98\linewidth]{figures/terminal_ui.png}
+  \caption{终端仿真监控界面（Text-based UI）}
+  \label{fig:ui-terminal}
+\end{figure}
+
+
+\begin{table}[h]
+\centering
+\begin{tabular}{p{3cm} p{4cm} p{6cm}}
+\toprule
+\textbf{界面类型} & \textbf{主要用途} & \textbf{适用场景} \\
+\midrule
+Web-Agent Panel & 策略级调试、参数观察 & 策略开发、策略比较、教学展示 \\
+Web-Market Panel & 仿真 vs 真实市场对照、校准验证 & 研究论文实验、校准调参、监管沙盒演示 \\
+终端 Text UI & 批量仿真监控、远程运行 & 服务器部署、Docker/SSH、高性能实验 \\
+\bottomrule
+\end{tabular}
+\caption{三类 UI 设计定位与典型应用场景}
+\end{table}
+
+\subsection{统一接口与扩展能力}
+
+所有 UI 通过同一消息层获取数据，具备以下特性：
+
+\begin{itemize}
+  \item 与仿真核心 \textbf{零耦合}，可热插拔或同时启用；
+  \item 支持 REST / WebSocket / 本地共享内存三种数据订阅方式；
+  \item 可扩展外部面板（如 Prometheus / Grafana / Plotly Dash）；
+  \item 可将 UI 运行在浏览器、本地客户端或嵌入式 IDE 插件中。
+\end{itemize}
+
+\noindent 综上，本系统 UI 设计覆盖可视化、调试、校准验证与远程批量实验需求，实现从微观代理到宏观市场的全视角监控，为仿真研究提供强交互支撑。
+
+
+\end{document}

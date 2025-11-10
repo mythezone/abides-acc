@@ -1,0 +1,79 @@
+\documentclass[border=6pt]{standalone}
+% —— 字体：用 xelatex 编译，保证中文正常显示 ——
+\usepackage{fontspec}
+\usepackage{xeCJK}
+% \setmainfont{TeX Gyre Heros}        % 英文字体，可按需替换
+% \setsansfont{TeX Gyre Heros}        % 无衬线
+% \setmonofont{JetBrains Mono}        % 等宽
+% \setCJKmainfont{Noto Sans CJK SC}   % 中文主字体（无则改为系统已有字体）
+
+% —— 排版与绘图 ——
+\usepackage{tikz}
+\usetikzlibrary{
+  arrows.meta,
+  backgrounds,
+  calc,
+  fit,
+  positioning,
+  shadows.blur
+}
+
+% —— 统一配色（柔和） ——
+\definecolor{CPrimary}{HTML}{2D5BFF}
+\definecolor{CPrimarySoft}{HTML}{E8EEFF}
+\definecolor{CInfo}{HTML}{2AA198}
+\definecolor{CInfoSoft}{HTML}{E6F4F1}
+\definecolor{CWarn}{HTML}{E9B200}
+\definecolor{CWarnSoft}{HTML}{FFF6DB}
+\definecolor{CDanger}{HTML}{D64545}
+\definecolor{CDangerSoft}{HTML}{FCE8E8}
+\definecolor{CGray}{HTML}{667085}
+
+% —— 全局 TikZ 风格 ——
+\tikzset{
+  >={Latex[round,scale=.9]},
+  node distance=10mm and 12mm,
+  font=\small,
+  box/.style={
+    draw,
+    rounded corners=6pt,
+    inner xsep=8pt, inner ysep=8pt,
+    align=left,
+    fill=white,
+    blur shadow
+  },
+  header/.style={
+    font=\bfseries\footnotesize,
+    text=CGray,
+    inner sep=2pt,
+    anchor=west
+  },
+  badge/.style={
+    font=\scriptsize\ttfamily,
+    rounded corners=3pt,
+    inner xsep=4pt, inner ysep=2pt,
+    draw=CGray!40, fill=CGray!10
+  },
+  % 分类盒
+  group/.style={box, draw=CPrimary, fill=CPrimarySoft},
+  subbox/.style={box, draw=CPrimary!70},
+  io/.style={box, draw=CInfo!70, fill=CInfoSoft},
+  note/.style={box, draw=CWarn!70, fill=CWarnSoft},
+  error/.style={box, draw=CDanger!80, fill=CDangerSoft},
+  % 箭头
+  flow/.style={very thick, CPrimary},
+  dashedflow/.style={thick, CGray, dashed},
+  backflow/.style={thick, CGray!80, -{Latex[length=2mm]}}
+}
+
+% —— 统一的标题条宏：左上角小标题 + 等宽接口标签 ——
+\newcommand{\boxheader}[2][]{%
+  \node[header] {#2} #1;
+}
+
+\begin{document}
+% 本文件仅作为“模板骨架”，具体图请复制此 preamble。
+\begin{tikzpicture}
+% \node[io, minimum width=42mm] (sample) {这是模板示例框，后续请删除。};
+\end{tikzpicture}
+\end{document}

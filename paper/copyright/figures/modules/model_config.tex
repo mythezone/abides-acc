@@ -1,0 +1,62 @@
+
+
+\documentclass[tikz,svgnames,border={10 10},convert={density=300, outext=.png}]{standalone}
+
+% 若需要中文，请用 xelatex 编译并取消下面两行注释：
+\usepackage{xeCJK}
+% \setCJKmainfont{Noto Sans CJK SC}
+
+\usetikzlibrary{positioning,arrows,fit}
+
+\begin{document}
+\begin{tikzpicture}[
+    box/.style={rectangle,draw,fill=DarkGray!20,rounded corners,
+                node distance=1cm,text width=18em,text centered,
+                minimum height=2.4em,thick},
+    arrow/.style={draw,-latex',thick},
+  ]
+
+  % === 主体流程节点（与前述模块一致风格，不加外框） ===
+  \node[box,fill=PeachPuff!60,text width=24em] (input)
+    {接收配置与命令行输入：YAML/JSON 配置、CLI 覆盖、参数扫描定义};
+
+  \node[box,below=0.6 of input] (parse)
+    {配置解析与类型验证（parse / override → 统一配置对象）};
+
+  \node[box,below=0.5 of parse] (sweep)
+    {参数扫描与调度（generate\_experiments / submit\_jobs）};
+
+  \node[box,below=0.5 of sweep] (setup)
+    {初始化仿真环境（setup\_experiment / 依赖锁 / 随机种子）};
+
+  \node[box,below=0.5 of setup] (run)
+    {运行与监控（run；日志/状态机/失败恢复）};
+
+  \node[box,below=0.5 of run] (crit)
+    {还有待运行的实验？};
+
+  % 底部输出
+  \node[box,below=1.8 of crit,fill=LightSteelBlue!60,text width=26em] (output)
+    {输出：实验运行上下文、日志目录结构、结果索引与归档包；配置快照与锁文件};
+
+  % === 箭头（直连 + Yes/No 回路） ===
+  \path[arrow] (input) -- (parse);
+  \path[arrow] (parse) -- (sweep);
+  \path[arrow] (sweep) -- (setup);
+  \path[arrow] (setup) -- (run);
+  \path[arrow] (run) -- (crit);
+
+  % Yes 分支：直达输出
+  \path[arrow] (crit) -- (output)
+    node[midway,left=0.1,draw,outer sep=0pt,fill=white] {No};
+
+  % No 分支：先竖直向下，再水平右移（Yes 在水平段下方），最后折返到“初始化仿真环境”节点
+  % 语义：若“还有待运行的实验？”为 Yes，则回到 setup 继续下一轮
+  \path[draw,thick] (crit.south) ++(0,-1em) coordinate(novert);
+  \draw[thick] (novert) -- ++(4,0) coordinate(nojump)
+        node[midway,below=2pt,draw,outer sep=0pt,fill=white] {Yes};
+  \draw[arrow] (nojump) |- (setup.east);
+
+\end{tikzpicture}
+
+\end{document}
