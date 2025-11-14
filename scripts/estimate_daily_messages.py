@@ -40,24 +40,24 @@ def main():
 
     # Optionally augment with a heavy profile to increase message volume
     if args.heavy:
-        symbols = []
+        stocks = []
         try:
-            symbols = list(kernel.exchange.lob_dict.keys())
-            if not symbols:
-                symbols = ["AAA", "BBB", "CCC", "DDD", "EEE"]
+            stocks = list(kernel.exchange.lob_dict.keys())
+            if not stocks:
+                stocks = ["AAA", "BBB", "CCC", "DDD", "EEE"]
                 from core.orderbook import LimitOrderBook
 
-                for s in symbols:
+                for s in stocks:
                     kernel.exchange.lob_dict[s] = LimitOrderBook(s)
         except Exception:
-            symbols = ["AAA", "BBB", "CCC"]
+            stocks = ["AAA", "BBB", "CCC"]
         extra_agents = [
-            {"type": "zero_intelligence", "num": 50, "params": {"initial_symbols": symbols, "wakeup_ms_range": [5, 15]}},
-            {"type": "noise", "num": 100, "params": {"initial_symbols": symbols, "max_batch": 5}},
-            {"type": "order_book_imbalance", "num": 50, "params": {"initial_symbols": symbols, "depth": 1}},
-            {"type": "hbl", "num": 50, "params": {"initial_symbols": symbols}},
-            {"type": "value", "num": 50, "params": {"initial_symbols": symbols}},
-            {"type": "fundamental_tracking", "num": 50, "params": {"initial_symbols": symbols}},
+            {"type": "zero_intelligence", "num": 50, "params": {"initial_stocks": stocks, "wakeup_ms_range": [5, 15]}},
+            {"type": "noise", "num": 100, "params": {"initial_stocks": stocks, "max_batch": 5}},
+            {"type": "order_book_imbalance", "num": 50, "params": {"initial_stocks": stocks, "depth": 1}},
+            {"type": "hbl", "num": 50, "params": {"initial_stocks": stocks}},
+            {"type": "value", "num": 50, "params": {"initial_stocks": stocks}},
+            {"type": "fundamental_tracking", "num": 50, "params": {"initial_stocks": stocks}},
         ]
         kernel.init_agent(extra_agents)
 

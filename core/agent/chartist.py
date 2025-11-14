@@ -6,8 +6,8 @@ import numpy as np
 
 
 class Chartist(FundamentalTrackingAgent):
-    def __init__(self, id, D, beta, delta_c, *args, initial_symbols=None, **kwargs):
-        super().__init__(id, *args, initial_symbols=initial_symbols, **kwargs)
+    def __init__(self, id, D, beta, delta_c, *args, initial_stocks=None, **kwargs):
+        super().__init__(id, *args, initial_stocks=initial_stocks, **kwargs)
 
         self.D = D  # period of moving average
         self.beta = beta
@@ -17,9 +17,9 @@ class Chartist(FundamentalTrackingAgent):
         self.historical_prices = {}
         # time-step, 1-indexed
         self.time_step = 1
-        self.selected_symbols = list(
+        self.selected_stocks = list(
             np.random.choice(
-                initial_symbols, int(np.random.randint(1, 3)), replace=False
+                initial_stocks, int(np.random.randint(1, 3)), replace=False
             )
         )
 
@@ -31,7 +31,7 @@ class Chartist(FundamentalTrackingAgent):
             return
 
         requests = []
-        for symbol in self.selected_symbols:
+        for stock in self.selected_stocks:
             # 1. get the latest price
             p = self.historical_prices[str(self.time_step)]
 
@@ -40,7 +40,7 @@ class Chartist(FundamentalTrackingAgent):
 
             # 3. making trading decision
             self.make_trading_decision(
-                price=p, moving_avg_price=m, symbol=symbol, requests=requests
+                price=p, moving_avg_price=m, stock=stock, requests=requests
             )
 
     def get_moving_average_price(self):
@@ -53,7 +53,7 @@ class Chartist(FundamentalTrackingAgent):
             sum_of_prev_prices += self.historical_prices[str(key)]
         return sum_of_prev_prices / self.D
 
-    def make_trading_decision(self, price, moving_avg_price, symbol, requests):
+    def make_trading_decision(self, price, moving_avg_price, stock, requests):
         H = np.sign(price - moving_avg_price)
         qty = np.floor(self.beta * np.abs(price - moving_avg_price))
         if H > 0:
@@ -62,7 +62,7 @@ class Chartist(FundamentalTrackingAgent):
             # place a buy limit order at price limit_price, quantity q
             order = {
                 "type": "limit_order",
-                "symbol": symbol,
+                "stock": stock,
                 "agent_id": self.id,
                 "timestamp": str(self.current_time),
                 "side": "buy",
@@ -76,7 +76,7 @@ class Chartist(FundamentalTrackingAgent):
             # place a sell limit order at price limit_price, quantity q
             order = {
                 "type": "market_order",
-                "symbol": symbol,
+                "stock": stock,
                 "agent_id": self.id,
                 "timestamp": str(self.current_time),
                 "side": "buy",
@@ -93,15 +93,15 @@ class Chartist(FundamentalTrackingAgent):
                 msg.content, dict
             ):
                 content = msg.content
-                symbol = content["symbol"]
+                stock = content["stock"]
                 last_price = content["data"]
                 self.last_price = last_price
-                self.update_price_history(self.last_price, symbol)
+                self.update_price_history(self.last_price, stock)
             else:
                 remaining.append(msg)
         self.inbox = remaining
 
-    def update_price_history(self, price, symbol):
-        if symbol not in self.historical_prices:
-            self.historical_prices[symbol] = deque(maxlen=50)
-        self.historical_prices[symbol].append(price)
+    def update_price_history(self, price, stock):
+        if stock not in self.historical_prices:
+            self.historical_prices[stock] = deque(maxlen=50)
+        self.historical_prices[stock].append(price)

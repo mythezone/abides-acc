@@ -7,17 +7,17 @@ import pandas as pd
 
 class ZeroIntelligenceAgent(BaseAgent):
 
-    def __init__(self, id, *args, message_queue: MessageQueue = None, initial_symbols: List[str] = None, **kwargs):
+    def __init__(self, id, *args, message_queue: MessageQueue = None, initial_stocks: List[str] = None, **kwargs):
         super().__init__(id, *args, message_queue=message_queue, **kwargs)
-        self.subscribed_symbols: List[str] = []
-        if initial_symbols:
-            for sym in initial_symbols:
+        self.subscribed_stocks: List[str] = []
+        if initial_stocks:
+            for sym in initial_stocks:
                 if isinstance(sym, str):
-                    self.subscribed_symbols.append(sym)
+                    self.subscribed_stocks.append(sym)
                 elif isinstance(sym, dict):
-                    val = sym.get("symbol")
+                    val = sym.get("stock")
                     if val:
-                        self.subscribed_symbols.append(str(val))
+                        self.subscribed_stocks.append(str(val))
 
     def action(self):
         # Detect SZSE pre-open auction window (09:15-09:25)
@@ -28,9 +28,9 @@ class ZeroIntelligenceAgent(BaseAgent):
         except Exception:
             preopen = False
 
-        if not self.subscribed_symbols:
+        if not self.subscribed_stocks:
             n = int(np.random.randint(1, 5))
-            request = {"type": "query_symbols", "n": n}
+            request = {"type": "query_stocks", "n": n}
             msg = new_message(
                 message_type=MessageType.MKT_DATA,
                 sender_id=self.id,
@@ -43,12 +43,12 @@ class ZeroIntelligenceAgent(BaseAgent):
         else:
             # Pre-open auction: submit fewer limit orders, avoid market orders and cancellations
             if preopen:
-                selected = list(np.random.choice(self.subscribed_symbols, int(np.random.randint(1, 3)), replace=False))
+                selected = list(np.random.choice(self.subscribed_stocks, int(np.random.randint(1, 3)), replace=False))
                 reqs = []
-                for symbol in selected:
+                for stock in selected:
                     side = np.random.choice(["buy", "sell"]) 
                     # only allow sell if we have inventory
-                    inv = int(self.portfolio.holdings.get(symbol, 0))
+                    inv = int(self.portfolio.holdings.get(stock, 0))
                     if side == "sell" and inv <= 0:
                         side = "buy"
                     quantity = int(np.random.randint(1, 50))
@@ -57,7 +57,7 @@ class ZeroIntelligenceAgent(BaseAgent):
                     price = round(float(np.random.uniform(10, 100)), 2)
                     order = {
                         "type": "limit_order",
-                        "symbol": symbol,
+                        "stock": stock,
                         "agent_id": self.id,
                         "timestamp": str(self.current_time),
                         "side": side,
@@ -80,17 +80,17 @@ class ZeroIntelligenceAgent(BaseAgent):
                 return
             # Calibration mode: query oracle first, optionally craft orders around oracle snapshot
             if getattr(self, "calibration_mode", False) and self.oracle_id:
-                sym = str(np.random.choice(self.subscribed_symbols))
+                sym = str(np.random.choice(self.subscribed_stocks))
                 self.request_oracle(sym, kind="lob")
                 # orders will be sent after oracle response is processed
                 return
             # Normal mode: batch multiple orders into a single message to reduce overhead
-            batch_sz = int(np.random.randint(1, min(10, len(self.subscribed_symbols)) + 1))
-            selected = list(np.random.choice(self.subscribed_symbols, batch_sz, replace=False))
+            batch_sz = int(np.random.randint(1, min(10, len(self.subscribed_stocks)) + 1))
+            selected = list(np.random.choice(self.subscribed_stocks, batch_sz, replace=False))
             reqs = []
-            for symbol in selected:
+            for stock in selected:
                 side = np.random.choice(["buy", "sell"]) 
-                inv = int(self.portfolio.holdings.get(symbol, 0))
+                inv = int(self.portfolio.holdings.get(stock, 0))
                 if side == "sell" and inv <= 0:
                     side = "buy"
                 quantity = int(np.random.randint(1, 100))
@@ -100,7 +100,7 @@ class ZeroIntelligenceAgent(BaseAgent):
                 order_type = np.random.choice(["limit_order", "market_order"])
                 order = {
                     "type": order_type,
-                    "symbol": symbol,
+                    "stock": stock,
                     "agent_id": self.id,
                     "timestamp": str(self.current_time),
                     "side": side,
@@ -123,26 +123,26 @@ class ZeroIntelligenceAgent(BaseAgent):
     def process_inbox(self):
         # First apply base processing (portfolio updates)
         super().process_inbox()
-        # Then pick up symbol list if provided
-        new_symbols: List[str] = []
+        # Then pick up stock list if provided
+        new_stocks: List[str] = []
         keep = []
 
-        def _normalize_symbol(value):
+        def _normalize_stock(value):
             if isinstance(value, str):
                 return value
             if isinstance(value, dict):
-                sym = value.get("symbol")
+                sym = value.get("stock")
                 if sym is not None:
                     return str(sym)
             return None
 
         for m in self.inbox:
             if m.message_type == MessageType.MKT_DATA and isinstance(m.content, dict):
-                if "symbols" in m.content:
-                    for item in m.content.get("symbols", []):
-                        sym = _normalize_symbol(item)
+                if "stocks" in m.content:
+                    for item in m.content.get("stocks", []):
+                        sym = _normalize_stock(item)
                         if sym:
-                            new_symbols.append(sym)
+                            new_stocks.append(sym)
             elif (
                 m.message_type == MessageType.ORACLE_RESPONSE_LOB
                 and isinstance(m.content, dict)
@@ -150,7 +150,7 @@ class ZeroIntelligenceAgent(BaseAgent):
                 data = m.content.get("lob") or {}
                 if not isinstance(data, dict) or not data:
                     continue
-                symbol = m.content.get("symbol")
+                stock = m.content.get("stock")
                 # build simple heuristic orders near oracle best levels
                 reqs = []
                 try:
@@ -175,22 +175,22 @@ class ZeroIntelligenceAgent(BaseAgent):
                         # Place small aggressive orders around oracle implied levels
                         # buy leg
                         reqs.append({
-                            "type": "limit_order", "symbol": symbol, "agent_id": self.id,
+                            "type": "limit_order", "stock": stock, "agent_id": self.id,
                             "timestamp": str(self.current_time), "side": "buy", "quantity": int(np.random.randint(1, 50)),
                             "price": best_bid
                         })
                         # sell leg only if inventory is available
-                        inv = int(self.portfolio.holdings.get(symbol, 0))
+                        inv = int(self.portfolio.holdings.get(stock, 0))
                         if inv > 0:
                             qty = max(1, min(int(np.random.randint(1, 50)), inv))
                             reqs.append({
-                                "type": "limit_order", "symbol": symbol, "agent_id": self.id,
+                                "type": "limit_order", "stock": stock, "agent_id": self.id,
                                 "timestamp": str(self.current_time), "side": "sell", "quantity": qty,
                                 "price": best_ask
                             })
                         # mid buy
                         reqs.append({
-                            "type": "limit_order", "symbol": symbol, "agent_id": self.id,
+                            "type": "limit_order", "stock": stock, "agent_id": self.id,
                             "timestamp": str(self.current_time), "side": "buy", "quantity": int(np.random.randint(1, 20)),
                             "price": mid
                         })
@@ -208,7 +208,7 @@ class ZeroIntelligenceAgent(BaseAgent):
                     self.send(msg)
             elif m.message_type == MessageType.ORACLE_RESPONSE_OHLC and isinstance(m.content, dict):
                 data = m.content.get("ohlc") or {}
-                symbol = m.content.get("symbol")
+                stock = m.content.get("stock")
                 reqs = []
                 try:
                     close = data.get("close") or data.get("close")
@@ -216,15 +216,15 @@ class ZeroIntelligenceAgent(BaseAgent):
                         close = float(close)
                         # place buy/sell around close
                         reqs.append({
-                            "type": "limit_order", "symbol": symbol, "agent_id": self.id,
+                            "type": "limit_order", "stock": stock, "agent_id": self.id,
                             "timestamp": str(self.current_time), "side": "buy", "quantity": int(np.random.randint(1, 50)),
                             "price": close
                         })
-                        inv = int(self.portfolio.holdings.get(symbol, 0))
+                        inv = int(self.portfolio.holdings.get(stock, 0))
                         if inv > 0:
                             qty = max(1, min(int(np.random.randint(1, 50)), inv))
                             reqs.append({
-                                "type": "limit_order", "symbol": symbol, "agent_id": self.id,
+                                "type": "limit_order", "stock": stock, "agent_id": self.id,
                                 "timestamp": str(self.current_time), "side": "sell", "quantity": qty,
                                 "price": close
                             })
@@ -243,10 +243,10 @@ class ZeroIntelligenceAgent(BaseAgent):
             else:
                 keep.append(m)
         self.inbox = keep
-        if new_symbols:
+        if new_stocks:
             # Deduplicate and ensure all entries are strings
             uniq = []
-            for sym in new_symbols:
+            for sym in new_stocks:
                 if sym not in uniq:
                     uniq.append(sym)
-            self.subscribed_symbols = uniq
+            self.subscribed_stocks = uniq

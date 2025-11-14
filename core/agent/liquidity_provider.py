@@ -15,11 +15,11 @@ class LiquidityProviderAgent(FundamentalTrackingAgent):
         alpha,
         delta_s,
         q_provider=0.5,
-        initial_symbols=None,
+        initial_stocks=None,
         *args,
         **kwargs,
     ):
-        super().__init__(id, *args, initial_symbols=initial_symbols, **kwargs)
+        super().__init__(id, *args, initial_stocks=initial_stocks, **kwargs)
         self.lambda_0 = lambda_0
         self.C_lambda = C_lambda
         self.alpha = alpha
@@ -27,23 +27,23 @@ class LiquidityProviderAgent(FundamentalTrackingAgent):
         self.delta_s = delta_s
 
         self.time_step = 1
-        self.subscribed_symbols: List[str] = (initial_symbols or [])[:]
-        self.selected_symbols = list(
+        self.subscribed_stocks: List[str] = (initial_stocks or [])[:]
+        self.selected_stocks = list(
             np.random.choice(
-                initial_symbols, int(np.random.randint(1, 3)), replace=False
+                initial_stocks, int(np.random.randint(1, 3)), replace=False
             )
         )
         self.q_taker_values = {}
-        for symbol in self.selected_symbols:
-            self.q_taker_values[symbol] = {}
+        for stock in self.selected_stocks:
+            self.q_taker_values[stock] = {}
 
     def action(self):
         super().action()
 
         requests = []
-        for symbol in self.selected_symbols:
+        for stock in self.selected_stocks:
             # get eta
-            eta = self._get_eta(t=self.time_step, symbol=symbol)
+            eta = self._get_eta(t=self.time_step, stock=stock)
             u = np.random.rand()
             best_bid, best_ask = self._get_best_bid_ask()
             is_buyer = False
@@ -55,7 +55,7 @@ class LiquidityProviderAgent(FundamentalTrackingAgent):
 
             order = {
                 "type": "limit_order",
-                "symbol": symbol,
+                "stock": stock,
                 "agent_id": self.id,
                 "timestamp": str(self.current_time),
                 "side": "buy" if is_buyer else "sell",
@@ -79,30 +79,30 @@ class LiquidityProviderAgent(FundamentalTrackingAgent):
         # timestamp increment
         self.time_step += 1
 
-    def _get_eta(self, t, symbol):
+    def _get_eta(self, t, stock):
         u = np.random.rand()
-        lambda_t = self._get_lambda_t(t, symbol)
+        lambda_t = self._get_lambda_t(t, stock)
         return np.floor(-lambda_t * np.log(u))
 
-    def _get_lambda_t(self, t, symbol):
+    def _get_lambda_t(self, t, stock):
         MC_result = self._MC_simulations(t)
         return self.lambda_0 * (
             1
-            + self.C_lambda * np.abs(self.q_taker(t, symbol) - 0.5) / np.sqrt(MC_result)
+            + self.C_lambda * np.abs(self.q_taker(t, stock) - 0.5) / np.sqrt(MC_result)
         )
 
-    def _MC_simulations(self, t, symbol):
+    def _MC_simulations(self, t, stock):
         q = self.q_taker
         result_array = []
         for _ in range(1e5):
-            q_t = q(t, symbol)
+            q_t = q(t, stock)
             result_array.append((q_t - 0.5) ** 2)
         return np.average(result_array)
 
-    def q_taker(self, t, symbol: str):
+    def q_taker(self, t, stock: str):
         if t == 0:
-            return self._update_q_taker_values(t=t, value=0.5, symbol=symbol)
-        prev_q_taker = self.q_taker_values[symbol][t - 1]
+            return self._update_q_taker_values(t=t, value=0.5, stock=stock)
+        prev_q_taker = self.q_taker_values[stock][t - 1]
         u = np.random.rand()
         if u < 0.5:
             result = prev_q_taker + self.delta_s
@@ -115,14 +115,14 @@ class LiquidityProviderAgent(FundamentalTrackingAgent):
                 result -= self.delta_s
             elif result < 0.5:
                 result += self.delta_s
-        return self._update_q_taker_values(t=t, value=result, symbol=symbol)
+        return self._update_q_taker_values(t=t, value=result, stock=stock)
 
-    def _update_q_taker_values(self, t, value, symbol):
-        self.q_taker_values[symbol].setdefault(key=str(t), default=value)
+    def _update_q_taker_values(self, t, value, stock):
+        self.q_taker_values[stock].setdefault(key=str(t), default=value)
         return value
 
     def _get_best_bid_ask(self):
-        msg = self.build_top_of_book_query(symbols=self.selected_symbols)
+        msg = self.build_top_of_book_query(stocks=self.selected_stocks)
         self.send(msg)
         msg_in = self.message_queue.get_raw()
         if msg_in.message_type == MessageType.QUERY_TOP_OF_BOOK:

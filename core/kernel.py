@@ -43,12 +43,12 @@ class Kernel:
         if self.config.get("disable_main_log", False):
             self.logger.disable_main_log = True
 
-        # Minimal exchange with empty symbol universe, will grow on demand
+        # Minimal exchange with empty stock universe, will grow on demand
         ex_params = self.config.get("exchange_params", {})
-        symbols = self.config.get("symbols", [])
+        stocks = self.config.get("stocks", [])
         self.exchange = new_exchange(
             self.config.get("exchange_type", "SZSE"),
-            symbols=symbols,
+            stocks=stocks,
             logger=self.logger,
             exchange_params=ex_params,
             out_queue=self.message_queue,
@@ -79,9 +79,9 @@ class Kernel:
                     lob_levels=int(calib.get("lob_levels", 10)),
                 )
                 specs = calib.get("agent_specs") or []
-                symbol_filter = calib.get("symbols")
-                if isinstance(symbol_filter, list):
-                    symbol_filter = [str(s) for s in symbol_filter]
+                stock_filter = calib.get("stocks")
+                if isinstance(stock_filter, list):
+                    stock_filter = [str(s) for s in stock_filter]
                 trigger_offset = (
                     calib.get("trigger_offset")
                     or calib.get("trigger_offset_ms")
@@ -92,7 +92,7 @@ class Kernel:
                     exchange=self.exchange,
                     oracle=self.oracle,
                     agent_specs=specs,
-                    symbols=symbol_filter,
+                    stocks=stock_filter,
                     max_levels=max_levels,
                     trigger_offset=trigger_offset,
                 )
@@ -113,11 +113,11 @@ class Kernel:
     ):
         agent_log_freq = self.config.get("agent_log_freq", "tick")
         positions_default = self.config.get("agent_positions") or {}
-        # Symbols universe (for random positions)
+        # stocks universe (for random positions)
         try:
-            universe_symbols = list(self.exchange.lob_dict.keys())
+            universe_stocks = list(self.exchange.lob_dict.keys())
         except Exception:
-            universe_symbols = []
+            universe_stocks = []
         for config in agent_config:
             # accept either 'type' or legacy 'name'
             agent_type = config.get("type") or config.get("name")
@@ -171,7 +171,7 @@ class Kernel:
                             max_sh = int(spec.get("max_shares", 0))
                             min_cash = float(spec.get("min_cash", 100000.0))
                             max_cash = float(spec.get("max_cash", 1000000.0))
-                            syms = spec.get("symbols") or universe_symbols
+                            syms = spec.get("stocks") or universe_stocks
                             if syms:
                                 agent_instance.portfolio.initialize_random_portfolio(
                                     syms,
@@ -565,7 +565,7 @@ class Kernel:
                     resolved[sym] = path
             ep["initial_snapshots"] = resolved
 
-        symbols_raw = getattr(cm, "symbols", [])
+        stocks_raw = getattr(cm, "stocks", [])
         log_dir_override = getattr(kcfg, "log_dir", None)
         cfg = {
             "name": kname,
@@ -575,7 +575,7 @@ class Kernel:
             "log_dir": str(log_dir_override) if log_dir_override else f"log/{kname}",
             "exchange_params": ep,
             "calibration": {},
-            "symbols": symbols_raw,
+            "stocks": stocks_raw,
             "end_date": str(end_date) if end_date is not None else None,
             "enforce_step_limit": bool(getattr(kcfg, "enforce_step_limit", False)),
         }
@@ -594,12 +594,12 @@ class Kernel:
             pass
         kernel = cls(config=cfg)
         kernel.initialize()
-        # Initialize exchange symbol universe if provided
+        # Initialize exchange stock universe if provided
         try:
-            symbols = getattr(cm, "symbols", [])
-            for sym in symbols:
+            stocks = getattr(cm, "stocks", [])
+            for sym in stocks:
                 if isinstance(sym, dict):
-                    sym_name = sym.get("symbol")
+                    sym_name = sym.get("stock")
                 else:
                     sym_name = sym
                 if not sym_name:
@@ -615,15 +615,15 @@ class Kernel:
         agent_cfgs = []
         try:
             agent_defs = getattr(cm, "agents", [])
-            all_symbols = getattr(cm, "symbols", [])
+            all_stocks = getattr(cm, "stocks", [])
             for a in agent_defs:
                 atype = a.get("type") or a.get("name") or "zero_intelligence"
                 # Validate against registered agents registry
                 if atype not in AGENTS:
                     atype = "zero_intelligence"
                 params = a.get("params") or a.get("args") or {}
-                if atype == "zero_intelligence" and "initial_symbols" not in params:
-                    params["initial_symbols"] = list(all_symbols)
+                if atype == "zero_intelligence" and "initial_stocks" not in params:
+                    params["initial_stocks"] = list(all_stocks)
                 agent_cfgs.append(
                     {
                         "type": atype,

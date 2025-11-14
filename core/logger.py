@@ -108,7 +108,7 @@ class Logger(metaclass=Singleton):
                 logger.setLevel(logging.INFO)
                 self._handlers.append(h)
             elif logger_name == "ohlc":
-                # placeholder (we write OHLC per symbol directly)
+                # placeholder (we write OHLC per stock directly)
                 h = MemoryHandler()
                 h.setFormatter(logging.Formatter("%(message)s"))
                 logger.addHandler(h)
@@ -116,7 +116,7 @@ class Logger(metaclass=Singleton):
                 self._handlers.append(h)
 
             elif logger_name == "lob":
-                # placeholder (we write LOB per symbol directly)
+                # placeholder (we write LOB per stock directly)
                 h = MemoryHandler()
                 h.setFormatter(logging.Formatter("%(message)s"))
                 logger.addHandler(h)
@@ -133,8 +133,8 @@ class Logger(metaclass=Singleton):
                 logger.setLevel(logging.INFO)
                 self._handlers.append(h)
 
-    def _ensure_symbol_paths(self, symbol_name: str):
-        sdir = os.path.join(self.log_folder, symbol_name)
+    def _ensure_stock_paths(self, stock_name: str):
+        sdir = os.path.join(self.log_folder, stock_name)
         os.makedirs(sdir, exist_ok=True)
         ohlc_path = os.path.join(sdir, "ohlc.csv")
         lob_path = os.path.join(sdir, "lob.csv")
@@ -169,7 +169,7 @@ class Logger(metaclass=Singleton):
 
     def ohlc_log(
         self,
-        symbol_name: str,
+        stock_name: str,
         kernel_time: Union[str, pd.Timestamp],
         open_: float,
         high: float,
@@ -177,7 +177,7 @@ class Logger(metaclass=Singleton):
         close: float,
         volume: float,
     ):
-        ohlc_path, _ = self._ensure_symbol_paths(symbol_name)
+        ohlc_path, _ = self._ensure_stock_paths(stock_name)
         with self._file_lock, open(ohlc_path, "a") as f:
             line = f"{self.iso_time_format(kernel_time)},{open_:.2f},{high:.2f},{low:.2f},{close:.2f},{int(volume)}\n"
             f.write(line)
@@ -227,12 +227,12 @@ class Logger(metaclass=Singleton):
 
     def lob_log(
         self,
-        symbol_name: str,
+        stock_name: str,
         kernel_time: Union[str, pd.Timestamp],
         level: int,
         lob: str,
     ):
-        _, lob_path = self._ensure_symbol_paths(symbol_name)
+        _, lob_path = self._ensure_stock_paths(stock_name)
         header = self.format_lob_header(level=level)
         timestamp = self.iso_time_format(kernel_time)
         with self._file_lock:
@@ -242,12 +242,12 @@ class Logger(metaclass=Singleton):
 
     def preopen_log(
         self,
-        symbol_name: str,
+        stock_name: str,
         kernel_time: Union[str, pd.Timestamp],
         level: int,
         lob: str,
     ):
-        sdir = os.path.join(self.log_folder, symbol_name)
+        sdir = os.path.join(self.log_folder, stock_name)
         os.makedirs(sdir, exist_ok=True)
         preopen_path = os.path.join(sdir, "preopen.csv")
         header = self.format_lob_header(level=level)

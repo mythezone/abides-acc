@@ -10,7 +10,7 @@ class ValueAgent(BaseAgent):
     """
     ABIDES-style ValueAgent adapter.
 
-    - If calibration/oracle is enabled, queries OHLC for a symbol and places orders near last close.
+    - If calibration/oracle is enabled, queries OHLC for a stock and places orders near last close.
     - Otherwise falls back to simple limit orders around a random reference.
     """
 
@@ -18,16 +18,16 @@ class ValueAgent(BaseAgent):
         self,
         id: str,
         *args,
-        initial_symbols: Optional[List[str]] = None,
+        initial_stocks: Optional[List[str]] = None,
         **kwargs,
     ):
         super().__init__(id, *args, **kwargs)
-        self.subscribed_symbols: List[str] = (initial_symbols or [])[:]
+        self.subscribed_stocks: List[str] = (initial_stocks or [])[:]
 
     def action(self):
-        if not self.subscribed_symbols:
+        if not self.subscribed_stocks:
             return
-        sym = str(np.random.choice(self.subscribed_symbols))
+        sym = str(np.random.choice(self.subscribed_stocks))
         # If oracle available, request OHLC snapshot first; we will act in receive()
         if getattr(self, "calibration_mode", False) and self.oracle_id:
             msg = new_message(
@@ -36,7 +36,7 @@ class ValueAgent(BaseAgent):
                 recipient_id=self.oracle_id,
                 send_time=self.current_time,
                 recive_time=self.current_time,
-                content={"symbol": sym, "time": str(self.current_time)},
+                content={"stock": sym, "time": str(self.current_time)},
             )
             self.send(msg)
             return
@@ -49,7 +49,7 @@ class ValueAgent(BaseAgent):
             message.message_type == MessageType.ORACLE_RESPONSE_OHLC
             and isinstance(message.content, dict)
         ):
-            sym = str(message.content.get("symbol"))
+            sym = str(message.content.get("stock"))
             data = message.content.get("ohlc") or {}
             try:
                 close = data.get("close")
@@ -60,14 +60,14 @@ class ValueAgent(BaseAgent):
             return True
         return super().handle_inbox_message(message)
 
-    def _emit_orders_near(self, symbol: str, ref: float):
+    def _emit_orders_near(self, stock: str, ref: float):
         # one buy, one sell (sell only if inventory)
         reqs = []
         buy_px = round(max(0.01, ref * (1.0 - 0.002)), 2)
         reqs.append(
             {
                 "type": "limit_order",
-                "symbol": symbol,
+                "stock": stock,
                 "agent_id": self.id,
                 "timestamp": str(self.current_time),
                 "side": "buy",
@@ -75,14 +75,14 @@ class ValueAgent(BaseAgent):
                 "price": buy_px,
             }
         )
-        inv = int(self.portfolio.holdings.get(symbol, 0))
+        inv = int(self.portfolio.holdings.get(stock, 0))
         if inv > 0:
             qty = max(1, min(int(np.random.randint(1, 50)), inv))
             sell_px = round(ref * (1.0 + 0.002), 2)
             reqs.append(
                 {
                     "type": "limit_order",
-                    "symbol": symbol,
+                    "stock": stock,
                     "agent_id": self.id,
                     "timestamp": str(self.current_time),
                     "side": "sell",

@@ -5,7 +5,7 @@ Run a two-phase simulation pipeline:
   2. Calibration simulation using baseline logs as oracle data
 
 After both runs, compute normalized MSE metrics between baseline and calibrated
-LOB logs (per symbol and aggregated).
+LOB logs (per stock and aggregated).
 """
 
 from __future__ import annotations
@@ -91,12 +91,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--baseline-log-dir", type=Path, help="Override log dir for baseline run.")
     parser.add_argument("--calibrated-log-dir", type=Path, help="Override log dir for calibration run.")
     parser.add_argument("--force", action="store_true", help="Force removal of existing log directories.")
-    parser.add_argument("--symbols", nargs="*", help="Explicit symbol list for evaluation.")
+    parser.add_argument("--stocks", nargs="*", help="Explicit stock list for evaluation.")
     parser.add_argument("--price-weight", type=float, default=0.5, help="Weight for price MSE in combined score.")
     parser.add_argument("--volume-weight", type=float, default=0.5, help="Weight for volume MSE in combined score.")
     parser.add_argument("--normalization-mode", default="col_wise", choices=["none", "col_wise", "pv"], help="Normalization mode (z-score) before computing MSE.")
     parser.add_argument("--result-json", type=Path, help="Optional path to write metrics JSON.")
-    parser.add_argument("--result-csv", type=Path, help="Optional path to write per-symbol metrics CSV.")
+    parser.add_argument("--result-csv", type=Path, help="Optional path to write per-stock metrics CSV.")
     parser.add_argument("--tag", default=now_tag, help="Run tag appended to default log dir if overrides not provided.")
     return parser.parse_args()
 
@@ -136,23 +136,23 @@ def main() -> int:
     finally:
         cal_cfg_path.unlink(missing_ok=True)
 
-    # Identify symbols to evaluate
-    if args.symbols:
-        symbols = args.symbols
+    # Identify stocks to evaluate
+    if args.stocks:
+        stocks = args.stocks
     else:
-        symbols = cal_cfg.get("symbols") or baseline_cfg.get("symbols") or []
-        if symbols:
+        stocks = cal_cfg.get("stocks") or baseline_cfg.get("stocks") or []
+        if stocks:
             normalized = []
-            for s in symbols:
+            for s in stocks:
                 if isinstance(s, str):
                     normalized.append(s)
                 elif isinstance(s, dict):
-                    sym_val = s.get("symbol")
+                    sym_val = s.get("stock")
                     if sym_val:
                         normalized.append(str(sym_val))
-            symbols = normalized
-        if not symbols:
-            symbols = [
+            stocks = normalized
+        if not stocks:
+            stocks = [
                 p.name
                 for p in baseline_log.iterdir()
                 if p.is_dir() and (baseline_log / p / "lob.csv").exists()
@@ -163,13 +163,13 @@ def main() -> int:
         volume_weight=args.volume_weight,
         normalization_mode=args.normalization_mode,
     )
-    metrics = evaluate_directories(str(baseline_log), str(calibrated_log), symbols, config=cfg)
+    metrics = evaluate_directories(str(baseline_log), str(calibrated_log), stocks, config=cfg)
     summary = summarize_metrics(metrics)
 
-    print("=== Per-symbol metrics ===")
+    print("=== Per-stock metrics ===")
     for entry in metrics:
         print(
-            f"{entry['symbol']}: price_mse={entry['price_mse']:.6f}, "
+            f"{entry['stock']}: price_mse={entry['price_mse']:.6f}, "
             f"volume_mse={entry['volume_mse']:.6f}, combined_mse={entry['combined_mse']:.6f}"
         )
 
@@ -184,7 +184,7 @@ def main() -> int:
                 {
                     "baseline_log_dir": str(baseline_log),
                     "calibrated_log_dir": str(calibrated_log),
-                    "symbols": symbols,
+                    "stocks": stocks,
                     "metrics": metrics,
                     "summary": summary,
                 },

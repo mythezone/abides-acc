@@ -9,7 +9,7 @@ class FundamentalTrackingAgent(BaseAgent):
     """
     ABIDES-style FundamentalTrackingAgent adapter.
 
-    - Queries oracle OHLC for symbol, places mean-reverting orders towards fundamental close.
+    - Queries oracle OHLC for stock, places mean-reverting orders towards fundamental close.
     - Falls back to random reference when oracle off.
     """
 
@@ -17,16 +17,16 @@ class FundamentalTrackingAgent(BaseAgent):
         self,
         id: str,
         *args,
-        initial_symbols: Optional[List[str]] = None,
+        initial_stocks: Optional[List[str]] = None,
         **kwargs,
     ):
         super().__init__(id, *args, **kwargs)
-        self.subscribed_symbols: List[str] = (initial_symbols or [])[:]
+        self.subscribed_stocks: List[str] = (initial_stocks or [])[:]
 
     def action(self):
-        if not self.subscribed_symbols:
+        if not self.subscribed_stocks:
             return
-        sym = str(np.random.choice(self.subscribed_symbols))
+        sym = str(np.random.choice(self.subscribed_stocks))
         if getattr(self, "calibration_mode", False) and self.oracle_id:
             msg = new_message(
                 message_type=MessageType.ORACLE_QUERY_OHLC,
@@ -34,7 +34,7 @@ class FundamentalTrackingAgent(BaseAgent):
                 recipient_id=self.oracle_id,
                 send_time=self.current_time,
                 recive_time=self.current_time,
-                content={"symbol": sym, "time": str(self.current_time)},
+                content={"stock": sym, "time": str(self.current_time)},
             )
             self.send(msg)
             return
@@ -45,7 +45,7 @@ class FundamentalTrackingAgent(BaseAgent):
             message.message_type == MessageType.ORACLE_RESPONSE_OHLC
             and isinstance(message.content, dict)
         ):
-            sym = str(message.content.get("symbol"))
+            sym = str(message.content.get("stock"))
             data = message.content.get("ohlc") or {}
             try:
                 close = data.get("close")
@@ -56,13 +56,13 @@ class FundamentalTrackingAgent(BaseAgent):
             return True
         return super().handle_inbox_message(message)
 
-    def _submit_towards(self, symbol: str, ref: float):
+    def _submit_towards(self, stock: str, ref: float):
         # Buy below ref, sell above if inventory
         buy_px = round(max(0.01, ref * (1.0 - 0.003)), 2)
         reqs = [
             {
                 "type": "limit_order",
-                "symbol": symbol,
+                "stock": stock,
                 "agent_id": self.id,
                 "timestamp": str(self.current_time),
                 "side": "buy",
@@ -70,14 +70,14 @@ class FundamentalTrackingAgent(BaseAgent):
                 "price": buy_px,
             }
         ]
-        inv = int(self.portfolio.holdings.get(symbol, 0))
+        inv = int(self.portfolio.holdings.get(stock, 0))
         if inv > 0:
             qty = max(1, min(int(np.random.randint(1, 40)), inv))
             sell_px = round(ref * (1.0 + 0.003), 2)
             reqs.append(
                 {
                     "type": "limit_order",
-                    "symbol": symbol,
+                    "stock": stock,
                     "agent_id": self.id,
                     "timestamp": str(self.current_time),
                     "side": "sell",

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Multi-run visualization and metrics: compare multiple simulation runs against a baseline (truth)
-and optionally compute pairwise metrics. Produces per-symbol plots and metrics tables.
+and optionally compute pairwise metrics. Produces per-stock plots and metrics tables.
 
 This variant avoids problematic string interpolation in embedded JS.
 """
@@ -20,7 +20,7 @@ from matplotlib.patches import Rectangle
 
 from calibration_viz import (
     _ensure_dir,
-    _list_symbols,
+    _list_stocks,
     _load_ohlc,
     _load_lob,
     _merge_nearest,
@@ -52,7 +52,7 @@ def _draw_candles(ax, df: pd.DataFrame, width_minutes: float = 3.0,
     ax.autoscale_view()
 
 
-def overlay_symbol(symbol: str,
+def overlay_stock(stock: str,
                    truth_dir: str,
                    groups: Dict[str, str],
                    out_dir: str,
@@ -60,8 +60,8 @@ def overlay_symbol(symbol: str,
                    lob_levels: int) -> Dict[str, Dict[str, float]]:
     sym_dir = os.path.join(out_dir, "plots")
     _ensure_dir(sym_dir)
-    ohlc_t = _load_ohlc(os.path.join(truth_dir, symbol, "ohlc.csv"))
-    lob_t = _load_lob(os.path.join(truth_dir, symbol, "lob.csv"))
+    ohlc_t = _load_ohlc(os.path.join(truth_dir, stock, "ohlc.csv"))
+    lob_t = _load_lob(os.path.join(truth_dir, stock, "lob.csv"))
 
     metrics: Dict[str, Dict[str, float]] = {}
 
@@ -72,7 +72,7 @@ def overlay_symbol(symbol: str,
 
     ax0 = axes[0, 0]
     _draw_candles(ax0, ohlc_t)
-    ax0.set_title(f"{symbol} Truth OHLC")
+    ax0.set_title(f"{stock} Truth OHLC")
     if not ohlc_t.empty:
         ax0.set_xlim(date2num(pd.to_datetime(ohlc_t["kernel_time"]).dt.to_pydatetime()).min(),
                      date2num(pd.to_datetime(ohlc_t["kernel_time"]).dt.to_pydatetime()).max())
@@ -83,7 +83,7 @@ def overlay_symbol(symbol: str,
         r = (gi + 1) // cols
         c = (gi + 1) % cols
         ax = axes[r, c]
-        ohlc_g = _load_ohlc(os.path.join(gdir, symbol, "ohlc.csv"))
+        ohlc_g = _load_ohlc(os.path.join(gdir, stock, "ohlc.csv"))
         if not ohlc_g.empty:
             A, B = _merge_nearest(ohlc_t, ohlc_g, on="kernel_time", tol=tol) if not ohlc_t.empty else (ohlc_g, ohlc_g)
             m_ohlc = compute_ohlc_metrics(A, B, tol=tol)
@@ -105,7 +105,7 @@ def overlay_symbol(symbol: str,
         axes[r, c].axis('off')
 
     fig.tight_layout()
-    fig.savefig(os.path.join(sym_dir, f"{symbol}_ohlc_panel.png"), dpi=150)
+    fig.savefig(os.path.join(sym_dir, f"{stock}_ohlc_panel.png"), dpi=150)
     plt.close(fig)
 
     for lvl in range(lob_levels):
@@ -132,7 +132,7 @@ def overlay_symbol(symbol: str,
                 ax2.bar(t, vol.values, width=width_days, color="#90caf9", alpha=0.4, label="Truth vol", zorder=2)
                 ax2.set_ylabel("Vol")
             ax0.plot(t, mid.values, color="#1b5e20", linewidth=1.2, label="Truth mid", zorder=3)
-        ax0.set_title(f"{symbol} L{lvl} Truth mid/vol")
+        ax0.set_title(f"{stock} L{lvl} Truth mid/vol")
         ax0.grid(True, linestyle=":", alpha=0.25)
 
         gi = 0
@@ -140,7 +140,7 @@ def overlay_symbol(symbol: str,
             r = (gi + 1) // cols
             c = (gi + 1) % cols
             ax = axes[r, c]
-            lob_g = _load_lob(os.path.join(gdir, symbol, "lob.csv"))
+            lob_g = _load_lob(os.path.join(gdir, stock, "lob.csv"))
             if not lob_g.empty:
                 A, B = _merge_nearest(lob_t, lob_g, on="kernel_time", tol=tol) if not lob_t.empty else (lob_g, lob_g)
                 m_lob = compute_lob_metrics(A, B, tol=tol, levels=lob_levels)
@@ -181,7 +181,7 @@ def overlay_symbol(symbol: str,
             axes[r, c].axis('off')
 
         fig.tight_layout()
-        fig.savefig(os.path.join(sym_dir, f"{symbol}_lob_level{lvl}.png"), dpi=150)
+        fig.savefig(os.path.join(sym_dir, f"{stock}_lob_level{lvl}.png"), dpi=150)
         plt.close(fig)
 
     return metrics
@@ -192,7 +192,7 @@ def main():
     ap.add_argument("--truth_dir", required=True, help="Baseline (truth) log dir")
     ap.add_argument("--group", action="append", default=[], help="Group spec as NAME=DIR; can be provided multiple times")
     ap.add_argument("--out_dir", required=True, help="Output report directory")
-    ap.add_argument("--symbols", default="", help="Comma-separated symbols to evaluate; default is intersection")
+    ap.add_argument("--stocks", default="", help="Comma-separated stocks to evaluate; default is intersection")
     ap.add_argument("--tolerance", default="2s", help="Time tolerance for alignment")
     ap.add_argument("--lob_levels", type=int, default=10, help="LOB levels to include for metrics")
     args = ap.parse_args()
@@ -209,22 +209,22 @@ def main():
     _ensure_dir(out_dir)
     _ensure_dir(os.path.join(out_dir, "plots"))
 
-    if args.symbols.strip():
-        symbols = [s.strip() for s in args.symbols.split(",") if s.strip()]
+    if args.stocks.strip():
+        stocks = [s.strip() for s in args.stocks.split(",") if s.strip()]
     else:
-        s_truth = set(_list_symbols(truth_dir))
+        s_truth = set(_list_stocks(truth_dir))
         inter = s_truth
         for _, d in groups.items():
-            inter = inter & set(_list_symbols(d))
-        symbols = sorted(list(inter))
+            inter = inter & set(_list_stocks(d))
+        stocks = sorted(list(inter))
 
     tol = pd.Timedelta(args.tolerance)
 
     rows = []
-    for sym in symbols:
-        m = overlay_symbol(sym, truth_dir, groups, out_dir, tol, args.lob_levels)
+    for sym in stocks:
+        m = overlay_stock(sym, truth_dir, groups, out_dir, tol, args.lob_levels)
         for gname, gm in m.items():
-            row = {"symbol": sym, "group": gname}
+            row = {"stock": sym, "group": gname}
             row.update(gm)
             rows.append(row)
     df = pd.DataFrame(rows)
@@ -271,12 +271,12 @@ def main():
                 html.append(f"<tr><td>{r['group']}</td><td>{r['ohlc_mse_ohlc_avg']:.6g}</td><td>{r['ohlc_mae_ohlc_avg']:.6g}</td><td>{r['lob_mse_lob_avg']:.6g}</td><td>{r['lob_mae_lob_avg']:.6g}</td></tr>")
             html.append("</table>")
         html.append("<h3>Per-Symbol Panels</h3>")
-        # symbol dropdown
+        # stock dropdown
         html.append("<div>Symbol: <select id='sym_select' onchange=\"selSym()\">")
-        for i, sym in enumerate(symbols):
+        for i, sym in enumerate(stocks):
             html.append(f"<option value='{sym}' {'selected' if i==0 else ''}>{sym}</option>")
         html.append("</select></div>")
-        for i, sym in enumerate(symbols):
+        for i, sym in enumerate(stocks):
             display = 'block' if i == 0 else 'none'
             html.append(f"<div class='sym' id='sym_{sym}' style='display:{display};'><h4>{sym}</h4>")
             html.append(f"<div><img src='plots/{sym}_ohlc_panel.png' style='max-width: 1100px;'></div>")

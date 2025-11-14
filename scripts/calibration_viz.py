@@ -9,9 +9,9 @@ Inputs are two log directories with the structure produced by core.logger.Logger
   <SYMBOL>/lob.csv      (columns: kernel_time, AskPrice0.., AskVolume0.., BidPrice0.., BidVolume0..)
 
 Outputs:
-- metrics.csv: per-symbol MSE/MAE for OHLC (per field and averaged) and LOB top-N
+- metrics.csv: per-stock MSE/MAE for OHLC (per field and averaged) and LOB top-N
 - overview.txt: quick summary with overall averages
-- plots/*.png: per-symbol plots for OHLC (candles) and top-of-book (best bid/ask)
+- plots/*.png: per-stock plots for OHLC (candles) and top-of-book (best bid/ask)
 - index.html: simple HTML report linking the above
 """
 
@@ -33,7 +33,7 @@ def _ensure_dir(p: str):
     os.makedirs(p, exist_ok=True)
 
 
-def _list_symbols(log_dir: str) -> List[str]:
+def _list_stocks(log_dir: str) -> List[str]:
     if not log_dir or not os.path.isdir(log_dir):
         return []
     return [d for d in os.listdir(log_dir) if os.path.isdir(os.path.join(log_dir, d))]
@@ -184,7 +184,7 @@ def _plot_bestpx(ax, df: pd.DataFrame, color_bid="#42a5f5", color_ask="#ab47bc",
     ax.grid(True, linestyle=":", alpha=0.25)
 
 
-def visualize_symbol(symbol: str,
+def visualize_stock(stock: str,
                      truth_dir: str,
                      calib_dir: str,
                      out_dir: str,
@@ -192,10 +192,10 @@ def visualize_symbol(symbol: str,
                      lob_levels: int) -> Dict[str, float]:
     sym_dir = os.path.join(out_dir, "plots")
     _ensure_dir(sym_dir)
-    ohlc_t = _load_ohlc(os.path.join(truth_dir, symbol, "ohlc.csv"))
-    ohlc_c = _load_ohlc(os.path.join(calib_dir, symbol, "ohlc.csv"))
-    lob_t = _load_lob(os.path.join(truth_dir, symbol, "lob.csv"))
-    lob_c = _load_lob(os.path.join(calib_dir, symbol, "lob.csv"))
+    ohlc_t = _load_ohlc(os.path.join(truth_dir, stock, "ohlc.csv"))
+    ohlc_c = _load_ohlc(os.path.join(calib_dir, stock, "ohlc.csv"))
+    lob_t = _load_lob(os.path.join(truth_dir, stock, "lob.csv"))
+    lob_c = _load_lob(os.path.join(calib_dir, stock, "lob.csv"))
 
     m_ohlc = compute_ohlc_metrics(ohlc_t, ohlc_c, tol=tol)
     m_lob = compute_lob_metrics(lob_t, lob_c, tol=tol, levels=lob_levels)
@@ -206,10 +206,10 @@ def visualize_symbol(symbol: str,
     fig, ax = plt.subplots(1, 1, figsize=(10, 5))
     _plot_candles(ax, ohlc_t, color_up="#4caf50", color_down="#c62828", label_prefix="Truth")
     _plot_candles(ax, ohlc_c, color_up="#81d4fa", color_down="#1565c0", alpha=0.5, label_prefix="Calib")
-    ax.set_title(f"{symbol} OHLC (avg MSE={m_ohlc.get('mse_ohlc_avg', np.nan):.4g})")
+    ax.set_title(f"{stock} OHLC (avg MSE={m_ohlc.get('mse_ohlc_avg', np.nan):.4g})")
     ax.legend(loc="best")
     fig.tight_layout()
-    f1 = os.path.join(sym_dir, f"{symbol}_ohlc.png")
+    f1 = os.path.join(sym_dir, f"{stock}_ohlc.png")
     fig.savefig(f1, dpi=150)
     plt.close(fig)
 
@@ -217,10 +217,10 @@ def visualize_symbol(symbol: str,
     fig, ax = plt.subplots(1, 1, figsize=(10, 4))
     _plot_bestpx(ax, lob_t, color_bid="#2e7d32", color_ask="#c62828", label_prefix="Truth")
     _plot_bestpx(ax, lob_c, color_bid="#0277bd", color_ask="#6a1b9a", label_prefix="Calib")
-    ax.set_title(f"{symbol} BestPx (LOB avg MSE={m_lob.get('mse_lob_avg', np.nan):.4g})")
+    ax.set_title(f"{stock} BestPx (LOB avg MSE={m_lob.get('mse_lob_avg', np.nan):.4g})")
     ax.legend(loc="best")
     fig.tight_layout()
-    f2 = os.path.join(sym_dir, f"{symbol}_bestpx.png")
+    f2 = os.path.join(sym_dir, f"{stock}_bestpx.png")
     fig.savefig(f2, dpi=150)
     plt.close(fig)
 
@@ -232,7 +232,7 @@ def main():
     ap.add_argument("--truth_dir", required=True, help="Ground-truth log directory (contains <SYMBOL>/ohlc.csv, lob.csv)")
     ap.add_argument("--calib_dir", required=True, help="Calibration run log directory to evaluate")
     ap.add_argument("--out_dir", required=True, help="Output directory for report/plots")
-    ap.add_argument("--symbols", default="", help="Comma-separated symbols to evaluate; default is intersection of both dirs")
+    ap.add_argument("--stocks", default="", help="Comma-separated stocks to evaluate; default is intersection of both dirs")
     ap.add_argument("--tolerance", default="2s", help="Time alignment tolerance for nearest match, e.g. '2s'")
     ap.add_argument("--lob_levels", type=int, default=1, help="LOB levels to include for metrics (default=1, top-of-book)")
     args = ap.parse_args()
@@ -243,19 +243,19 @@ def main():
     _ensure_dir(out_dir)
     _ensure_dir(os.path.join(out_dir, "plots"))
 
-    if args.symbols.strip():
-        symbols = [s.strip() for s in args.symbols.split(",") if s.strip()]
+    if args.stocks.strip():
+        stocks = [s.strip() for s in args.stocks.split(",") if s.strip()]
     else:
-        s_truth = set(_list_symbols(truth_dir))
-        s_calib = set(_list_symbols(calib_dir))
-        symbols = sorted(list(s_truth & s_calib))
+        s_truth = set(_list_stocks(truth_dir))
+        s_calib = set(_list_stocks(calib_dir))
+        stocks = sorted(list(s_truth & s_calib))
 
     tol = pd.Timedelta(args.tolerance)
 
     rows = []
-    for sym in symbols:
-        metrics = visualize_symbol(sym, truth_dir, calib_dir, out_dir, tol, args.lob_levels)
-        row = {"symbol": sym}
+    for sym in stocks:
+        metrics = visualize_stock(sym, truth_dir, calib_dir, out_dir, tol, args.lob_levels)
+        row = {"stock": sym}
         row.update(metrics)
         rows.append(row)
 
@@ -265,7 +265,7 @@ def main():
 
     # Overall summary
     overall = {
-        "symbols": len(symbols),
+        "stocks": len(stocks),
         "mse_ohlc_avg": float(df[[c for c in df.columns if c.endswith("mse_ohlc_avg") or c == "ohlc_mse_ohlc_avg"]].mean(axis=1).mean()) if not df.empty else np.nan,
         "mae_ohlc_avg": float(df[[c for c in df.columns if c.endswith("mae_ohlc_avg") or c == "ohlc_mae_ohlc_avg"]].mean(axis=1).mean()) if not df.empty else np.nan,
         "mse_lob_avg": float(df[[c for c in df.columns if c.endswith("mse_lob_avg") or c == "lob_mse_lob_avg"]].mean(axis=1).mean()) if not df.empty else np.nan,
@@ -273,7 +273,7 @@ def main():
     }
     with open(os.path.join(out_dir, "overview.txt"), "w") as f:
         f.write("Calibration vs Truth Summary\n")
-        f.write(f"Symbols: {overall['symbols']}\n")
+        f.write(f"Symbols: {overall['stocks']}\n")
         f.write(f"OHLC avg MSE: {overall['mse_ohlc_avg']:.6g}\n")
         f.write(f"OHLC avg MAE: {overall['mae_ohlc_avg']:.6g}\n")
         f.write(f"LOB  avg MSE: {overall['mse_lob_avg']:.6g}\n")
@@ -283,11 +283,11 @@ def main():
     try:
         html = ["<html><head><meta charset='utf-8'><title>Calibration Report</title></head><body>"]
         html.append("<h2>Calibration vs Truth Summary</h2>")
-        html.append(f"<p>Symbols: {overall['symbols']}<br>"
+        html.append(f"<p>Symbols: {overall['stocks']}<br>"
                     f"OHLC avg MSE: {overall['mse_ohlc_avg']:.6g}, MAE: {overall['mae_ohlc_avg']:.6g}<br>"
                     f"LOB avg MSE: {overall['mse_lob_avg']:.6g}, MAE: {overall['mae_lob_avg']:.6g}</p>")
         html.append("<h3>Per-Symbol Plots</h3>")
-        for sym in symbols:
+        for sym in stocks:
             html.append(f"<h4>{sym}</h4>")
             html.append(f"<img src='plots/{sym}_ohlc.png' style='max-width: 1000px;'><br>")
             html.append(f"<img src='plots/{sym}_bestpx.png' style='max-width: 1000px;'><br>")

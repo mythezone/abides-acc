@@ -1,7 +1,7 @@
 from core.kernel import Kernel
-from core.symbol import Symbol
+from core.stock import Stock
 import pytest
-from agent import Agent, TradingAgent
+from core.agent import Agent, TradingAgent
 from core.exchange import Exchange
 
 
@@ -26,8 +26,8 @@ def test_kernel_initialization(kernel):
 
 
 def test_symbol_config(kernel):
-    assert Symbol["SYM1"] is not None, "Symbol SYS1 should be initialized"
-    assert Symbol["SYM2"] is not None, "Symbol SYS2 should be initialized"
+    assert Stock["SYM1"] is not None, "Symbol SYS1 should be initialized"
+    assert Stock["SYM2"] is not None, "Symbol SYS2 should be initialized"
 
 
 def test_agent_config(kernel):

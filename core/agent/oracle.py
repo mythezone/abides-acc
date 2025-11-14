@@ -15,7 +15,7 @@ class OracleAgent(BaseAgent):
 
     Supported directory layouts:
       1) root/<SYMBOL>/lob.csv (ABIDES-style hierarchy)
-      2) root/<SYMBOL>.csv (flat directory, single file per symbol)
+      2) root/<SYMBOL>.csv (flat directory, single file per stock)
     """
 
     _DEFAULT_TIME_COLUMNS: Sequence[str] = (
@@ -52,31 +52,31 @@ class OracleAgent(BaseAgent):
 
         for entry in base.iterdir():
             if entry.is_dir():
-                self._load_directory_symbol(entry)
+                self._load_directory_stock(entry)
             elif entry.is_file() and entry.suffix.lower() == ".csv":
-                self._load_flat_symbol(entry)
+                self._load_flat_stock(entry)
 
-    def _load_directory_symbol(self, dir_path: Path) -> None:
-        symbol = dir_path.name
+    def _load_directory_stock(self, dir_path: Path) -> None:
+        stock = dir_path.name
         lob_path = dir_path / "lob.csv"
         ohlc_path = dir_path / "ohlc.csv"
         if lob_path.exists():
             df, time_col = self._read_time_series_csv(lob_path)
             if df is not None:
-                self.lob[symbol] = df
-                self._lob_time_col[symbol] = time_col
+                self.lob[stock] = df
+                self._lob_time_col[stock] = time_col
         if ohlc_path.exists():
             df, time_col = self._read_time_series_csv(ohlc_path)
             if df is not None:
-                self.ohlc[symbol] = df
-                self._ohlc_time_col[symbol] = time_col
+                self.ohlc[stock] = df
+                self._ohlc_time_col[stock] = time_col
 
-    def _load_flat_symbol(self, file_path: Path) -> None:
-        symbol = file_path.stem
+    def _load_flat_stock(self, file_path: Path) -> None:
+        stock = file_path.stem
         df, time_col = self._read_time_series_csv(file_path)
         if df is not None:
-            self.lob[symbol] = df
-            self._lob_time_col[symbol] = time_col
+            self.lob[stock] = df
+            self._lob_time_col[stock] = time_col
 
     def _read_time_series_csv(
         self, csv_path: Path
@@ -110,17 +110,17 @@ class OracleAgent(BaseAgent):
     # ------------------------------------------------------------------ #
     # Public helpers
     # ------------------------------------------------------------------ #
-    def available_symbols(self) -> Sequence[str]:
+    def available_stocks(self) -> Sequence[str]:
         return list(self.lob.keys())
 
-    def has_lob(self, symbol: str) -> bool:
-        return symbol in self.lob
+    def has_lob(self, stock: str) -> bool:
+        return stock in self.lob
 
     def get_lob(
-        self, symbol: str, current_time: pd.Timestamp
+        self, stock: str, current_time: pd.Timestamp
     ) -> Optional[Dict[str, object]]:
-        df = self.lob.get(symbol)
-        time_col = self._lob_time_col.get(symbol)
+        df = self.lob.get(stock)
+        time_col = self._lob_time_col.get(stock)
         if df is None or time_col is None or df.empty:
             return None
         t = pd.Timestamp(current_time)
@@ -180,34 +180,34 @@ class OracleAgent(BaseAgent):
     def handle_inbox_message(self, message):
         # Answer queries immediately with response messages
         t = pd.to_datetime(message.content.get("time", message.recive_time))
-        symbol = message.content.get("symbol")
+        stock = message.content.get("stock")
         if message.message_type == MessageType.ORACLE_QUERY_OHLC:
             data = None
-            time_col = self._ohlc_time_col.get(symbol)
-            if symbol in self.ohlc:
-                data = self._find_next(self.ohlc[symbol], t, time_col=time_col)
+            time_col = self._ohlc_time_col.get(stock)
+            if stock in self.ohlc:
+                data = self._find_next(self.ohlc[stock], t, time_col=time_col)
             rsp = new_message(
                 message_type=MessageType.ORACLE_RESPONSE_OHLC,
                 sender_id=self.id,
                 recipient_id=message.sender_id,
                 send_time=message.recive_time,
                 recive_time=message.recive_time,
-                content={"symbol": symbol, "ohlc": data},
+                content={"stock": stock, "ohlc": data},
             )
             self.send(rsp)
             return True
         if message.message_type == MessageType.ORACLE_QUERY_LOB:
             data = None
-            time_col = self._lob_time_col.get(symbol)
-            if symbol in self.lob:
-                data = self._find_next(self.lob[symbol], t, time_col=time_col)
+            time_col = self._lob_time_col.get(stock)
+            if stock in self.lob:
+                data = self._find_next(self.lob[stock], t, time_col=time_col)
             rsp = new_message(
                 message_type=MessageType.ORACLE_RESPONSE_LOB,
                 sender_id=self.id,
                 recipient_id=message.sender_id,
                 send_time=message.recive_time,
                 recive_time=message.recive_time,
-                content={"symbol": symbol, "lob": data},
+                content={"stock": stock, "lob": data},
             )
             self.send(rsp)
             return True

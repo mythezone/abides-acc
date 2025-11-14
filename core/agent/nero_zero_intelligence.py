@@ -13,7 +13,7 @@ class NearZeroIntelligenceAgent(FundamentalTrackingAgent):
         self,
         id,
         message_queue: MessageQueue = None,
-        initial_symbols: Optional[List[str]] = None,
+        initial_stocks: Optional[List[str]] = None,
         alpha=0.85,
         kappa=4.10,
         phi=0.016,
@@ -25,13 +25,13 @@ class NearZeroIntelligenceAgent(FundamentalTrackingAgent):
             id,
             *args,
             message_queue=message_queue,
-            initial_symbols=initial_symbols,
+            initial_stocks=initial_stocks,
             **kwargs,
         )
-        self.subscribed_symbols: List[str] = (initial_symbols or [])[:]
-        self.selected_symbols = list(
+        self.subscribed_stocks: List[str] = (initial_stocks or [])[:]
+        self.selected_stocks = list(
             np.random.choice(
-                self.subscribed_symbols, int(np.random.randint(1, 3)), replace=False
+                self.subscribed_stocks, int(np.random.randint(1, 3)), replace=False
             )
         )
         self.alpha = alpha
@@ -46,11 +46,11 @@ class NearZeroIntelligenceAgent(FundamentalTrackingAgent):
     def action(self):
         super().action()
 
-        for symbol in self.selected_symbols:
+        for stock in self.selected_stocks:
             requests = []
 
             # make the trading decision
-            is_buyer = self._determine_buyer_rule(symbol=symbol)
+            is_buyer = self._determine_buyer_rule(stock=stock)
 
             # get fundamental values
             fundamental_value = self._get_fundamental_price()
@@ -62,7 +62,7 @@ class NearZeroIntelligenceAgent(FundamentalTrackingAgent):
 
             # generate size
             # Since the paper doesn't speicfy how to generate ORDER SIZE, here I just follow the implementation in ZeroIntellugenceAgent.
-            inventory = int(self.portfolio.holdings.get(symbol, 0))
+            inventory = int(self.portfolio.holdings.get(stock, 0))
             quantity = int(np.random.randint(1, 50))
             if not is_buyer and inventory > 0:
                 quantity = max(1, min(quantity, inventory))
@@ -70,7 +70,7 @@ class NearZeroIntelligenceAgent(FundamentalTrackingAgent):
             # add content to contents
             order = {
                 "type": "limit_order",
-                "symbol": symbol,
+                "stock": stock,
                 "agent_id": self.id,
                 "timestamp": str(self.current_time),
                 "side": "buy" if is_buyer else "sell",
@@ -96,20 +96,20 @@ class NearZeroIntelligenceAgent(FundamentalTrackingAgent):
         if self.current_period > self.period_limit:
             self._end_period()
 
-    def _determine_buyer_rule(self, symbol) -> bool:
+    def _determine_buyer_rule(self, stock) -> bool:
         """Return true if it is a buyer."""
         p = np.random.rand()
         pi_t = np.max(0.5 - self.phi * self.current_period, 0)
         is_buyer = p < pi_t
         # check if we have the current stock
-        inventory = int(self.portfolio.holdings.get(symbol, 0))
+        inventory = int(self.portfolio.holdings.get(stock, 0))
         if not is_buyer and inventory == 0:
             is_buyer = True
         return is_buyer
 
-    def _get_fundamental_price(self, symbol: str):
+    def _get_fundamental_price(self, stock: str):
         """Return the current fundamental prices."""
-        msg = self.build_fundamental_query(symbols=[symbol])
+        msg = self.build_fundamental_query(stocks=[stock])
         self.send(msg)
         msg_in: Message = self.message_queue.get_raw()
         if msg_in.message_type == "QUERY_FUNDAMENTAL":
@@ -130,14 +130,14 @@ class NearZeroIntelligenceAgent(FundamentalTrackingAgent):
             # calculate trading quantity via weighted average price
             total_value = 0
             total_quantity = 0
-            for symbol in self.selected_symbols:
-                period_trades_for_symbol = [
-                    trade[symbol] for trade in self.period_trades if symbol in trade
+            for stock in self.selected_stocks:
+                period_trades_for_stock = [
+                    trade[stock] for trade in self.period_trades if stock in trade
                 ]
                 total_value = np.sum(
-                    price * qty for price, qty in period_trades_for_symbol
+                    price * qty for price, qty in period_trades_for_stock
                 )
-                total_quantity = np.sum(qty for _, qty in period_trades_for_symbol)
+                total_quantity = np.sum(qty for _, qty in period_trades_for_stock)
             avg_price = total_value / total_quantity
 
         self.prev_avg_price = avg_price
@@ -148,18 +148,18 @@ class NearZeroIntelligenceAgent(FundamentalTrackingAgent):
         """Here I just simply copy the implementation in ZeroIntelligenceAgent. I guess it's OK."""
         # First apply base processing (portfolio updates)
         super().process_inbox()
-        # Then pick up symbol list if provided
-        new_symbols = []
+        # Then pick up stock list if provided
+        new_stocks = []
         keep = []
         for m in self.inbox:
             if m.message_type == MessageType.MKT_DATA and isinstance(m.content, dict):
-                if "symbols" in m.content:
-                    new_symbols.extend(m.content.get("symbols", []))
+                if "stocks" in m.content:
+                    new_stocks.extend(m.content.get("stocks", []))
             elif m.message_type == MessageType.ORACLE_RESPONSE_LOB and isinstance(
                 m.content, dict
             ):
                 data = m.content.get("lob")
-                symbol = m.content.get("symbol")
+                stock = m.content.get("stock")
                 # build simple heuristic orders near oracle best levels
                 reqs = []
                 try:
@@ -186,7 +186,7 @@ class NearZeroIntelligenceAgent(FundamentalTrackingAgent):
                         reqs.append(
                             {
                                 "type": "limit_order",
-                                "symbol": symbol,
+                                "stock": stock,
                                 "agent_id": self.id,
                                 "timestamp": str(self.current_time),
                                 "side": "buy",
@@ -195,13 +195,13 @@ class NearZeroIntelligenceAgent(FundamentalTrackingAgent):
                             }
                         )
                         # sell leg only if inventory is available
-                        inv = int(self.portfolio.holdings.get(symbol, 0))
+                        inv = int(self.portfolio.holdings.get(stock, 0))
                         if inv > 0:
                             qty = max(1, min(int(np.random.randint(1, 50)), inv))
                             reqs.append(
                                 {
                                     "type": "limit_order",
-                                    "symbol": symbol,
+                                    "stock": stock,
                                     "agent_id": self.id,
                                     "timestamp": str(self.current_time),
                                     "side": "sell",
@@ -213,7 +213,7 @@ class NearZeroIntelligenceAgent(FundamentalTrackingAgent):
                         reqs.append(
                             {
                                 "type": "limit_order",
-                                "symbol": symbol,
+                                "stock": stock,
                                 "agent_id": self.id,
                                 "timestamp": str(self.current_time),
                                 "side": "buy",
@@ -237,7 +237,7 @@ class NearZeroIntelligenceAgent(FundamentalTrackingAgent):
                 m.content, dict
             ):
                 data = m.content.get("ohlc") or {}
-                symbol = m.content.get("symbol")
+                stock = m.content.get("stock")
                 reqs = []
                 try:
                     close = data.get("close") or data.get("close")
@@ -247,7 +247,7 @@ class NearZeroIntelligenceAgent(FundamentalTrackingAgent):
                         reqs.append(
                             {
                                 "type": "limit_order",
-                                "symbol": symbol,
+                                "stock": stock,
                                 "agent_id": self.id,
                                 "timestamp": str(self.current_time),
                                 "side": "buy",
@@ -255,13 +255,13 @@ class NearZeroIntelligenceAgent(FundamentalTrackingAgent):
                                 "price": close,
                             }
                         )
-                        inv = int(self.portfolio.holdings.get(symbol, 0))
+                        inv = int(self.portfolio.holdings.get(stock, 0))
                         if inv > 0:
                             qty = max(1, min(int(np.random.randint(1, 50)), inv))
                             reqs.append(
                                 {
                                     "type": "limit_order",
-                                    "symbol": symbol,
+                                    "stock": stock,
                                     "agent_id": self.id,
                                     "timestamp": str(self.current_time),
                                     "side": "sell",
@@ -284,15 +284,15 @@ class NearZeroIntelligenceAgent(FundamentalTrackingAgent):
             else:
                 keep.append(m)
         self.inbox = keep
-        if new_symbols:
+        if new_stocks:
             # Deduplicate
-            uniq = list(dict.fromkeys(new_symbols))
-            self.subscribed_symbols = uniq
+            uniq = list(dict.fromkeys(new_stocks))
+            self.subscribed_stocks = uniq
 
     def receive(self, message: Message):
         super().receive(message)
         if message.message_type == "ORDER_EXECUTED":
-            symbol = str(message.content.get("symbol"))
+            stock = str(message.content.get("stock"))
             price = float(message.content.get("price"))
             size = int(message.content.get("size"))
-            self.period_trades.append({symbol: (price, size)})
+            self.period_trades.append({stock: (price, size)})

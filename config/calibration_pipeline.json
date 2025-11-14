@@ -62,16 +62,16 @@
     ],
     "output_dir": "log/calibration_pipeline"
   },
-  "symbols": [
-    { "symbol": "000001", "market_cap": 350000000000 },
-    { "symbol": "000002", "market_cap": 210000000000 },
-    { "symbol": "000004", "market_cap": 145000000000 },
-    { "symbol": "000006", "market_cap": 120000000000 },
-    { "symbol": "000008", "market_cap": 80000000000 },
-    { "symbol": "000009", "market_cap": 95000000000 },
-    { "symbol": "000010", "market_cap": 150000000000 },
-    { "symbol": "000011", "market_cap": 60000000000 },
-    { "symbol": "000012", "market_cap": 50000000000 },
-    { "symbol": "000016", "market_cap": 400000000000 }
+  "stocks": [
+    { "stock": "000001", "market_cap": 350000000000 },
+    { "stock": "000002", "market_cap": 210000000000 },
+    { "stock": "000004", "market_cap": 145000000000 },
+    { "stock": "000006", "market_cap": 120000000000 },
+    { "stock": "000008", "market_cap": 80000000000 },
+    { "stock": "000009", "market_cap": 95000000000 },
+    { "stock": "000010", "market_cap": 150000000000 },
+    { "stock": "000011", "market_cap": 60000000000 },
+    { "stock": "000012", "market_cap": 50000000000 },
+    { "stock": "000016", "market_cap": 400000000000 }
   ]
 }

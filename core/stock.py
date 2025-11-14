@@ -11,12 +11,12 @@ import datetime
 from datetime import datetime as dt
 
 
-CACHE_FOLDER = "history/symbol_cache"
+CACHE_FOLDER = "history/stock_cache"
 START_DATE = "20050101"
 END_DATE = dt.today().strftime("%Y%m%d")
 
 
-class Symbol:
+class Stock:
 
     def __init__(self, code: str):
         self.code = code
@@ -26,7 +26,7 @@ class Symbol:
             # Fetch data from akshare
             # print(f"Fetching data for {self.code} from akshare.")
             self.real_history = ak.stock_zh_a_hist(
-                symbol=self.code,
+                stock=self.code,
                 period="daily",
                 # start_date=START_DATE,
                 end_date=END_DATE,
@@ -62,9 +62,9 @@ class Symbol:
             )
 
 class EFT:
-    def __init__(self, portfolio: List[Symbol]):
+    def __init__(self, portfolio: List[Stock]):
         self.portfolio = portfolio
 
 if __name__ == "__main__":
-    symbol = Symbol("000001")
-    print(symbol.get_real_ohlc("2005-05-09"))  # Should return None values for this date
+    stock = Stock("000001")
+    print(stock.get_real_ohlc("2005-05-09"))  # Should return None values for this date

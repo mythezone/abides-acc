@@ -6,9 +6,9 @@ import numpy as np
 
 class FCNAgent(FundamentalTrackingAgent):
     def __init__(
-        self, id, *args, p_star, Z, mu, sigma, tau, T, k, initial_symbols=None, **kwargs
+        self, id, *args, p_star, Z, mu, sigma, tau, T, k, initial_stocks=None, **kwargs
     ):
-        super().__init__(id, *args, initial_symbols=initial_symbols, **kwargs)
+        super().__init__(id, *args, initial_stocks=initial_stocks, **kwargs)
         self.p_star = p_star
         self.Z = Z
         self.mu = mu
@@ -17,28 +17,28 @@ class FCNAgent(FundamentalTrackingAgent):
         self.T = T
         self.k = k
 
-        self.selected_symbols = list(
+        self.selected_stocks = list(
             np.random.choice(
-                initial_symbols, int(np.random.randint(1, 3)), replace=False
+                initial_stocks, int(np.random.randint(1, 3)), replace=False
             )
         )
         self.time_step = 1
         self.prices = {}
         self.fundamental_prices = {}
-        for symbol in self.selected_symbols:
-            self.prices[symbol] = {}
-            self.fundamental_prices[symbol] = {}
+        for stock in self.selected_stocks:
+            self.prices[stock] = {}
+            self.fundamental_prices[stock] = {}
 
     def wakeup(self, currentTime):
         super().wakeup(currentTime)
         requests = []
-        for symbol in self.selected_symbols:
+        for stock in self.selected_stocks:
             # 1. get the fundamental value and current price
-            p_t_star = self.GBM(symbol=symbol)
-            p_t = self.prices[symbol][str(self.time_step)]
+            p_t_star = self.GBM(stock=stock)
+            p_t = self.prices[stock][str(self.time_step)]
 
             # 2. calculate return rate
-            r = self.calc_return_rate(p=p_t, p_star=p_t_star, symbol=symbol)
+            r = self.calc_return_rate(p=p_t, p_star=p_t_star, stock=stock)
 
             # 3. predict future price
             p_t_plus_tau = p_t * np.exp(r * self.tau)
@@ -49,18 +49,18 @@ class FCNAgent(FundamentalTrackingAgent):
         self.send(requests)
         self.time_step += 1
 
-    def GBM(self, symbol):
+    def GBM(self, stock):
         """Return the result of fundamental price, which changes as a geometric Brownian motion, at the current timestamp."""
         t = self.time_step
         Z_t = self.Z(t)
         X_t = np.exp((self.mu - self.sigma**2 / 2) * t + self.sigma * Z_t)
-        self.fundamental_prices.get(symbol).setdefault(key=str(t), default=X_t)
+        self.fundamental_prices.get(stock).setdefault(key=str(t), default=X_t)
         return X_t
 
-    def calc_return_rate(self, p, p_star, symbol):
+    def calc_return_rate(self, p, p_star, stock):
         t = self.time_step
         T = self.T
-        prev_p = self.prices[symbol][str(t - self.tau)]
+        prev_p = self.prices[stock][str(t - self.tau)]
         F = 1 / T * np.log(p_star / p)
         C = 1 / T * np.log(p / prev_p)
         N = np.random.normal(loc=0, scale=0.0001)
@@ -68,7 +68,7 @@ class FCNAgent(FundamentalTrackingAgent):
         weights = np.random.exponential(scale=rate_param, size=3)
         return np.dot(weights, (F, C, N)) / np.sum(weights)
 
-    def make_trading_decision(self, p, p_pred, requests: list, symbol: str):
+    def make_trading_decision(self, p, p_pred, requests: list, stock: str):
         is_buy_order = True
         if p_pred > p:
             price = p_pred * (1 - self.k)
@@ -78,7 +78,7 @@ class FCNAgent(FundamentalTrackingAgent):
         volume = np.random.randint(low=1, high=6)
         order = {
             "type": "limit_order",
-            "symbol": symbol,
+            "stock": stock,
             "agent_id": self.id,
             "timestamp": str(self.current_time),
             "side": "buy" if is_buy_order else "sell",

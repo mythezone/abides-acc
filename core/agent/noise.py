@@ -10,7 +10,7 @@ class NoiseAgent(BaseAgent):
     """
     ABIDES-style NoiseAgent adapter.
 
-    - On wakeup, randomly submits small limit/market orders across initial symbols.
+    - On wakeup, randomly submits small limit/market orders across initial stocks.
     - Compatible with our SUBMIT_ORDER batching and portfolio updates via BaseAgent.
     """
 
@@ -18,28 +18,28 @@ class NoiseAgent(BaseAgent):
         self,
         id: str,
         *args,
-        initial_symbols: Optional[List[str]] = None,
+        initial_stocks: Optional[List[str]] = None,
         max_batch: int = 3,
         **kwargs,
     ):
         super().__init__(id, *args, **kwargs)
-        self.subscribed_symbols: List[str] = (initial_symbols or [])[:]
+        self.subscribed_stocks: List[str] = (initial_stocks or [])[:]
         self.max_batch = int(max_batch)
 
     def action(self):
-        if not self.subscribed_symbols:
+        if not self.subscribed_stocks:
             return
         # Ensure sample size <= population for replace=False
-        k = len(self.subscribed_symbols)
+        k = len(self.subscribed_stocks)
         if k <= 0:
             return
         n = int(np.random.randint(1, min(self.max_batch, k) + 1))
-        selected = list(np.random.choice(self.subscribed_symbols, n, replace=False))
+        selected = list(np.random.choice(self.subscribed_stocks, n, replace=False))
         ts = self.current_time if isinstance(self.current_time, pd.Timestamp) else pd.Timestamp.now()
         reqs = []
-        for symbol in selected:
+        for stock in selected:
             side = np.random.choice(["buy", "sell"])  # portfolio will guard negative sells
-            inv = int(self.portfolio.holdings.get(symbol, 0))
+            inv = int(self.portfolio.holdings.get(stock, 0))
             qty = int(np.random.randint(1, 50))
             if side == "sell" and inv <= 0:
                 side = "buy"
@@ -49,7 +49,7 @@ class NoiseAgent(BaseAgent):
             otype = np.random.choice(["limit_order", "market_order"])  # ABIDES style
             order = {
                 "type": otype,
-                "symbol": symbol,
+                "stock": stock,
                 "agent_id": self.id,
                 "timestamp": str(ts),
                 "side": side,

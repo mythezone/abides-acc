@@ -16,7 +16,7 @@ def handle(exchange, message, now):
             recive_time=now,
             content={
                 "strategy": params.get("strategy", "random"),
-                "symbols": selection,
+                "stocks": selection,
                 "count": len(selection),
             },
         )

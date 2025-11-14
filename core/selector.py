@@ -18,7 +18,7 @@ class WeightSnapshot:
 
 
 class SymbolSelectionManager:
-    """Maintains symbol sampling distributions and schedules periodic refresh."""
+    """Maintains stock sampling distributions and schedules periodic refresh."""
 
     def __init__(self, exchange, update_interval: str = "60s") -> None:
         self.exchange = exchange
@@ -42,13 +42,13 @@ class SymbolSelectionManager:
         self._schedule_next(now)
 
     def refresh(self, now: pd.Timestamp) -> None:
-        symbols = list(self.exchange.symbols)
+        stocks = list(self.exchange.stocks)
         market_caps: Dict[str, float] = {}
         volumes: Dict[str, float] = {}
         uniform: Dict[str, float] = {}
 
-        for sym in symbols:
-            meta = self.exchange.symbol_metadata.get(sym, {})
+        for sym in stocks:
+            meta = self.exchange.stock_metadata.get(sym, {})
             try:
                 cap = float(meta.get("market_cap", 0.0))
             except Exception:
@@ -56,7 +56,7 @@ class SymbolSelectionManager:
             market_caps[sym] = max(cap, 0.0)
 
             try:
-                vol = float(self.exchange._symbol_volume.get(sym, 0.0))
+                vol = float(self.exchange._stock_volume.get(sym, 0.0))
             except Exception:
                 vol = 0.0
             volumes[sym] = max(vol, 0.0)

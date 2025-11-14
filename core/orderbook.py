@@ -56,8 +56,8 @@ class PriceLevel:
 class LimitOrderBook:
     """Price/time priority book with behaviour aligned to MAXE's PriceTimeBook."""
 
-    def __init__(self, symbol: Optional[str]):
-        self.symbol = symbol
+    def __init__(self, stock: Optional[str]):
+        self.stock = stock
         self.buy_prices: List[float] = []
         self.sell_prices: List[float] = []
         self.buy_levels: Dict[float, PriceLevel] = {}
@@ -200,7 +200,7 @@ class LimitOrderBook:
                 side="buy",
                 quantity=volume,
                 price=float(price),
-                symbol=self.symbol or "",
+                stock=self.stock or "",
                 id=f"INIT_BID_{price}_{volume}",
             )
             self.add_order(order)
@@ -214,7 +214,7 @@ class LimitOrderBook:
                 side="sell",
                 quantity=volume,
                 price=float(price),
-                symbol=self.symbol or "",
+                stock=self.stock or "",
                 id=f"INIT_ASK_{price}_{volume}",
             )
             self.add_order(order)
@@ -267,7 +267,7 @@ class LimitOrderBook:
 
     def render_lob(self) -> str:
         snap = self.snapshot_top_n(5)
-        lines = [f"Order Book for {self.symbol or 'UNKNOWN'}"]
+        lines = [f"Order Book for {self.stock or 'UNKNOWN'}"]
         lines.append(" Side | Price | Volume")
         for price, qty in snap["sell"]:
             lines.append(f"  ASK | {price:>8.2f} | {qty:>6}")
@@ -421,7 +421,7 @@ class LimitOrderBook:
             buyer = incoming.agent_id if incoming.side == "buy" else resting.agent_id
             seller = resting.agent_id if incoming.side == "buy" else incoming.agent_id
             trade = {
-                "symbol": self.symbol,
+                "stock": self.stock,
                 "price": round(float(level.price), 6),
                 "quantity": int(traded_qty),
                 "timestamp": self._normalize_time(incoming.timestamp),

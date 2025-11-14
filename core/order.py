@@ -13,18 +13,18 @@ class Order:
     timestamp: str
     side: str  # 'buy' or 'sell'
     quantity: int
-    symbol: str = ""
+    stock: str = ""
     id: int = field(default_factory=lambda: next(_order_id_gen))
 
     @classmethod
     def from_dict(cls, data: dict) -> "Order":
-        symbol = data.get("symbol") or data.get("_symbol") or ""
+        stock = data.get("stock") or data.get("_stock") or ""
         return cls(
             agent_id=data["agent_id"],
             timestamp=data["timestamp"],
             side=data["side"],
             quantity=data["quantity"],
-            symbol=symbol,
+            stock=stock,
             id=data.get("id", next(_order_id_gen)),
         )
 
@@ -41,7 +41,7 @@ class LimitOrder(Order):
             side=data["side"],
             quantity=data["quantity"],
             price=data["price"],
-            symbol=data.get("symbol") or data.get("_symbol") or "",
+            stock=data.get("stock") or data.get("_stock") or "",
             id=data.get("id", next(_order_id_gen)),
         )
 
@@ -57,13 +57,13 @@ class MarketOrder(Order):
             timestamp=data["timestamp"],
             side=data["side"],
             quantity=data["quantity"],
-            symbol=data.get("symbol") or data.get("_symbol") or "",
+            stock=data.get("stock") or data.get("_stock") or "",
             id=data.get("id", next(_order_id_gen)),
             market_depth=data.get("market_depth"),
         )
 
 
-def generate_random_order(symbol: str) -> Order:
+def generate_random_order(stock: str) -> Order:
     order_type = random.choice(["limit", "market"])
     side = random.choice(["buy", "sell"])
     quantity = random.randint(1, 1000)
@@ -74,7 +74,7 @@ def generate_random_order(symbol: str) -> Order:
     if order_type == "limit":
         return LimitOrder(
             agent_id=agent_id,
-            symbol=symbol,
+            stock=stock,
             timestamp=timestamp,
             side=side,
             quantity=quantity,
@@ -83,7 +83,7 @@ def generate_random_order(symbol: str) -> Order:
     else:
         return MarketOrder(
             agent_id=agent_id,
-            symbol=symbol,
+            stock=stock,
             timestamp=timestamp,
             side=side,
             quantity=quantity

@@ -20,9 +20,9 @@ def _resolve_columns(level: int = 10) -> Dict[str, List[str]]:
     return cols
 
 
-def load_lob_series(log_dir: str, symbol: str) -> Optional[pd.DataFrame]:
-    """Load the LOB CSV for a given symbol if it exists."""
-    path = Path(log_dir) / symbol / "lob.csv"
+def load_lob_series(log_dir: str, stock: str) -> Optional[pd.DataFrame]:
+    """Load the LOB CSV for a given stock if it exists."""
+    path = Path(log_dir) / stock / "lob.csv"
     if not path.exists():
         return None
     df = pd.read_csv(path)
@@ -134,18 +134,18 @@ def compute_lob_mse(
 def evaluate_directories(
     base_dir: str,
     calibrated_dir: str,
-    symbols: Sequence[str],
+    stocks: Sequence[str],
     config: Optional[LOBMSEConfig] = None,
 ) -> List[Dict[str, float]]:
     results: List[Dict[str, float]] = []
     cfg = config or LOBMSEConfig()
-    for symbol in symbols:
-        base_df = load_lob_series(base_dir, symbol)
-        cal_df = load_lob_series(calibrated_dir, symbol)
+    for stock in stocks:
+        base_df = load_lob_series(base_dir, stock)
+        cal_df = load_lob_series(calibrated_dir, stock)
         if base_df is None or cal_df is None:
             results.append(
                 {
-                    "symbol": symbol,
+                    "stock": stock,
                     "price_mse": float("nan"),
                     "volume_mse": float("nan"),
                     "combined_mse": float("nan"),
@@ -153,7 +153,7 @@ def evaluate_directories(
             )
             continue
         metrics = compute_lob_mse(base_df, cal_df, cfg)
-        metrics["symbol"] = symbol
+        metrics["stock"] = stock
         results.append(metrics)
     return results
 

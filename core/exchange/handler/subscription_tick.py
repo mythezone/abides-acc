@@ -8,16 +8,16 @@ from .manager import register_handler
 @register_handler(MessageType.MKT_DATA_SUBSCRIPTION_TICK)
 def handle(exchange, message, now):
     aid = message.content.get("agent_id")
-    symbol = message.content.get("symbol")
-    sub = exchange._subs.get(aid, {}).get(symbol) if aid else None
+    stock = message.content.get("stock")
+    sub = exchange._subs.get(aid, {}).get(stock) if aid else None
     if not sub:
         return []
-    lob = exchange._get_lob(symbol)
+    lob = exchange._get_lob(stock)
     depth = int(sub.get("depth", 1))
     freq_ms = int(sub.get("freq_ms", 1000))
     snap = lob.snapshot_top_n(depth) if lob is not None else {"buy": [], "sell": []}
     payload = {
-        "symbol": symbol,
+        "stock": stock,
         "depth": depth,
         "bids": snap.get("buy", []),
         "asks": snap.get("sell", []),
@@ -34,5 +34,5 @@ def handle(exchange, message, now):
     exchange._emit(msg)
     sub["last_sent"] = now
     next_time = now + pd.Timedelta(milliseconds=freq_ms)
-    exchange._schedule_subscription_tick(aid, symbol, next_time)
+    exchange._schedule_subscription_tick(aid, stock, next_time)
     return []

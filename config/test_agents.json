@@ -25,16 +25,40 @@
     }
   },
   "agents": [
-    { "num": 1, "type": "zero_intelligence", "params": {"initial_symbols": ["AAA","BBB","CCC"]} },
-    { "num": 1, "type": "noise", "params": {"initial_symbols": ["AAA","BBB","CCC"]} },
-    { "num": 1, "type": "value", "params": {"initial_symbols": ["AAA","BBB","CCC"]} },
-    { "num": 1, "type": "order_book_imbalance", "params": {"initial_symbols": ["AAA","BBB","CCC"], "depth": 1} },
-    { "num": 1, "type": "hbl", "params": {"initial_symbols": ["AAA","BBB","CCC"]} },
-    { "num": 1, "type": "fundamental_tracking", "params": {"initial_symbols": ["AAA","BBB","CCC"]} }
+    {
+      "num": 1,
+      "type": "zero_intelligence",
+      "params": { "initial_stocks": ["AAA", "BBB", "CCC"] }
+    },
+    {
+      "num": 1,
+      "type": "noise",
+      "params": { "initial_stocks": ["AAA", "BBB", "CCC"] }
+    },
+    {
+      "num": 1,
+      "type": "value",
+      "params": { "initial_stocks": ["AAA", "BBB", "CCC"] }
+    },
+    {
+      "num": 1,
+      "type": "order_book_imbalance",
+      "params": { "initial_stocks": ["AAA", "BBB", "CCC"], "depth": 1 }
+    },
+    {
+      "num": 1,
+      "type": "hbl",
+      "params": { "initial_stocks": ["AAA", "BBB", "CCC"] }
+    },
+    {
+      "num": 1,
+      "type": "fundamental_tracking",
+      "params": { "initial_stocks": ["AAA", "BBB", "CCC"] }
+    }
   ],
-  "symbols": [
-    {"symbol": "AAA", "market_cap": 80000000000},
-    {"symbol": "BBB", "market_cap": 62000000000},
-    {"symbol": "CCC"}
+  "stocks": [
+    { "stock": "AAA", "market_cap": 80000000000 },
+    { "stock": "BBB", "market_cap": 62000000000 },
+    { "stock": "CCC" }
   ]
 }

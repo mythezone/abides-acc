@@ -13,8 +13,8 @@ class PreopenOrderBook:
       and minimize imbalance (standard call auction heuristic).
     """
 
-    def __init__(self, symbol: str):
-        self.symbol = symbol
+    def __init__(self, stock: str):
+        self.stock = stock
         self._orders: List[Optional[Order]] = []
         self._id_index: Dict[str, int] = {}
 
@@ -108,7 +108,7 @@ class PreopenOrderBook:
                     si += 1
                 continue
             trades.append({
-                "symbol": self.symbol,
+                "stock": self.stock,
                 "price": float(px),
                 "quantity": int(qty),
                 "buy": b.agent_id,

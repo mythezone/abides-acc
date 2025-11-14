@@ -16,17 +16,17 @@ class HeuristicBeliefLearningAgent(BaseAgent):
         self,
         id: str,
         *args,
-        initial_symbols: Optional[List[str]] = None,
+        initial_stocks: Optional[List[str]] = None,
         **kwargs,
     ):
         super().__init__(id, *args, **kwargs)
-        self.subscribed_symbols: List[str] = (initial_symbols or [])[:]
+        self.subscribed_stocks: List[str] = (initial_stocks or [])[:]
         self._last_side: str = "sell"
 
     def action(self):
-        if not self.subscribed_symbols:
+        if not self.subscribed_stocks:
             return
-        sym = str(np.random.choice(self.subscribed_symbols))
+        sym = str(np.random.choice(self.subscribed_stocks))
         import pandas as pd
         ts = self.current_time if isinstance(self.current_time, pd.Timestamp) else pd.Timestamp.now()
         msg = new_message(
@@ -35,13 +35,13 @@ class HeuristicBeliefLearningAgent(BaseAgent):
             recipient_id="Exchange",
             send_time=ts,
             recive_time=ts,
-            content={"symbol": sym, "depth": 1},
+            content={"stock": sym, "depth": 1},
         )
         self.send(msg)
 
     def handle_inbox_message(self, message):
         if message.message_type == MessageType.QUERY_SPERAD and isinstance(message.content, dict):
-            sym = str(message.content.get("symbol"))
+            sym = str(message.content.get("stock"))
             bids = message.content.get("bids", [])
             asks = message.content.get("asks", [])
             if not (bids or asks):
@@ -63,7 +63,7 @@ class HeuristicBeliefLearningAgent(BaseAgent):
             ts2 = self.current_time if isinstance(self.current_time, pd.Timestamp) else pd.Timestamp.now()
             req = {
                 "type": "limit_order",
-                "symbol": sym,
+                "stock": sym,
                 "agent_id": self.id,
                 "timestamp": str(ts2),
                 "side": side,

@@ -53,7 +53,7 @@ def main():
     ap.add_argument("--out_root", required=True, help="Output root directory for all runs and reports")
     ap.add_argument("--max_steps", type=int, default=20000, help="Max steps per run (used when --sim_seconds is not provided)")
     ap.add_argument("--sim_seconds", type=int, default=None, help="Simulated time horizon in seconds for all runs")
-    ap.add_argument("--symbols", default="", help="Comma-separated symbols to plot; default=intersection")
+    ap.add_argument("--stocks", default="", help="Comma-separated stocks to plot; default=intersection")
     ap.add_argument("--tolerance", default="2s", help="Time tolerance for alignment in viz")
     ap.add_argument("--lob_levels", type=int, default=10, help="LOB levels for metrics")
     args = ap.parse_args()
@@ -110,8 +110,8 @@ def main():
     # Use the safer viz v2 (no fragile string interpolation in JS)
     viz = os.path.join(os.path.dirname(__file__), "multi_run_viz2.py")
     cmd = [exe, viz, "--truth_dir", runA_dir, "--group", f"RunB={runB_dir}", "--group", f"Calib={calib_dir}", "--out_dir", os.path.join(out_root, f"report_{ts}"), "--tolerance", args.tolerance, "--lob_levels", str(args.lob_levels)]
-    if args.symbols.strip():
-        cmd += ["--symbols", args.symbols]
+    if args.stocks.strip():
+        cmd += ["--stocks", args.stocks]
     print("[viz]", " ".join(cmd))
     subprocess.check_call(cmd)
 

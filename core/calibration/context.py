@@ -56,32 +56,32 @@ class CalibrationContext:
     exchange: object
     oracle: object
     agent_specs: Iterable[Union[dict, CalibratingAgentSpec]]
-    symbols: Optional[Sequence[str]] = None
+    stocks: Optional[Sequence[str]] = None
     max_levels: int = 10
     trigger_offset: Union[pd.Timedelta, int, float, str] = pd.Timedelta(milliseconds=10)
 
     def __post_init__(self) -> None:
         specs = _build_agent_specs(self.agent_specs)
         self.trigger_offset = _normalize_offset(self.trigger_offset)
-        normalized_symbols = self._normalize_symbols(self.symbols)
+        normalized_stocks = self._normalize_stocks(self.stocks)
         self.agent_group = AgentGroup(
             self.exchange,
             self.oracle,
             specs,
             max_levels=int(self.max_levels),
-            symbols=normalized_symbols,
+            stocks=normalized_stocks,
         )
 
     @staticmethod
-    def _normalize_symbols(symbols: Optional[Sequence[str]]) -> Optional[List[str]]:
-        if not symbols:
+    def _normalize_stocks(stocks: Optional[Sequence[str]]) -> Optional[List[str]]:
+        if not stocks:
             return None
         normalized: List[str] = []
-        for sym in symbols:
+        for sym in stocks:
             if isinstance(sym, str):
                 normalized.append(sym)
             elif isinstance(sym, dict):
-                val = sym.get("symbol")
+                val = sym.get("stock")
                 if val:
                     normalized.append(str(val))
         return normalized or None

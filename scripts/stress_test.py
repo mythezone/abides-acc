@@ -46,7 +46,7 @@ def get_rss_bytes() -> int:
 
 def inject_orders(
     kernel: Kernel,
-    symbols,
+    stocks,
     start_time: pd.Timestamp,
     orders: int,
     rate_per_sec: int,
@@ -57,14 +57,14 @@ def inject_orders(
     # Spread orders uniformly across simulation window determined by orders/rate
     for i in range(orders):
         ts = start_time + pd.Timedelta(seconds=(i / max(1, rate_per_sec)))
-        sym = symbols[i % len(symbols)] if symbols else f"SYM{i%10:02d}"
+        sym = stocks[i % len(stocks)] if stocks else f"SYM{i%10:02d}"
         side = random.choice(["buy", "sell"])  # introduce both sides
         qty = random.randint(1, 100)
         price = round(random.uniform(price_min, price_max), 2)
         agent_id = "STRESS" if virtual_agents <= 0 else f"A{(i % virtual_agents):06d}"
         order = {
             "type": "limit_order",
-            "symbol": sym,
+            "stock": sym,
             "agent_id": agent_id,
             "timestamp": str(ts),
             "side": side,
@@ -109,14 +109,14 @@ def main():
     # Reduce agent noise for stress: if any agents exist, we let them be; this script injects main load
     start_time = kernel.clock.now()
 
-    # Prepare symbols: use those initialized in exchange or from config
-    symbols = list(kernel.exchange.lob_dict.keys())
-    if not symbols:
-        symbols = stress_cfg.get("symbols", [f"S{i:04d}" for i in range(10)])
+    # Prepare stocks: use those initialized in exchange or from config
+    stocks = list(kernel.exchange.lob_dict.keys())
+    if not stocks:
+        stocks = stress_cfg.get("stocks", [f"S{i:04d}" for i in range(10)])
         # Initialize LOBs so that snapshots work
         from core.orderbook import LimitOrderBook
 
-        for s in symbols:
+        for s in stocks:
             kernel.exchange.lob_dict[s] = LimitOrderBook(s)
 
     # Optional: configure logging frequencies
@@ -143,7 +143,7 @@ def main():
     # Inject sample orders
     inject_orders(
         kernel,
-        symbols,
+        stocks,
         start_time=start_time,
         orders=sample_orders,
         rate_per_sec=orders_per_sec,

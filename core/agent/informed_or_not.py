@@ -16,51 +16,51 @@ class InformedAgent(FundamentalTrackingAgent):
         alpha,
         sigma,
         *args,
-        initial_symbols=None,
+        initial_stocks=None,
         **kwargs,
     ):
-        super().__init__(id, *args, initial_symbols=initial_symbols, **kwargs)
+        super().__init__(id, *args, initial_stocks=initial_stocks, **kwargs)
 
         self.r = r  # return rate
         self.tau = tau  # look-back periods
         self.alpha = alpha  # alpha
         self.durations = durations  # T-d+1 in the formula
         self.sigma = sigma
-        self.subscribed_symbols: List[str] = (initial_symbols or [])[:]
-        self.selected_symbols = list(
+        self.subscribed_stocks: List[str] = (initial_stocks or [])[:]
+        self.selected_stocks = list(
             np.random.choice(
-                initial_symbols, int(np.random.randint(1, 3)), replace=False
+                initial_stocks, int(np.random.randint(1, 3)), replace=False
             )
         )
 
         self.time_step = 1
         self.common_values: dict[str, dict] = {}
         self.historical_prices: dict[str, dict] = {}
-        for symbol in self.selected_symbols:
-            self.common_values[symbol] = {}
-            self.historical_prices[symbol] = {}
+        for stock in self.selected_stocks:
+            self.common_values[stock] = {}
+            self.historical_prices[stock] = {}
 
     def action(self):
         super().action()
         requests = []
 
-        for symbol in self.selected_symbols:
+        for stock in self.selected_stocks:
             # 1. get p_hat
             p_hat = self._get_expected_price(
-                t=self.time_step, tau=self.tau, symbol=symbol
+                t=self.time_step, tau=self.tau, stock=stock
             )
 
             # 2. get order submission price
-            price = self._compute_submission_price(symbol=symbol, p_hat=p_hat)
+            price = self._compute_submission_price(stock=stock, p_hat=p_hat)
 
             # 3. get desired position
             desired_position = self._compute_desired_position(
-                symbol=symbol, submission_price=price
+                stock=stock, submission_price=price
             )
 
             # 4. determine the order and add to the list
             self._determine_order(
-                symbol=symbol,
+                stock=stock,
                 desired_position=desired_position,
                 submission_price=price,
                 requests=requests,
@@ -79,11 +79,11 @@ class InformedAgent(FundamentalTrackingAgent):
             self.send(msg)
 
         # always update local storage
-        for symbol in self.selected_symbols:
-            self._update_historical_prices(t=self.time_step, symbol=symbol)
+        for stock in self.selected_stocks:
+            self._update_historical_prices(t=self.time_step, stock=stock)
             if self.time_step == 1:
                 self._update_common_values(
-                    t=self.time_step, symbol=symbol, period_to_update=100
+                    t=self.time_step, stock=stock, period_to_update=100
                 )
 
         # time step increment
@@ -94,19 +94,19 @@ class InformedAgent(FundamentalTrackingAgent):
         for msg in self.inbox:
             pass
 
-    def _get_expected_price(self, t, symbols: str):
+    def _get_expected_price(self, t, stocks: str):
         M_0 = self.get_M_0(t)
         S = []
         v = []
-        for symbol in symbols:
-            S.append(self.portfolio.holdings[symbol])
-            v.append(self._get_common_values_safely(symbol, t))
+        for stock in stocks:
+            S.append(self.portfolio.holdings[stock])
+            v.append(self._get_common_values_safely(stock, t))
         numerator = np.dot(S, v)
         denominator = M_0 * 3000 * (1 + self.r) ** self.durations
         return numerator / denominator
 
-    def _compute_submission_price(self, symbol, p_hat):
-        midpoint = np.mean(self.get_best_bid_ask(symbol))
+    def _compute_submission_price(self, stock, p_hat):
+        midpoint = np.mean(self.get_best_bid_ask(stock))
         if midpoint is not None and p_hat is not None:
             # p_hat and midpoint may be floats/ints; compute average
             res = 0.5 * (float(p_hat) + float(midpoint))
@@ -120,12 +120,12 @@ class InformedAgent(FundamentalTrackingAgent):
 
         return int(round(res))
 
-    def _compute_desired_position(self, symbol, p_hat, submission_price):
+    def _compute_desired_position(self, stock, p_hat, submission_price):
         if p_hat is None or submission_price is None:
             return None
 
         # variance estimate: use tau as lookback window (paper uses tau)
-        V_it = self._estimate_variance(symbol, self.tau)
+        V_it = self._estimate_variance(stock, self.tau)
 
         # apply formula: pi = ln(p_hat / p) / (alpha * V * p)
         # if p_hat == p => ln = 0 => pi = 0 (no trade)
@@ -142,8 +142,8 @@ class InformedAgent(FundamentalTrackingAgent):
         desired = int(round(pi))
         return desired
 
-    def _estimate_variance(self, symbol, lookback, t):
-        prices = self.historical_prices[symbol]
+    def _estimate_variance(self, stock, lookback, t):
+        prices = self.historical_prices[stock]
         returns = []
 
         for j in range(1, lookback + 1):
@@ -165,19 +165,19 @@ class InformedAgent(FundamentalTrackingAgent):
         return float(np.var(returns, ddof=1))
 
     def _determine_order(
-        self, symbol, desired_position, submission_price, requests: list
+        self, stock, desired_position, submission_price, requests: list
     ):
-        current = self.portfolio.holdings[symbol]
+        current = self.portfolio.holdings[stock]
         delta = desired_position - current  # positive -> buy, negative -> sell
         if delta == 0:
             return
         qty = np.abs(delta)
-        best_bid, best_ask = self.get_best_bid_ask(symbol)
+        best_bid, best_ask = self.get_best_bid_ask(stock)
         if delta > 0:
             if best_ask is not None and submission_price > best_ask:
                 order = {
                     "type": "market_order",
-                    "symbol": symbol,
+                    "stock": stock,
                     "agent_id": self.id,
                     "timestamp": str(self.current_time),
                     "side": "buy",
@@ -186,7 +186,7 @@ class InformedAgent(FundamentalTrackingAgent):
             else:
                 order = {
                     "type": "limit_order",
-                    "symbol": symbol,
+                    "stock": stock,
                     "agent_id": self.id,
                     "timestamp": str(self.current_time),
                     "side": "buy",
@@ -197,7 +197,7 @@ class InformedAgent(FundamentalTrackingAgent):
             if best_bid is not None and submission_price <= best_bid:
                 order = {
                     "type": "market_order",
-                    "symbol": symbol,
+                    "stock": stock,
                     "agent_id": self.id,
                     "timestamp": str(self.current_time),
                     "side": "sell",
@@ -206,7 +206,7 @@ class InformedAgent(FundamentalTrackingAgent):
             else:
                 order = {
                     "type": "limit_order",
-                    "symbol": symbol,
+                    "stock": stock,
                     "agent_id": self.id,
                     "timestamp": str(self.current_time),
                     "side": "sell",
@@ -215,9 +215,9 @@ class InformedAgent(FundamentalTrackingAgent):
                 }
         requests.append(order)
 
-    def _update_common_values(self, symbol: str, t, period_to_update):
+    def _update_common_values(self, stock: str, t, period_to_update):
         """Update common values at the begging of t. The rest of the series is determined by a stochastic process."""
-        msg = self.build_fundamental_query(symbols=[symbol])
+        msg = self.build_fundamental_query(stocks=[stock])
         self.send(msg)
         msg_in: Message = self.message_queue.get_raw()
         if msg_in.message_type == MessageType.QUERY_FUNDAMENTAL:
@@ -225,21 +225,21 @@ class InformedAgent(FundamentalTrackingAgent):
             res = content["data"]
 
         # update local fundamental values storage
-        self.common_values[symbol].setdefault(str(t), res)
+        self.common_values[stock].setdefault(str(t), res)
 
         for period in range(period_to_update):
-            value = self.common_values[symbol].get(str(period + 1)) * (
+            value = self.common_values[stock].get(str(period + 1)) * (
                 1 + self.sigma * np.random.rand()
             )
-        self.common_values[symbol].setdefault(str(period + 1), value)
+        self.common_values[stock].setdefault(str(period + 1), value)
 
-    def _get_common_values_safely(self, symbol: str, t):
-        if not self.common_values[symbol].get(str(t)):
-            self._update_common_values(symbol=symbol, t=t, period_to_update=100)
-        return self.common_values[symbol].get(str(t))
+    def _get_common_values_safely(self, stock: str, t):
+        if not self.common_values[stock].get(str(t)):
+            self._update_common_values(stock=stock, t=t, period_to_update=100)
+        return self.common_values[stock].get(str(t))
 
-    def get_best_bid_ask(self, symbol: str):
-        msg = self.build_top_of_book_query(symbols=[symbol])
+    def get_best_bid_ask(self, stock: str):
+        msg = self.build_top_of_book_query(stocks=[stock])
         self.send(msg)
         msg_in: Message = self.message_queue.get_raw()
         if msg_in.message_type == MessageType.QUERY_TOP_OF_BOOK:
@@ -249,10 +249,10 @@ class InformedAgent(FundamentalTrackingAgent):
     def _update_historical_prices(
         self,
         t,
-        symbol: str,
+        stock: str,
         send_time: Optional[pd.Timestamp] = None,
     ):
-        content = {"request": {"symbol": symbol}}
+        content = {"request": {"stock": stock}}
         time = send_time or self.current_time
         msg = new_message(
             message_type=MessageType.QUERY_LAST_TRADE,
@@ -269,7 +269,7 @@ class InformedAgent(FundamentalTrackingAgent):
             last_price = content["data"]
 
         # update local historical data storage
-        self.historical_prices[symbol].setdefault(key=t, default=last_price)
+        self.historical_prices[stock].setdefault(key=t, default=last_price)
 
 
 class UninformedAgent(FundamentalTrackingAgent):
@@ -285,10 +285,10 @@ class UninformedAgent(FundamentalTrackingAgent):
         b,
         c,
         *args,
-        initial_symbols=None,
+        initial_stocks=None,
         **kwargs,
     ):
-        super().__init__(id, *args, initial_symbols=initial_symbols, **kwargs)
+        super().__init__(id, *args, initial_stocks=initial_stocks, **kwargs)
 
         self.r = r  # return rate
         self.tau = tau  # look-back periods
@@ -296,39 +296,39 @@ class UninformedAgent(FundamentalTrackingAgent):
         self.durations = durations  # T-d+1 in the formula
         self.sigma = sigma
         self.a, self.b, self.c = a, b, c
-        self.subscribed_symbols: List[str] = (initial_symbols or [])[:]
-        self.selected_symbols = list(
+        self.subscribed_stocks: List[str] = (initial_stocks or [])[:]
+        self.selected_stocks = list(
             np.random.choice(
-                initial_symbols, int(np.random.randint(1, 3)), replace=False
+                initial_stocks, int(np.random.randint(1, 3)), replace=False
             )
         )
 
         self.time_step = 1
         self.common_values: dict[str, dict] = {}
         self.historical_prices: dict[str, dict] = {}
-        for symbol in self.selected_symbols:
-            self.common_values[symbol] = {}
-            self.historical_prices[symbol] = {}
+        for stock in self.selected_stocks:
+            self.common_values[stock] = {}
+            self.historical_prices[stock] = {}
 
     def action(self):
         super().action()
         requests = []
 
-        for symbol in self.selected_symbols:
+        for stock in self.selected_stocks:
             # 1. get p_hat
-            p_hat = self._get_expected_price(t=self.time_step, symbol=symbol)
+            p_hat = self._get_expected_price(t=self.time_step, stock=stock)
 
             # 2. get order submission price
-            price = self._compute_submission_price(symbol=symbol, p_hat=p_hat)
+            price = self._compute_submission_price(stock=stock, p_hat=p_hat)
 
             # 3. get desired position
             desired_position = self._compute_desired_position(
-                symbol=symbol, submission_price=price
+                stock=stock, submission_price=price
             )
 
             # 4. determine the order and add to the list
             self._determine_order(
-                symbol=symbol,
+                stock=stock,
                 desired_position=desired_position,
                 submission_price=price,
                 requests=requests,
@@ -347,11 +347,11 @@ class UninformedAgent(FundamentalTrackingAgent):
             self.send(msg)
 
         # always update local storage
-        for symbol in self.selected_symbols:
-            self._update_historical_prices(t=self.time_step, symbol=symbol)
+        for stock in self.selected_stocks:
+            self._update_historical_prices(t=self.time_step, stock=stock)
             if self.time_step == 1:
                 self._update_common_values(
-                    t=self.time_step, symbol=symbol, period_to_update=100
+                    t=self.time_step, stock=stock, period_to_update=100
                 )
 
         # time step increment
@@ -362,20 +362,20 @@ class UninformedAgent(FundamentalTrackingAgent):
         for msg in self.inbox:
             pass
 
-    def _get_expected_price(self, t, symbol: str):
+    def _get_expected_price(self, t, stock: str):
         v_t = self.historical_prices[str(t)]
         p_tau_bar = 0
         for i in range(self.tau):
             p_tau_bar += self.historical_prices[str(t - i)]
         p_tau_bar /= self.tau
-        midpoint = np.mean(self.get_best_bid_ask(symbol))
+        midpoint = np.mean(self.get_best_bid_ask(stock))
 
         return np.dot((self.a, self.b, self.c), (v_t, p_tau_bar, midpoint)) / np.sum(
             self.a, self.b, self.c
         )
 
-    def _compute_submission_price(self, symbol, p_hat):
-        midpoint = np.mean(self.get_best_bid_ask(symbol))
+    def _compute_submission_price(self, stock, p_hat):
+        midpoint = np.mean(self.get_best_bid_ask(stock))
         if midpoint is not None and p_hat is not None:
             # p_hat and midpoint may be floats/ints; compute average
             res = 0.5 * (float(p_hat) + float(midpoint))
@@ -389,12 +389,12 @@ class UninformedAgent(FundamentalTrackingAgent):
 
         return int(round(res))
 
-    def _compute_desired_position(self, symbol, p_hat, submission_price):
+    def _compute_desired_position(self, stock, p_hat, submission_price):
         if p_hat is None or submission_price is None:
             return None
 
         # variance estimate: use tau as lookback window (paper uses tau)
-        V_it = self._estimate_variance(symbol, self.tau)
+        V_it = self._estimate_variance(stock, self.tau)
 
         # apply formula: pi = ln(p_hat / p) / (alpha * V * p)
         # if p_hat == p => ln = 0 => pi = 0 (no trade)
@@ -411,8 +411,8 @@ class UninformedAgent(FundamentalTrackingAgent):
         desired = int(round(pi))
         return desired
 
-    def _estimate_variance(self, symbol, lookback, t):
-        prices = self.historical_prices[symbol]
+    def _estimate_variance(self, stock, lookback, t):
+        prices = self.historical_prices[stock]
         returns = []
 
         for j in range(1, lookback + 1):
@@ -434,19 +434,19 @@ class UninformedAgent(FundamentalTrackingAgent):
         return float(np.var(returns, ddof=1))
 
     def _determine_order(
-        self, symbol, desired_position, submission_price, requests: list
+        self, stock, desired_position, submission_price, requests: list
     ):
-        current = self.portfolio.holdings[symbol]
+        current = self.portfolio.holdings[stock]
         delta = desired_position - current  # positive -> buy, negative -> sell
         if delta == 0:
             return
         qty = np.abs(delta)
-        best_bid, best_ask = self.get_best_bid_ask(symbol)
+        best_bid, best_ask = self.get_best_bid_ask(stock)
         if delta > 0:
             if best_ask is not None and submission_price > best_ask:
                 order = {
                     "type": "market_order",
-                    "symbol": symbol,
+                    "stock": stock,
                     "agent_id": self.id,
                     "timestamp": str(self.current_time),
                     "side": "buy",
@@ -455,7 +455,7 @@ class UninformedAgent(FundamentalTrackingAgent):
             else:
                 order = {
                     "type": "limit_order",
-                    "symbol": symbol,
+                    "stock": stock,
                     "agent_id": self.id,
                     "timestamp": str(self.current_time),
                     "side": "buy",
@@ -466,7 +466,7 @@ class UninformedAgent(FundamentalTrackingAgent):
             if best_bid is not None and submission_price <= best_bid:
                 order = {
                     "type": "market_order",
-                    "symbol": symbol,
+                    "stock": stock,
                     "agent_id": self.id,
                     "timestamp": str(self.current_time),
                     "side": "sell",
@@ -475,7 +475,7 @@ class UninformedAgent(FundamentalTrackingAgent):
             else:
                 order = {
                     "type": "limit_order",
-                    "symbol": symbol,
+                    "stock": stock,
                     "agent_id": self.id,
                     "timestamp": str(self.current_time),
                     "side": "sell",
@@ -484,9 +484,9 @@ class UninformedAgent(FundamentalTrackingAgent):
                 }
         requests.append(order)
 
-    def _update_common_values(self, symbol: str, t, period_to_update):
+    def _update_common_values(self, stock: str, t, period_to_update):
         """Update common values begging at t. The rest of the series is determined by a stochastic process."""
-        msg = self.build_fundamental_query(symbols=[symbol])
+        msg = self.build_fundamental_query(stocks=[stock])
         self.send(msg)
         msg_in: Message = self.message_queue.get_raw()
         if msg_in.message_type == MessageType.QUERY_FUNDAMENTAL:
@@ -494,21 +494,21 @@ class UninformedAgent(FundamentalTrackingAgent):
             res = content["data"]
 
         # update local fundamental values storage
-        self.common_values[symbol].setdefault(str(t), res)
+        self.common_values[stock].setdefault(str(t), res)
 
         for period in range(period_to_update):
-            value = self.common_values[symbol].get(str(period + 1)) * (
+            value = self.common_values[stock].get(str(period + 1)) * (
                 1 + self.sigma * np.random.rand()
             )
-        self.common_values[symbol].setdefault(str(period + 1), value)
+        self.common_values[stock].setdefault(str(period + 1), value)
 
-    def _get_common_values_safely(self, symbol: str, t):
-        if not self.common_values[symbol].get(str(t)):
-            self._update_common_values(symbol=symbol, t=t, period_to_update=100)
-        return self.common_values[symbol].get(str(t))
+    def _get_common_values_safely(self, stock: str, t):
+        if not self.common_values[stock].get(str(t)):
+            self._update_common_values(stock=stock, t=t, period_to_update=100)
+        return self.common_values[stock].get(str(t))
 
-    def get_best_bid_ask(self, symbol: str):
-        msg = self.build_top_of_book_query(symbols=[symbol])
+    def get_best_bid_ask(self, stock: str):
+        msg = self.build_top_of_book_query(stocks=[stock])
         self.send(msg)
         msg_in: Message = self.message_queue.get_raw()
         if msg_in.message_type == MessageType.QUERY_TOP_OF_BOOK:
@@ -518,10 +518,10 @@ class UninformedAgent(FundamentalTrackingAgent):
     def _update_historical_prices(
         self,
         t,
-        symbol: str,
+        stock: str,
         send_time: Optional[pd.Timestamp] = None,
     ):
-        content = {"request": {"symbol": symbol}}
+        content = {"request": {"stock": stock}}
         time = send_time or self.current_time
         msg = new_message(
             message_type=MessageType.QUERY_LAST_TRADE,
@@ -538,4 +538,4 @@ class UninformedAgent(FundamentalTrackingAgent):
             last_price = content["data"]
 
         # update local historical data storage
-        self.historical_prices[symbol].setdefault(key=t, default=last_price)
+        self.historical_prices[stock].setdefault(key=t, default=last_price)

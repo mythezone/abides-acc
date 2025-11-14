@@ -6,7 +6,7 @@ from .manager import register_handler
 @register_handler(MessageType.MKT_DATA_SUBSCRIPTION_CANCELLATION)
 def handle(exchange, message, now):
     aid = message.sender_id
-    syms = message.content.get("symbols") or []
+    syms = message.content.get("stocks") or []
     if aid in exchange._subs:
         if syms:
             for s in syms:

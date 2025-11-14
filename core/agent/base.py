@@ -59,7 +59,7 @@ class BaseAgent:
             "exchange_location", None
         )
         self._peer_locations: Dict[str, Tuple[float, float]] = {}
-        self._latest_symbol_response: Optional[Dict[str, object]] = None
+        self._latest_stock_response: Optional[Dict[str, object]] = None
         # Calibration flags
         self.calibration_mode: bool = bool(kwargs.pop("calibration_mode", False))
         self.oracle_id: Optional[str] = kwargs.pop("oracle_id", None)
@@ -162,14 +162,14 @@ class BaseAgent:
             ):
                 trades = m.content.get("trades", [])
                 for t in trades:
-                    symbol = t.get("symbol")
+                    stock = t.get("stock")
                     price = float(t.get("price", 0.0))
                     qty = int(t.get("quantity", 0))
                     # Determine if this agent is buyer or seller in this trade
                     if t.get("buy") == self.id:
-                        self.portfolio.apply_trade(symbol, "buy", price, qty)
+                        self.portfolio.apply_trade(stock, "buy", price, qty)
                     if t.get("sell") == self.id:
-                        self.portfolio.apply_trade(symbol, "sell", price, qty)
+                        self.portfolio.apply_trade(stock, "sell", price, qty)
                 # Deduct fees if provided
                 try:
                     fees = float(m.content.get("fees", 0.0))
@@ -178,7 +178,7 @@ class BaseAgent:
                 except Exception:
                     pass
             elif m.message_type == MessageType.SELECT_SYMBOLS_RESPONSE and isinstance(m.content, dict):
-                self._latest_symbol_response = m.content
+                self._latest_stock_response = m.content
             else:
                 self.handle_inbox_message(m)
         self.inbox = []
@@ -186,7 +186,7 @@ class BaseAgent:
     def action(self):
         pass
 
-    def request_oracle(self, symbol: str, kind: str = "lob"):
+    def request_oracle(self, stock: str, kind: str = "lob"):
         if not self.calibration_mode or not self.oracle_id:
             return
         mtype = (
@@ -200,7 +200,7 @@ class BaseAgent:
             recipient_id=self.oracle_id,
             send_time=self.current_time,
             recive_time=self.current_time,
-            content={"symbol": symbol, "time": str(self.current_time)},
+            content={"stock": stock, "time": str(self.current_time)},
         )
         self.send(msg)
 
@@ -257,24 +257,24 @@ class BaseAgent:
     # --- Exchange query helpers ---
     def build_fundamental_query(
         self,
-        symbols: List[str],
+        stocks: List[str],
         *,
         send_time: Optional[pd.Timestamp] = None,
     ) -> Optional[Message]:
-        """Create a fundamental data request for one or more symbols.
+        """Create a fundamental data request for one or more stocks.
 
-        Returns a message targeting the exchange or ``None`` if no valid symbols
+        Returns a message targeting the exchange or ``None`` if no valid stocks
         were provided. Agents should add the resulting message to their outgoing
         list (alongside orders, etc.) before invoking ``send``.
         """
 
-        if not symbols:
+        if not stocks:
             return None
-        valid_symbols = [str(sym) for sym in symbols if isinstance(sym, str)]
-        if not valid_symbols:
+        valid_stocks = [str(sym) for sym in stocks if isinstance(sym, str)]
+        if not valid_stocks:
             return None
         ts = send_time or self.current_time
-        content = {"requests": [{"symbol": sym} for sym in valid_symbols]}
+        content = {"requests": [{"stock": sym} for sym in valid_stocks]}
         return new_message(
             message_type=MessageType.QUERY_FUNDAMENTAL,
             sender_id=self.id,
@@ -286,22 +286,22 @@ class BaseAgent:
 
     def build_top_of_book_query(
         self,
-        symbols: List[str],
+        stocks: List[str],
         *,
         depth: int = 1,
         send_time: Optional[pd.Timestamp] = None,
     ) -> Optional[Message]:
-        """Create a top-of-book snapshot request for the provided symbols."""
+        """Create a top-of-book snapshot request for the provided stocks."""
 
-        if not symbols:
+        if not stocks:
             return None
-        valid_symbols = [str(sym) for sym in symbols if isinstance(sym, str)]
-        if not valid_symbols:
+        valid_stocks = [str(sym) for sym in stocks if isinstance(sym, str)]
+        if not valid_stocks:
             return None
         depth = max(1, int(depth))
         ts = send_time or self.current_time
         content = {
-            "requests": [{"symbol": sym, "depth": depth} for sym in valid_symbols]
+            "requests": [{"stock": sym, "depth": depth} for sym in valid_stocks]
         }
         return new_message(
             message_type=MessageType.QUERY_TOP_OF_BOOK,
@@ -312,7 +312,7 @@ class BaseAgent:
             content=content,
         )
 
-    def build_symbol_query(
+    def build_stock_query(
         self,
         *,
         strategy: str = "random",
@@ -333,7 +333,7 @@ class BaseAgent:
             content=payload,
         )
 
-    def request_symbols(
+    def request_stocks(
         self,
         *,
         strategy: str = "random",
@@ -341,7 +341,7 @@ class BaseAgent:
         send_time: Optional[pd.Timestamp] = None,
         **params,
     ) -> None:
-        msg = self.build_symbol_query(
+        msg = self.build_stock_query(
             strategy=strategy,
             count=count,
             send_time=send_time,

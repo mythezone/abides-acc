@@ -28,9 +28,9 @@ def load_config(config_path: str) -> Tuple[Dict, Path]:
     with cfg_path.open("r", encoding="utf-8") as fh:
         cfg = json.load(fh)
 
-    symbols = cfg.get("symbols")
-    if not symbols:
-        raise ValueError("Config must define a non-empty 'symbols' list.")
+    stocks = cfg.get("stocks")
+    if not stocks:
+        raise ValueError("Config must define a non-empty 'stocks' list.")
 
     calibration = cfg.get("calibration")
     if not isinstance(calibration, dict) or not calibration.get("output_dir"):
@@ -54,8 +54,8 @@ def run_replay(config_path: str, max_steps: int = 500_000) -> Tuple[Path, Path]:
     finally:
         kernel.shutdown()
 
-    symbol = str(cfg["symbols"][0])
-    lob_path = Path(cfg["calibration"]["output_dir"]).expanduser().resolve() / symbol / "lob.csv"
+    stock = str(cfg["stocks"][0])
+    lob_path = Path(cfg["calibration"]["output_dir"]).expanduser().resolve() / stock / "lob.csv"
     if not lob_path.exists():
         raise FileNotFoundError(f"LOB file not found at expected location: {lob_path}")
 

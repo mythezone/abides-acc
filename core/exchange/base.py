@@ -16,10 +16,10 @@ from typing import Optional, Dict, Tuple, Iterable, List
 from core.preopen_book import PreopenOrderBook
 from core.logger import Logger
 from util.util import random_china_location, network_latency_ms
-from core.selector import SymbolSelectionManager
+from core.selector import StockSelectionManager
 from .handler.manager import HandlerManager
 from . import handler as _exchange_handlers  # noqa: F401
-from core.selector import SymbolSelectionManager
+from core.selector import StockSelectionManager
 from .handler.manager import HandlerManager
 from . import handler as _exchange_handlers  # noqa: F401
 
@@ -32,7 +32,7 @@ class Exchange:
 
     def __init__(
         self,
-        symbols: Iterable[str],
+        stocks: Iterable[str],
         logger: Logger,
         ohlc_freq: str = "3s",
         lob_log_level: int = 5,
@@ -53,15 +53,15 @@ class Exchange:
 
         market_cap_range = kwargs.pop("market_cap_range", (5e9, 5e11))
         self.market_cap_range = self._normalize_market_cap_range(market_cap_range)
-        self.symbols, self.symbol_metadata = self._normalize_symbol_specs(symbols)
+        self.stocks, self.stock_metadata = self._normalize_stock_specs(stocks)
         self.lob_dict = {
-            symbol_name: LimitOrderBook(symbol_name) for symbol_name in self.symbols
+            stock_name: LimitOrderBook(stock_name) for stock_name in self.stocks
         }
-        for sym in self.symbols:
+        for sym in self.stocks:
             self._ensure_market_cap(sym)
         self.logger = logger
         self.ohlc_freq = ohlc_freq
-        self.ohlc_by_symbol: dict[str, OHLCAggregator] = {}
+        self.ohlc_by_stock: dict[str, OHLCAggregator] = {}
         self.lob_log_level = lob_log_level
         # support special tick mode
         self._lob_tick_mode = str(lob_log_freq).lower() == "tick"
@@ -71,22 +71,22 @@ class Exchange:
         self._next_lob_log_time: Optional[pd.Timestamp] = None
         self.out_queue = out_queue
         self.is_open: bool = True
-        # Price references and last prices per symbol for limit checks in subclasses
+        # Price references and last prices per stock for limit checks in subclasses
         self._last_price: Dict[str, float] = {}
         # Fee rate in bps (subclasses may override)
         self.fee_rate: float = 0.0  # e.g., 0.0003 = 3 bps
-        # Optional initial positions for account-aware rules (agent_id -> {symbol: qty})
+        # Optional initial positions for account-aware rules (agent_id -> {stock: qty})
         self._initial_positions: Dict[str, Dict[str, int]] = {}
-        # Track per-agent T+1 availability (agent, symbol) -> remaining sellable qty
+        # Track per-agent T+1 availability (agent, stock) -> remaining sellable qty
         self._t1_available: Dict[Tuple[str, str], int] = {}
         # Per-day buy/sell counters for T+1 enforcement (legacy metrics)
-        self._day_buys: Dict[Tuple[str, str], int] = {}  # (agent,symbol)->qty
+        self._day_buys: Dict[Tuple[str, str], int] = {}  # (agent,stock)->qty
         self._day_sells: Dict[Tuple[str, str], int] = {}
-        self._symbol_volume: Dict[str, int] = {str(sym): 0 for sym in self.symbols}
-        self.selector = SymbolSelectionManager(self, kwargs.pop("selector_update_freq", "60s"))
+        self._stock_volume: Dict[str, int] = {str(sym): 0 for sym in self.stocks}
+        self.selector = StockSelectionManager(self, kwargs.pop("selector_update_freq", "60s"))
         self.handler_manager = HandlerManager()
 
-        # Market data subscriptions: agent_id -> symbol -> {depth, freq_ms, last_sent}
+        # Market data subscriptions: agent_id -> stock -> {depth, freq_ms, last_sent}
         self._subs: dict[str, dict[str, dict]] = {}
         self._agent_locations: Dict[str, Tuple[float, float]] = {}
 
@@ -112,7 +112,7 @@ class Exchange:
             self._trade_log_writer = csv.writer(self._trade_log_file)
             self._trade_log_writer.writerow(["id", "time", "valume", "price"])
 
-        # Parallel workers sharded by symbol hash (if requested)
+        # Parallel workers sharded by stock hash (if requested)
         self.workers = int(workers) if workers and int(workers) > 0 else 0
         self._worker_queues: list[Queue] = []
         self._executor: Optional[ThreadPoolExecutor] = None
@@ -138,8 +138,8 @@ class Exchange:
             iterator = snapshots.items()
         else:
             iterator = []
-        for symbol, path in iterator:
-            lob = self._ensure_lob(symbol)
+        for stock, path in iterator:
+            lob = self._ensure_lob(stock)
             try:
                 lob.initialize_from_csv(path, agent_id="InitAgent", timestamp="1970-01-01T00:00:00")
             except Exception:
@@ -224,7 +224,7 @@ class Exchange:
             self._calibration_offset = pd.Timedelta(milliseconds=10)
 
     def _schedule_subscription_tick(
-        self, agent_id: str, symbol: str, when: pd.Timestamp
+        self, agent_id: str, stock: str, when: pd.Timestamp
     ) -> None:
         if self.out_queue is None:
             return
@@ -234,7 +234,7 @@ class Exchange:
             recipient_id="Exchange",
             send_time=when,
             recive_time=when,
-            content={"agent_id": agent_id, "symbol": symbol},
+            content={"agent_id": agent_id, "stock": stock},
         )
         if self.logger is not None:
             try:
@@ -257,11 +257,11 @@ class Exchange:
         for agent, holdings in self._initial_positions.items():
             if not isinstance(holdings, dict):
                 continue
-            for symbol, qty in holdings.items():
+            for stock, qty in holdings.items():
                 try:
-                    self._t1_available[(agent, symbol)] = int(qty)
+                    self._t1_available[(agent, stock)] = int(qty)
                 except Exception:
-                    self._t1_available[(agent, symbol)] = 0
+                    self._t1_available[(agent, stock)] = 0
 
     def handle_message(self, message: Message):
         now = message.send_time
@@ -283,8 +283,8 @@ class Exchange:
     def _log_lob_snapshot(self, now: pd.Timestamp) -> None:
         if self.logger is None:
             return
-        for symbol, lob in self.lob_dict.items():
-            sym = str(symbol)
+        for stock, lob in self.lob_dict.items():
+            sym = str(stock)
             price = None
             snap = lob.snapshot_top_n(1)
             if snap["buy"] and snap["sell"]:
@@ -292,16 +292,16 @@ class Exchange:
                 ask = float(snap["sell"][0][0])
                 price = round((bid + ask) / 2.0, 2)
             if price is not None:
-                if sym not in self.ohlc_by_symbol:
-                    self.ohlc_by_symbol[sym] = OHLCAggregator(
+                if sym not in self.ohlc_by_stock:
+                    self.ohlc_by_stock[sym] = OHLCAggregator(
                         sym, self.ohlc_freq, self.logger
                     )
-                self.ohlc_by_symbol[sym].update(now, price, volume=0.0)
+                self.ohlc_by_stock[sym].update(now, price, volume=0.0)
                 self._last_price[sym] = float(price)
             level = self.lob_log_level
             lob_csv = lob.format_snapshot_csv(level)
             self.logger.lob_log(
-                symbol_name=sym, kernel_time=now, level=level, lob=lob_csv
+                stock_name=sym, kernel_time=now, level=level, lob=lob_csv
             )
             self._last_lob_log[sym] = now
 
@@ -352,7 +352,7 @@ class Exchange:
         if self.out_queue is not None:
             self.out_queue.put(msg, recive_delay=delay)
 
-    # --- Symbol metadata helpers ---
+    # --- Stock metadata helpers ---
     def _normalize_market_cap_range(self, raw) -> Tuple[float, float]:
         try:
             lo, hi = raw
@@ -366,45 +366,45 @@ class Exchange:
             hi = lo * 10 if lo > 0 else lo + 1.0
         return float(lo), float(hi)
 
-    def _normalize_symbol_specs(
-        self, symbols: Iterable
+    def _normalize_stock_specs(
+        self, stocks: Iterable
     ) -> Tuple[List[str], Dict[str, Dict[str, object]]]:
-        if symbols is None:
+        if stocks is None:
             iterable = []
-        elif isinstance(symbols, (str, bytes)):
-            iterable = [symbols]
+        elif isinstance(stocks, (str, bytes)):
+            iterable = [stocks]
         else:
-            iterable = list(symbols)
+            iterable = list(stocks)
         names: List[str] = []
         metadata: Dict[str, Dict[str, object]] = {}
         seen = set()
         for entry in iterable:
-            symbol: Optional[str] = None
+            stock: Optional[str] = None
             extra: Dict[str, object] = {}
             if isinstance(entry, dict):
-                raw_sym = entry.get("symbol")
+                raw_sym = entry.get("stock")
                 if raw_sym is None:
                     continue
-                symbol = str(raw_sym)
-                extra = {k: v for k, v in entry.items() if k != "symbol"}
+                stock = str(raw_sym)
+                extra = {k: v for k, v in entry.items() if k != "stock"}
             elif entry is None:
                 continue
             else:
-                symbol = str(entry)
-            if not symbol:
+                stock = str(entry)
+            if not stock:
                 continue
-            if symbol not in seen:
-                names.append(symbol)
-                seen.add(symbol)
-            meta = metadata.setdefault(symbol, {})
+            if stock not in seen:
+                names.append(stock)
+                seen.add(stock)
+            meta = metadata.setdefault(stock, {})
             if extra:
                 meta.update(extra)
         for sym in names:
             metadata.setdefault(sym, {})
         return names, metadata
 
-    def _ensure_market_cap(self, symbol: str) -> float:
-        meta = self.symbol_metadata.setdefault(symbol, {})
+    def _ensure_market_cap(self, stock: str) -> float:
+        meta = self.stock_metadata.setdefault(stock, {})
         current = meta.get("market_cap")
         try:
             cap_val = float(current)
@@ -416,23 +416,23 @@ class Exchange:
         meta["market_cap"] = float(cap_val)
         return float(cap_val)
 
-    def _get_lob(self, symbol: Optional[str]) -> Optional[LimitOrderBook]:
-        if isinstance(symbol, str):
-            return self.lob_dict.get(symbol)
+    def _get_lob(self, stock: Optional[str]) -> Optional[LimitOrderBook]:
+        if isinstance(stock, str):
+            return self.lob_dict.get(stock)
         return None
 
-    def _ensure_lob(self, symbol: Optional[str]) -> Optional[LimitOrderBook]:
-        if not isinstance(symbol, str):
+    def _ensure_lob(self, stock: Optional[str]) -> Optional[LimitOrderBook]:
+        if not isinstance(stock, str):
             return None
-        lob = self.lob_dict.get(symbol)
+        lob = self.lob_dict.get(stock)
         if lob is None:
-            lob = LimitOrderBook(symbol)
-            self.lob_dict[symbol] = lob
-            if symbol not in self.symbols:
-                self.symbols.append(symbol)
-            self.symbol_metadata.setdefault(symbol, {})
-        self._ensure_market_cap(symbol)
-        self._symbol_volume.setdefault(symbol, 0)
+            lob = LimitOrderBook(stock)
+            self.lob_dict[stock] = lob
+            if stock not in self.stocks:
+                self.stocks.append(stock)
+            self.stock_metadata.setdefault(stock, {})
+        self._ensure_market_cap(stock)
+        self._stock_volume.setdefault(stock, 0)
         return lob
 
     def _build_strategy_weights(
@@ -444,7 +444,7 @@ class Exchange:
             return [(sym, 1.0) for sym in pool]
         if strat in ("market_cap", "large_cap"):
             for sym in pool:
-                cap = self.symbol_metadata.get(sym, {}).get("market_cap")
+                cap = self.stock_metadata.get(sym, {}).get("market_cap")
                 try:
                     weight = float(cap)
                 except Exception:
@@ -453,7 +453,7 @@ class Exchange:
             return weights
         if strat in ("small_cap", "inverse_market_cap"):
             for sym in pool:
-                cap = self.symbol_metadata.get(sym, {}).get("market_cap")
+                cap = self.stock_metadata.get(sym, {}).get("market_cap")
                 try:
                     cap_val = float(cap)
                 except Exception:
@@ -465,7 +465,7 @@ class Exchange:
             return weights
         if strat in ("volume", "high_volume", "top_volume"):
             for sym in pool:
-                vol = self._symbol_volume.get(sym, 0)
+                vol = self._stock_volume.get(sym, 0)
                 if vol <= 0:
                     lob = self._get_lob(sym)
                     if lob is not None:
@@ -475,7 +475,7 @@ class Exchange:
         if strat in ("low_volume",):
             tmp: List[Tuple[str, float]] = []
             for sym in pool:
-                vol = self._symbol_volume.get(sym, 0)
+                vol = self._stock_volume.get(sym, 0)
                 if vol <= 0:
                     lob = self._get_lob(sym)
                     if lob is not None:
@@ -551,10 +551,10 @@ class Exchange:
         return []
 
     def _weighted_sample(
-        self, weighted_symbols: List[Tuple[str, float]], count: int
+        self, weighted_stocks: List[Tuple[str, float]], count: int
     ) -> List[str]:
         pool = []
-        for sym, weight in weighted_symbols:
+        for sym, weight in weighted_stocks:
             if not isinstance(sym, str):
                 continue
             try:
@@ -590,8 +590,8 @@ class Exchange:
         return selected
 
 
-    def _select_symbols(self, params: Dict) -> list[str]:
-        if not self.symbols:
+    def _select_stocks(self, params: Dict) -> list[str]:
+        if not self.stocks:
             return []
         strategy = str(params.get("strategy", "random"))
         try:
@@ -604,7 +604,7 @@ class Exchange:
             exclude = {str(exclude_param)}
         else:
             exclude = {str(sym) for sym in exclude_param if isinstance(sym, (str, int))}
-        pool = [str(sym) for sym in self.symbols if str(sym) not in exclude]
+        pool = [str(sym) for sym in self.stocks if str(sym) not in exclude]
         if not pool:
             return []
         weights = self._build_strategy_weights(strategy, pool, params)
@@ -617,14 +617,14 @@ class Exchange:
         return pool[:requested]
 
     def _process_order(self, now: pd.Timestamp, order: Order):
-        symbol = (
-            getattr(order, "_symbol", None) or getattr(order, "symbol", None) or None
+        stock = (
+            getattr(order, "_stock", None) or getattr(order, "stock", None) or None
         )
-        if symbol is None:
+        if stock is None:
             # fallback from request dict stored in order
-            if hasattr(order, "__dict__") and "symbol" in order.__dict__:
-                symbol = order.__dict__["symbol"]
-        lob = self._ensure_lob(symbol)
+            if hasattr(order, "__dict__") and "stock" in order.__dict__:
+                stock = order.__dict__["stock"]
+        lob = self._ensure_lob(stock)
         if lob is None:
             return
 
@@ -636,7 +636,7 @@ class Exchange:
             recipient_id=order.agent_id,
             send_time=now,
             recive_time=now,
-            content={"order_id": order.id, "symbol": str(symbol)},
+            content={"order_id": order.id, "stock": str(stock)},
         )
         self._emit(ack)
 
@@ -647,15 +647,15 @@ class Exchange:
             for t in trades:
                 # track last price
                 try:
-                    self._last_price[str(symbol)] = float(t["price"])  # per our trade dict
+                    self._last_price[str(stock)] = float(t["price"])  # per our trade dict
                 except Exception:
                     pass
                 qty = int(t.get("quantity", 0))
                 executed_qty += qty
                 total_fee += self._apply_fees(t.get("price", 0.0), qty)
             if executed_qty > 0:
-                sym_key = str(symbol)
-                self._symbol_volume[sym_key] = int(self._symbol_volume.get(sym_key, 0)) + executed_qty
+                sym_key = str(stock)
+                self._stock_volume[sym_key] = int(self._stock_volume.get(sym_key, 0)) + executed_qty
             execmsg = new_message(
                 message_type=MessageType.ORDER_EXECUTED,
                 sender_id="Exchange",
@@ -664,7 +664,7 @@ class Exchange:
                 recive_time=now,
                 content={
                     "trades": trades,
-                    "symbol": str(symbol),
+                    "stock": str(stock),
                     "fees": round(total_fee, 6),
                 },
             )
@@ -682,12 +682,12 @@ class Exchange:
                 ask = float(snap["sell"][0][0])
                 price = round((bid + ask) / 2.0, 2)
         if price is not None and self.logger is not None:
-            sym = str(symbol)
-            if sym not in self.ohlc_by_symbol:
-                self.ohlc_by_symbol[sym] = OHLCAggregator(
+            sym = str(stock)
+            if sym not in self.ohlc_by_stock:
+                self.ohlc_by_stock[sym] = OHLCAggregator(
                     sym, self.ohlc_freq, self.logger
                 )
-            self.ohlc_by_symbol[sym].update(now, price, volume=float(order.quantity))
+            self.ohlc_by_stock[sym].update(now, price, volume=float(order.quantity))
             self._last_price[sym] = float(price)
 
     def _handle_calibration_trigger(self, now: pd.Timestamp, message: Message) -> None:
@@ -706,10 +706,10 @@ class Exchange:
                 continue
 
     def _process_calibration_request(self, req: Dict, now: pd.Timestamp) -> None:
-        symbol = req.get("symbol")
-        if not symbol:
+        stock = req.get("stock")
+        if not stock:
             return
-        self._ensure_lob(symbol)
+        self._ensure_lob(stock)
         otype = req.get("type", "limit_order")
         if otype == "limit_order":
             order = LimitOrder.from_dict(req)
@@ -717,7 +717,7 @@ class Exchange:
             order = MarketOrder.from_dict(req)
         else:
             order = Order.from_dict(req)
-        setattr(order, "_symbol", symbol)
+        setattr(order, "_stock", stock)
         setattr(order, "_exempt_t1", True)
         if not getattr(order, "agent_id", None):
             order.agent_id = "CalibrationAgent"
@@ -764,7 +764,7 @@ class Exchange:
         """
         # Flush OHLC aggregators
         try:
-            for agg in self.ohlc_by_symbol.values():
+            for agg in self.ohlc_by_stock.values():
                 agg.flush_all()
         except Exception:
             pass
@@ -824,7 +824,7 @@ class SZSExchange(Exchange):
         # Pre-open call auction storage
         self._preopen_books: Dict[str, PreopenOrderBook] = {}
         self._auction_done: Dict[str, bool] = {}
-        self._preopen_once: set[tuple[str, str]] = set()  # (agent_id, symbol)
+        self._preopen_once: set[tuple[str, str]] = set()  # (agent_id, stock)
         self._preopen_last_order_ts: Optional[pd.Timestamp] = None
 
     @staticmethod
@@ -842,15 +842,15 @@ class SZSExchange(Exchange):
             return False
         if not self.is_preopen_time(now):
             return False
-        symbol = getattr(order, "_symbol", None) or getattr(order, "symbol", None)
-        if symbol is None:
+        stock = getattr(order, "_stock", None) or getattr(order, "stock", None)
+        if stock is None:
             return False
-        key = (getattr(order, "agent_id", ""), symbol)
-        # Allow only one submission per agent per symbol during pre-open
+        key = (getattr(order, "agent_id", ""), stock)
+        # Allow only one submission per agent per stock during pre-open
         if key in self._preopen_once:
             return True
         self._preopen_once.add(key)
-        book = self._preopen_books.setdefault(symbol, PreopenOrderBook(symbol))
+        book = self._preopen_books.setdefault(stock, PreopenOrderBook(stock))
         book.add_order(order)
         self._preopen_last_order_ts = now
         # ACK acceptance
@@ -860,12 +860,12 @@ class SZSExchange(Exchange):
             recipient_id=order.agent_id,
             send_time=now,
             recive_time=now,
-            content={"order_id": order.id, "symbol": symbol, "phase": "preopen"},
+            content={"order_id": order.id, "stock": stock, "phase": "preopen"},
         )
         self._emit(ack)
-        # Opportunistic preopen snapshot log for this symbol
+        # Opportunistic preopen snapshot log for this stock
         try:
-            self._log_preopen_symbol(symbol, now)
+            self._log_preopen_stock(stock, now)
         except Exception:
             pass
         return True
@@ -898,14 +898,14 @@ class SZSExchange(Exchange):
         return super().handle_message(message)
 
     def _run_call_auction(self, now: pd.Timestamp):
-        # For each symbol, if auction not done and there are preopen orders, determine opening price and match
-        for symbol, book in list(self._preopen_books.items()):
-            if self._auction_done.get(symbol, False):
+        # For each stock, if auction not done and there are preopen orders, determine opening price and match
+        for stock, book in list(self._preopen_books.items()):
+            if self._auction_done.get(stock, False):
                 continue
             snap = book.snapshot_top_n(1)
             # If no book content, mark done
             if not (snap.get("buy") or snap.get("sell")):
-                self._auction_done[symbol] = True
+                self._auction_done[stock] = True
                 continue
             trades, remaining = book.match_at_clearing()
             # Emit executions to both sides (one message per participant)
@@ -924,7 +924,7 @@ class SZSExchange(Exchange):
                     recive_time=now,
                     content={
                         "trades": tr,
-                        "symbol": symbol,
+                        "stock": stock,
                         "fees": round(total_fee, 6),
                         "phase": "open_auction",
                     },
@@ -932,23 +932,23 @@ class SZSExchange(Exchange):
                 self._emit(execmsg)
 
             # Update OHLC open bar at 09:25 using clearing price if any trade
-            sym = str(symbol)
-            self.ohlc_by_symbol.setdefault(
+            sym = str(stock)
+            self.ohlc_by_stock.setdefault(
                 sym, OHLCAggregator(sym, self.ohlc_freq, self.logger)
             )
             if trades:
                 vol = float(sum(t["quantity"] for t in trades))
                 px = float(trades[0]["price"]) if trades else None
                 if px is not None:
-                    self.ohlc_by_symbol[sym].update(now, px, volume=vol)
+                    self.ohlc_by_stock[sym].update(now, px, volume=vol)
                     self._last_price[sym] = px
 
             # Carry remaining quantities into continuous book
             for o in remaining:
-                lob_c = self._ensure_lob(symbol)
+                lob_c = self._ensure_lob(stock)
                 if lob_c is not None:
                     lob_c.add_order(o)
-            self._auction_done[symbol] = True
+            self._auction_done[stock] = True
 
     # Note: preopen snapshot aggregation is provided by PreopenOrderBook.snapshot_top_n
 
@@ -978,15 +978,15 @@ class SZSExchange(Exchange):
                     return
             except Exception:
                 pass
-            symbols = set(self.lob_dict.keys()) | set(self._preopen_books.keys())
-            for symbol in symbols:
-                self._log_preopen_symbol(symbol, now)
+            stocks = set(self.lob_dict.keys()) | set(self._preopen_books.keys())
+            for stock in stocks:
+                self._log_preopen_stock(stock, now)
             return
         # default behavior
         super()._tick_log(now)
 
-    def _log_preopen_symbol(self, symbol: str, now: pd.Timestamp):
-        book = self._preopen_books.get(symbol) or PreopenOrderBook(symbol)
+    def _log_preopen_stock(self, stock: str, now: pd.Timestamp):
+        book = self._preopen_books.get(stock) or PreopenOrderBook(stock)
         snap = book.snapshot_top_n(n=self.lob_log_level)
         asks = snap.get("sell", [])
         bids = snap.get("buy", [])
@@ -999,21 +999,21 @@ class SZSExchange(Exchange):
             ap = float(asks[0][0])
             bp = float(bids[0][0])
             mid = round((ap + bp) / 2.0, 2)
-            sym = str(symbol)
-            self.ohlc_by_symbol.setdefault(
+            sym = str(stock)
+            self.ohlc_by_stock.setdefault(
                 sym, OHLCAggregator(sym, self.ohlc_freq, self.logger)
             )
-            self.ohlc_by_symbol[sym].update(now, mid, volume=0.0)
+            self.ohlc_by_stock[sym].update(now, mid, volume=0.0)
             self._last_price[sym] = mid
         # LOB periodic log control
         if self.logger is not None:
-            sym = str(symbol)
+            sym = str(stock)
             csv = self._format_snapshot_csv_from_lists(
                 asks, bids, n=self.lob_log_level
             )
             # write to preopen.csv instead of lob.csv
             self.logger.preopen_log(
-                symbol_name=sym,
+                stock_name=sym,
                 kernel_time=now,
                 level=self.lob_log_level,
                 lob=csv,
@@ -1022,7 +1022,7 @@ class SZSExchange(Exchange):
         # Also honor subscriptions during pre-open using indicative book
         try:
             for aid, mp in list(self._subs.items()):
-                sub = mp.get(symbol)
+                sub = mp.get(stock)
                 if not sub:
                     continue
                 last = sub.get("last_sent")
@@ -1039,7 +1039,7 @@ class SZSExchange(Exchange):
                         send_time=now,
                         recive_time=now,
                         content={
-                            "symbol": symbol,
+                            "stock": stock,
                             "depth": depth,
                             "bids": pbids,
                             "asks": pasks,
@@ -1055,7 +1055,7 @@ class SZSExchange(Exchange):
     def _validate_order(self, order: Order, now: pd.Timestamp) -> bool:
         # Enforce price limits only for limit orders when reference available
         if isinstance(order, LimitOrder) and self.price_limit_pct > 0.0:
-            ref = self._last_price.get(getattr(order, "_symbol", ""))
+            ref = self._last_price.get(getattr(order, "_stock", ""))
             if ref and ref > 0:
                 up = ref * (1.0 + self.price_limit_pct)
                 dn = ref * (1.0 - self.price_limit_pct)
@@ -1066,14 +1066,14 @@ class SZSExchange(Exchange):
             if getattr(order, "_exempt_t1", False):
                 return True
             agent = getattr(order, "agent_id", None)
-            symbol = getattr(order, "_symbol", None) or getattr(order, "symbol", None)
-            if agent and symbol:
+            stock = getattr(order, "_stock", None) or getattr(order, "stock", None)
+            if agent and stock:
                 # If no initial_positions information, cannot infer prior-day holdings; do not block sells.
                 if not self.initial_positions or agent not in self.initial_positions:
                     return True
-                key = (agent, symbol)
+                key = (agent, stock)
                 init_pos = int(
-                    ((self.initial_positions.get(agent) or {}).get(symbol) or 0)
+                    ((self.initial_positions.get(agent) or {}).get(stock) or 0)
                 )
                 available = self._t1_available.get(key)
                 if available is None:
@@ -1087,10 +1087,10 @@ class SZSExchange(Exchange):
     def _process_order(self, now: pd.Timestamp, order: Order):
         # Track day buys/sells for T+1
         side = getattr(order, "side", None)
-        symbol = getattr(order, "_symbol", None) or getattr(order, "symbol", None)
+        stock = getattr(order, "_stock", None) or getattr(order, "stock", None)
         agent = getattr(order, "agent_id", None)
-        if side in ("buy", "sell") and symbol and agent:
-            key = (agent, symbol)
+        if side in ("buy", "sell") and stock and agent:
+            key = (agent, stock)
             if side == "buy":
                 self._day_buys[key] = int(self._day_buys.get(key, 0)) + int(
                     order.quantity
@@ -1116,14 +1116,14 @@ class NYSEExchange(Exchange):
 def new_exchange(
     exchange_type: str,
     *,
-    symbols: Iterable[str],
+    stocks: Iterable[str],
     logger=None,
     exchange_params: Optional[Dict] = None,
     out_queue=None,
 ):
     p = exchange_params or {}
     common = dict(
-        symbols=symbols,
+        stocks=stocks,
         logger=logger,
         ohlc_freq=p.get("ohlc_freq", "3s"),
         lob_log_level=p.get("lob_log_level", 5),

@@ -4,8 +4,8 @@ from core.logger import Logger
 
 
 class OHLCAggregator:
-    def __init__(self, symbol: str, freq: str = "1s", logger: Optional[Logger] = None):
-        self.symbol = symbol
+    def __init__(self, stock: str, freq: str = "1s", logger: Optional[Logger] = None):
+        self.stock = stock
         self.freq = pd.Timedelta(freq)
         self.logger = logger
         self.window_start: Optional[pd.Timestamp] = None
@@ -27,7 +27,7 @@ class OHLCAggregator:
             and self.logger is not None
         ):
             self.logger.ohlc_log(
-                symbol_name=self.symbol,
+                stock_name=self.stock,
                 kernel_time=self.window_start,
                 open_=float(self.open),
                 high=float(self.high),

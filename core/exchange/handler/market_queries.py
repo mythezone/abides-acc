@@ -21,10 +21,10 @@ def handle(exchange, message, now):
     if msg_type == MessageType.MKT_DATA:
         return _handle_market_data(exchange, message, now)
     if msg_type == MessageType.QUERY_LAST_TRADE:
-        symbol = message.content.get("symbol")
-        if not isinstance(symbol, str):
-            symbol = None
-        price = exchange._last_price.get(symbol) if isinstance(symbol, str) else None
+        stock = message.content.get("stock")
+        if not isinstance(stock, str):
+            stock = None
+        price = exchange._last_price.get(stock) if isinstance(stock, str) else None
         return [
             new_message(
                 message_type=MessageType.QUERY_LAST_TRADE,
@@ -32,17 +32,17 @@ def handle(exchange, message, now):
                 recipient_id=message.sender_id,
                 send_time=now,
                 recive_time=now,
-                content={"symbol": symbol, "data": price, "mkt_closed": not exchange.is_open},
+                content={"stock": stock, "data": price, "mkt_closed": not exchange.is_open},
             )
         ]
     if msg_type == MessageType.QUERY_SPERAD:
-        symbol = message.content.get("symbol")
-        if not isinstance(symbol, str):
-            symbol = None
+        stock = message.content.get("stock")
+        if not isinstance(stock, str):
+            stock = None
         depth = int(message.content.get("depth", 1))
         bids: List = []
         asks: List = []
-        lob = exchange._get_lob(symbol)
+        lob = exchange._get_lob(stock)
         if lob is not None:
             snap = lob.snapshot_top_n(depth)
             bids = snap.get("buy", [])
@@ -55,23 +55,23 @@ def handle(exchange, message, now):
                 send_time=now,
                 recive_time=now,
                 content={
-                    "symbol": symbol,
+                    "stock": stock,
                     "depth": depth,
                     "bids": bids,
                     "asks": asks,
-                    "data": exchange._last_price.get(symbol) if isinstance(symbol, str) else None,
+                    "data": exchange._last_price.get(stock) if isinstance(stock, str) else None,
                     "mkt_closed": not exchange.is_open,
                     "book": "",
                 },
             )
         ]
     if msg_type == MessageType.QUERY_ORDER_STREAM:
-        symbol = message.content.get("symbol")
-        if not isinstance(symbol, str):
-            symbol = None
+        stock = message.content.get("stock")
+        if not isinstance(stock, str):
+            stock = None
         length = int(message.content.get("length", 10))
         orders = []
-        lob = exchange._get_lob(symbol)
+        lob = exchange._get_lob(stock)
         if lob is not None:
             orders = list(lob.history_log)[-length:]
         return [
@@ -81,13 +81,13 @@ def handle(exchange, message, now):
                 recipient_id=message.sender_id,
                 send_time=now,
                 recive_time=now,
-                content={"symbol": symbol, "length": length, "orders": orders, "mkt_closed": not exchange.is_open},
+                content={"stock": stock, "length": length, "orders": orders, "mkt_closed": not exchange.is_open},
             )
         ]
     if msg_type == MessageType.QUERY_TRANSACTED_VOLUME:
-        symbol = message.content.get("symbol")
-        if not isinstance(symbol, str):
-            symbol = None
+        stock = message.content.get("stock")
+        if not isinstance(stock, str):
+            stock = None
         lookback = message.content.get("lookback_period", "60s")
         try:
             td = (
@@ -99,7 +99,7 @@ def handle(exchange, message, now):
             td = pd.Timedelta(seconds=60)
         cutoff = now - td
         vol = 0
-        lob = exchange._get_lob(symbol)
+        lob = exchange._get_lob(stock)
         if lob is not None:
             for t in lob.history_log:
                 try:
@@ -115,18 +115,18 @@ def handle(exchange, message, now):
                 recipient_id=message.sender_id,
                 send_time=now,
                 recive_time=now,
-                content={"symbol": symbol, "transacted_volume": vol, "mkt_closed": not exchange.is_open},
+                content={"stock": stock, "transacted_volume": vol, "mkt_closed": not exchange.is_open},
             )
         ]
     if msg_type == MessageType.QUERY_FUNDAMENTAL:
         responses = []
         requests = message.content.get("requests") or []
-        if not requests and message.content.get("symbol"):
-            requests = [{"symbol": message.content.get("symbol") }]
+        if not requests and message.content.get("stock"):
+            requests = [{"stock": message.content.get("stock") }]
         for req in requests:
-            symbol = req.get("symbol") if isinstance(req, dict) else None
+            stock = req.get("stock") if isinstance(req, dict) else None
             mid_price = None
-            lob = exchange._get_lob(symbol)
+            lob = exchange._get_lob(stock)
             if lob is not None:
                 snap = lob.snapshot_top_n(1)
                 bid = float(snap["buy"][0][0]) if snap.get("buy") else None
@@ -140,21 +140,21 @@ def handle(exchange, message, now):
                     recipient_id=message.sender_id,
                     send_time=now,
                     recive_time=now,
-                    content={"symbol": symbol, "data": mid_price, "mkt_closed": not exchange.is_open},
+                    content={"stock": stock, "data": mid_price, "mkt_closed": not exchange.is_open},
                 )
             )
         return responses
     if msg_type == MessageType.QUERY_TOP_OF_BOOK:
         responses = []
         requests = message.content.get("requests") or []
-        if not requests and message.content.get("symbol"):
-            requests = [{"symbol": message.content.get("symbol"), "depth": message.content.get("depth", 1)}]
+        if not requests and message.content.get("stock"):
+            requests = [{"stock": message.content.get("stock"), "depth": message.content.get("depth", 1)}]
         for req in requests:
-            symbol = req.get("symbol") if isinstance(req, dict) else None
+            stock = req.get("stock") if isinstance(req, dict) else None
             depth = int(req.get("depth", 1)) if isinstance(req, dict) else 1
             bids = []
             asks = []
-            lob = exchange._get_lob(symbol)
+            lob = exchange._get_lob(stock)
             if lob is not None:
                 snap = lob.snapshot_top_n(depth)
                 bids = snap.get("buy", [])
@@ -169,7 +169,7 @@ def handle(exchange, message, now):
                     send_time=now,
                     recive_time=now,
                     content={
-                        "symbol": symbol,
+                        "stock": stock,
                         "depth": depth,
                         "best_bid": best_bid,
                         "best_ask": best_ask,
@@ -186,7 +186,7 @@ def handle(exchange, message, now):
 def _handle_market_data(exchange, message, now):
     content = message.content or {}
     responses = []
-    if content.get("type") == "query_symbols":
+    if content.get("type") == "query_stocks":
         n = int(content.get("n", 3))
         universe = list(exchange.lob_dict.keys()) or ["SYM1", "SYM2", "SYM3", "SYM4"]
         if len(universe) < n:
@@ -199,13 +199,13 @@ def _handle_market_data(exchange, message, now):
                 recipient_id=message.sender_id,
                 send_time=now,
                 recive_time=now,
-                content={"symbols": selected},
+                content={"stocks": selected},
             )
         )
     else:
         for req in content.get("requests", []):
-            symbol = req.get("symbol", "SYM1")
-            lob = exchange._get_lob(symbol)
+            stock = req.get("stock", "SYM1")
+            lob = exchange._get_lob(stock)
             snap = lob.snapshot_top_n(1) if lob is not None else {"buy": [], "sell": []}
             best_bid = float(snap["buy"][0][0]) if snap["buy"] else None
             best_ask = float(snap["sell"][0][0]) if snap["sell"] else None
@@ -213,7 +213,7 @@ def _handle_market_data(exchange, message, now):
             if best_bid is not None and best_ask is not None:
                 mid = round((best_bid + best_ask) / 2.0, 2)
             snapshot = {
-                "symbol": symbol,
+                "stock": stock,
                 "best_bid": best_bid,
                 "best_ask": best_ask,
                 "mid": mid,

@@ -7,9 +7,9 @@ import numpy as np
 
 class BDIAgent(FundamentalTrackingAgent):
     def __init__(
-        self, id, *args, genome, starting_cash, initial_symbols=None, **kwargs
+        self, id, *args, genome, starting_cash, initial_stocks=None, **kwargs
     ):
-        super().__init__(id, *args, initial_symbols=initial_symbols, **kwargs)
+        super().__init__(id, *args, initial_stocks=initial_stocks, **kwargs)
 
         self.genome = genome
         self.starting_cash = starting_cash
@@ -33,13 +33,13 @@ class BDIAgent(FundamentalTrackingAgent):
         self.price_history = {}
         self.selected_smbols = list(
             np.random.choice(
-                initial_symbols, int(np.random.randint(1, 3)), replace=False
+                initial_stocks, int(np.random.randint(1, 3)), replace=False
             )
         )
-        for symbol in self.selected_smbols:
-            self.price_history[symbol] = []
-            self.price_concession[symbol] = {"buy": 0, "sell": 0}
-            self.last_price[symbol] = None
+        for stock in self.selected_smbols:
+            self.price_history[stock] = []
+            self.price_concession[stock] = {"buy": 0, "sell": 0}
+            self.last_price[stock] = None
 
     def action(self):
         super().action()
@@ -47,9 +47,9 @@ class BDIAgent(FundamentalTrackingAgent):
         requests = []
         for sym in self.selected_smbols:
             # 1. update beliefs
-            self.update_beliefs(symbol=sym)
+            self.update_beliefs(stock=sym)
             # 2. generate desires
-            self.generate_desires(symbol=sym)
+            self.generate_desires(stock=sym)
             # 3. form goals
             self.form_goals()
             # 4. excute buy or sell actions
@@ -66,7 +66,7 @@ class BDIAgent(FundamentalTrackingAgent):
             )
             self.send(msg)
 
-    def update_beliefs(self, symbol):
+    def update_beliefs(self, stock):
         tech_indicators = self.get_technical_indicators()
         belief_up = 0.0
 
@@ -83,22 +83,22 @@ class BDIAgent(FundamentalTrackingAgent):
         self.beliefs["cash"] = (
             1.0 if self.portfolio.cash > self.starting_cash * 0.1 else 0.0
         )
-        self.beliefs["asset"] = 1.0 if self.portfolio.holdings[symbol] > 10 else 0.0
+        self.beliefs["asset"] = 1.0 if self.portfolio.holdings[stock] > 10 else 0.0
 
-    def get_technical_indicators(self, symbol) -> list:
+    def get_technical_indicators(self, stock) -> list:
         """Return all technical indicators as a list."""
         # make sure that there are enough historical data
-        if symbol not in self.price_history.keys():
-            self.price_history[symbol] = deque(maxlen=50)
+        if stock not in self.price_history.keys():
+            self.price_history[stock] = deque(maxlen=50)
 
         # get current price
-        current_price = self.last_price.get(symbol)
+        current_price = self.last_price.get(stock)
         if current_price is None:
             return [0] * 22
 
         # update historical price
-        self.price_history[symbol].append(current_price)
-        prices = list(self.price_history[symbol])
+        self.price_history[stock].append(current_price)
+        prices = list(self.price_history[stock])
         n = len(prices)
 
         indicators = np.zeros(22)
@@ -157,12 +157,12 @@ class BDIAgent(FundamentalTrackingAgent):
         indicators[13] = 1 if current_price / ema_5 > ema_20 else 0
         indicators[14] = 1 if current_price / ema_5 > ema_50 else 0
 
-    def generate_desires(self, symbol):
+    def generate_desires(self, stock):
         self.desires["buy"] = self.beliefs["u"]
         self.desires["sell"] = self.beliefs["-u"]
 
         cash_threshold = self.portfolio.cash > self.starting_cash * 0.1
-        asset_threshold = self.portfolio.holdings[symbol] > 10
+        asset_threshold = self.portfolio.holdings[stock] > 10
 
         # The values are kept if True or be set to 0 if False.
         self.desires["buy"] *= cash_threshold
@@ -189,18 +189,18 @@ class BDIAgent(FundamentalTrackingAgent):
         else:
             self.goals = {}
 
-    def execute_actions(self, symbol, requests: list):
+    def execute_actions(self, stock, requests: list):
         if "buy" in self.goals:
-            self.place_buy_order(symbol=symbol, requests=requests)
+            self.place_buy_order(stock=stock, requests=requests)
         elif "sell" in self.goals:
-            self.place_sell_order(symbol=symbol, requests=requests)
+            self.place_sell_order(stock=stock, requests=requests)
 
-    def place_buy_order(self, symbol, requests: list):
+    def place_buy_order(self, stock, requests: list):
         goal_strenth = self.goals["buy"]
         gb1, gb2, gb3, gb4, gb5 = self.buy_params
 
         M = self.portfolio.cash
-        A = self.portfolio.holdings[symbol]
+        A = self.portfolio.holdings[stock]
 
         # calculate total value of the bid
         if A < gb2:
@@ -209,22 +209,22 @@ class BDIAgent(FundamentalTrackingAgent):
             V_bid = M * gb1
 
         # update price concession
-        if self.price_concession[symbol]["buy"] == 0:
-            self.price_concession[symbol]["buy"] = 2 * goal_strenth + gb4
+        if self.price_concession[stock]["buy"] == 0:
+            self.price_concession[stock]["buy"] = 2 * goal_strenth + gb4
         else:
-            c = self.price_concession[symbol]["buy"]
-            self.price_concession[symbol]["buy"] = c + (1 - c) * (
+            c = self.price_concession[stock]["buy"]
+            self.price_concession[stock]["buy"] = c + (1 - c) * (
                 4 * goal_strenth + gb5
             )
 
-        p_bid = self.last_price.get(symbol) * (1 - self.price_concession[symbol]["buy"])
+        p_bid = self.last_price.get(stock) * (1 - self.price_concession[stock]["buy"])
         q_bid = V_bid / p_bid
 
         if q_bid > 0:
-            # place a buy limit order at price p_bid and quantity q_bid for symbol
+            # place a buy limit order at price p_bid and quantity q_bid for stock
             order = {
                 "type": "limit_order",
-                "symbol": symbol,
+                "stock": stock,
                 "agent_id": self.id,
                 "timestamp": str(self.current_time),
                 "side": "buy",
@@ -233,12 +233,12 @@ class BDIAgent(FundamentalTrackingAgent):
             }
             requests.append(order)
 
-    def place_sell_order(self, symbol, requests: list):
+    def place_sell_order(self, stock, requests: list):
         goal_strenth = self.goals["sell"]
         ga1, ga2, ga3, ga4, ga5 = self.buy_params
 
         M = self.portfolio.cash
-        A = self.portfolio.holdings[symbol]
+        A = self.portfolio.holdings[stock]
 
         # calculate total value of the bid
         if A < ga2:
@@ -247,22 +247,22 @@ class BDIAgent(FundamentalTrackingAgent):
             V_ask = A * ga1
 
         # update price concession
-        if self.price_concession[symbol]["sell"] == 0:
-            self.price_concession[symbol]["sell"] = 2 * goal_strenth + ga4
+        if self.price_concession[stock]["sell"] == 0:
+            self.price_concession[stock]["sell"] = 2 * goal_strenth + ga4
         else:
-            c = self.price_concession[symbol]["sell"]
-            self.price_concession[symbol]["sell"] = c + (1 - c) * (
+            c = self.price_concession[stock]["sell"]
+            self.price_concession[stock]["sell"] = c + (1 - c) * (
                 4 * goal_strenth + ga5
             )
 
-        p_ask = self.last_price.get(symbol) * self.price_concession[symbol]["sell"]
+        p_ask = self.last_price.get(stock) * self.price_concession[stock]["sell"]
         q_ask = V_ask / p_ask
 
         if q_ask > 0:
-            # place a sell limit order at price p_bid and quantity q_bid for symbol
+            # place a sell limit order at price p_bid and quantity q_bid for stock
             order = {
                 "type": "limit_order",
-                "symbol": symbol,
+                "stock": stock,
                 "agent_id": self.id,
                 "timestamp": str(self.current_time),
                 "side": "sell",
@@ -279,28 +279,28 @@ class BDIAgent(FundamentalTrackingAgent):
             if msg.message_type == MessageType.ORDER_EXECUTED and isinstance(
                 msg.content, dict
             ):
-                symbol = msg.content.get("symbol")
+                stock = msg.content.get("stock")
                 if msg.content.get("side") == "buy":
-                    self.price_concession[symbol]["buy"] = 0
+                    self.price_concession[stock]["buy"] = 0
                 elif msg.content.get("side") == "sell":
-                    self.price_concession[symbol]["sell"] = 0
+                    self.price_concession[stock]["sell"] = 0
             elif msg.message_type == MessageType.MKT_CLOSE and isinstance(
                 msg.content, dict
             ):
-                self.price_concession[symbol] = {"buy": 0, "sell": 0}
+                self.price_concession[stock] = {"buy": 0, "sell": 0}
             elif msg.message_type == MessageType.QUERY_LAST_TRADE and isinstance(
                 msg.content, dict
             ):
                 content = msg.content
-                symbol = content["symbol"]
+                stock = content["stock"]
                 last_price = content["data"]
-                self.last_price[symbol] = last_price
-                self.update_price_history(self.last_price, symbol)
+                self.last_price[stock] = last_price
+                self.update_price_history(self.last_price, stock)
             else:
                 remaining.append(msg)
         self.inbox = remaining
 
-    def update_price_history(self, price, symbol):
-        if symbol not in self.price_history.keys():
-            self.price_history[symbol] = deque(maxlen=50)
-        self.price_history[symbol].append(price)
+    def update_price_history(self, price, stock):
+        if stock not in self.price_history.keys():
+            self.price_history[stock] = deque(maxlen=50)
+        self.price_history[stock].append(price)

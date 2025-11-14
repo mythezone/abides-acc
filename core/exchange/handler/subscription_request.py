@@ -11,7 +11,7 @@ def handle(exchange, message, now):
     aid = message.sender_id
     cur = exchange._subs.setdefault(aid, {})
     for s in subs:
-        sym = s.get("symbol")
+        sym = s.get("stock")
         if sym is None:
             continue
         freq_ms = int(s.get("freq_ms", 1000))
@@ -29,7 +29,7 @@ def handle(exchange, message, now):
         lob = exchange._get_lob(sym)
         snap = lob.snapshot_top_n(depth) if lob is not None else {"buy": [], "sell": []}
         payload = {
-            "symbol": sym,
+            "stock": sym,
             "depth": depth,
             "bids": snap.get("buy", []),
             "asks": snap.get("sell", []),

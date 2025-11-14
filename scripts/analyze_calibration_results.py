@@ -31,21 +31,21 @@ def load_config(path: Optional[Path]) -> dict:
         return json.load(fh)
 
 
-def normalize_symbols(symbols: Optional[Sequence]) -> List[str]:
-    if not symbols:
+def normalize_stocks(stocks: Optional[Sequence]) -> List[str]:
+    if not stocks:
         return []
     normalized: List[str] = []
-    for entry in symbols:
+    for entry in stocks:
         if isinstance(entry, str):
             normalized.append(entry)
         elif isinstance(entry, dict):
-            sym = entry.get("symbol")
+            sym = entry.get("stock")
             if sym:
                 normalized.append(str(sym))
     return normalized
 
 
-def infer_symbols(
+def infer_stocks(
     baseline_dir: Path, calibrated_dir: Path, explicit: Optional[Sequence[str]]
 ) -> List[str]:
     if explicit:
@@ -58,9 +58,9 @@ def infer_symbols(
             lob_path = item / "lob.csv"
             if item.is_dir() and lob_path.exists():
                 candidates.append(item.name)
-    # retain symbols present in both runs
-    symbols = sorted({sym for sym in candidates})
-    return symbols
+    # retain stocks present in both runs
+    stocks = sorted({sym for sym in candidates})
+    return stocks
 
 
 def write_outputs(
@@ -94,7 +94,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--baseline",
         required=True,
-        help="Path to baseline log directory (contains per-symbol folders).",
+        help="Path to baseline log directory (contains per-stock folders).",
     )
     parser.add_argument(
         "--calibrated",
@@ -106,9 +106,9 @@ def parse_args() -> argparse.Namespace:
         help="Optional JSON config (e.g., config/calibration_results_config.json).",
     )
     parser.add_argument(
-        "--symbols",
+        "--stocks",
         nargs="*",
-        help="Optional list of symbols to evaluate; otherwise inferred from directories.",
+        help="Optional list of stocks to evaluate; otherwise inferred from directories.",
     )
     parser.add_argument(
         "--result-json",
@@ -116,7 +116,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--result-csv",
-        help="Optional path to write per-symbol CSV (overrides config output).",
+        help="Optional path to write per-stock CSV (overrides config output).",
     )
     parser.add_argument(
         "--price-weight",
@@ -164,20 +164,20 @@ def main() -> int:
         normalization_mode=normalization_mode,
     )
 
-    explicit_symbols = normalize_symbols(args.symbols) if args.symbols else normalize_symbols(
-        config_data.get("symbols")
+    explicit_stocks = normalize_stocks(args.stocks) if args.stocks else normalize_stocks(
+        config_data.get("stocks")
     )
-    symbols = infer_symbols(baseline_dir, calibrated_dir, explicit_symbols)
-    if not symbols:
-        raise RuntimeError("No symbols found. Specify --symbols or provide directories with lob.csv files.")
+    stocks = infer_stocks(baseline_dir, calibrated_dir, explicit_stocks)
+    if not stocks:
+        raise RuntimeError("No stocks found. Specify --stocks or provide directories with lob.csv files.")
 
-    metrics = evaluate_directories(str(baseline_dir), str(calibrated_dir), symbols, config=cfg)
+    metrics = evaluate_directories(str(baseline_dir), str(calibrated_dir), stocks, config=cfg)
     summary = summarize_metrics(metrics)
 
-    print("=== Per-symbol metrics ===")
+    print("=== Per-stock metrics ===")
     for entry in metrics:
         print(
-            f"{entry['symbol']}: price_mse={entry['price_mse']:.6f}, "
+            f"{entry['stock']}: price_mse={entry['price_mse']:.6f}, "
             f"volume_mse={entry['volume_mse']:.6f}, combined_mse={entry['combined_mse']:.6f}"
         )
 

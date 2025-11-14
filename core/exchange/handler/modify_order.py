@@ -8,16 +8,16 @@ from .manager import register_handler
 def handle(exchange, message, now):
     responses = []
     for req in message.content.get("requests", []):
-        symbol_val = req.get("symbol")
-        if not isinstance(symbol_val, str):
+        stock_val = req.get("stock")
+        if not isinstance(stock_val, str):
             continue
-        symbol = symbol_val
+        stock = stock_val
         order_id = req.get("order_id")
         new_order_dict = req.get("new_order", {})
-        if symbol not in exchange.lob_dict:
+        if stock not in exchange.lob_dict:
             continue
         try:
-            exchange.lob_dict[symbol].cancel_order(order_id)
+            exchange.lob_dict[stock].cancel_order(order_id)
         except Exception:
             pass
         responses.append(
@@ -27,7 +27,7 @@ def handle(exchange, message, now):
                 recipient_id=message.sender_id,
                 send_time=now,
                 recive_time=now,
-                content={"order_id": order_id, "symbol": symbol, "reason": "MODIFY"},
+                content={"order_id": order_id, "stock": stock, "reason": "MODIFY"},
             )
         )
         otype = new_order_dict.get("type")
@@ -37,9 +37,9 @@ def handle(exchange, message, now):
             order = MarketOrder.from_dict(new_order_dict)
         else:
             order = Order.from_dict(new_order_dict)
-        setattr(order, "_symbol", symbol)
+        setattr(order, "_stock", stock)
         if exchange.workers > 0:
-            shard = hash(symbol) % exchange.workers
+            shard = hash(stock) % exchange.workers
             exchange._worker_queues[shard].put((now, order))
         else:
             exchange._process_order(now, order)

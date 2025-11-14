@@ -7,11 +7,11 @@ from .manager import register_handler
 def handle(exchange, message, now):
     responses = []
     for req in message.content.get("requests", []):
-        symbol_val = req.get("symbol")
-        if not isinstance(symbol_val, str):
+        stock_val = req.get("stock")
+        if not isinstance(stock_val, str):
             continue
-        symbol = symbol_val
-        lob = exchange.lob_dict.get(symbol)
+        stock = stock_val
+        lob = exchange.lob_dict.get(stock)
         if lob is None:
             continue
         order_id = req.get("order_id")
@@ -24,7 +24,7 @@ def handle(exchange, message, now):
                     recipient_id=message.sender_id,
                     send_time=now,
                     recive_time=now,
-                    content={"order_id": order_id, "symbol": symbol},
+                    content={"order_id": order_id, "stock": stock},
                 )
             )
             continue
@@ -50,7 +50,7 @@ def handle(exchange, message, now):
                 send_time=now,
                 recive_time=now,
                 content={
-                    "symbol": symbol,
+                    "stock": stock,
                     "side": side,
                     "price": price_val,
                     "quantity": removed,

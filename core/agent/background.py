@@ -15,27 +15,27 @@ class BackgroundAgent(BaseAgent):
     - in calibration mode, follows oracle LOB to emulate target microstructure
     """
 
-    def __init__(self, id, *args, initial_symbols: Optional[List[Union[str, Dict]]] = None, **kwargs):
+    def __init__(self, id, *args, initial_stocks: Optional[List[Union[str, Dict]]] = None, **kwargs):
         super().__init__(id, *args, **kwargs)
-        self.subscribed_symbols: List[str] = []
-        if initial_symbols:
-            for sym in initial_symbols:
+        self.subscribed_stocks: List[str] = []
+        if initial_stocks:
+            for sym in initial_stocks:
                 if isinstance(sym, str):
-                    self.subscribed_symbols.append(sym)
+                    self.subscribed_stocks.append(sym)
                 elif isinstance(sym, dict):
-                    val = sym.get("symbol")
+                    val = sym.get("stock")
                     if val:
-                        self.subscribed_symbols.append(str(val))
+                        self.subscribed_stocks.append(str(val))
         # BG agents place more frequent but smaller orders by default
         if not hasattr(self, "wakeup_ms_range"):
             self.wakeup_ms_range = [30, 80]
         if not hasattr(self, "agent_log_freq"):
             self.agent_log_freq = "tick"
         # Configuration knobs (with sensible defaults) controllable from config params
-        self.min_orders_per_symbol = int(kwargs.pop("min_orders_per_symbol", 3))
-        self.max_orders_per_symbol = int(kwargs.pop("max_orders_per_symbol", 7))
-        if self.max_orders_per_symbol < self.min_orders_per_symbol:
-            self.max_orders_per_symbol = self.min_orders_per_symbol
+        self.min_orders_per_stock = int(kwargs.pop("min_orders_per_stock", 3))
+        self.max_orders_per_stock = int(kwargs.pop("max_orders_per_stock", 7))
+        if self.max_orders_per_stock < self.min_orders_per_stock:
+            self.max_orders_per_stock = self.min_orders_per_stock
         self.min_quantity = int(kwargs.pop("min_quantity", 20))
         self.max_quantity = int(kwargs.pop("max_quantity", 120))
         if self.max_quantity < self.min_quantity:
@@ -44,36 +44,36 @@ class BackgroundAgent(BaseAgent):
         self.max_levels = int(kwargs.pop("max_levels", 10))
         self.market_order_prob = float(kwargs.pop("market_order_prob", 0.05))
         self.bias_empty_side = float(kwargs.pop("bias_empty_side", 0.75))
-        self.symbol_batch_min = int(kwargs.pop("min_symbols_per_batch", 2))
-        self.symbol_batch_max = int(kwargs.pop("max_symbols_per_batch", 6))
-        self.symbol_batch_max = max(self.symbol_batch_min, self.symbol_batch_max)
+        self.stock_batch_min = int(kwargs.pop("min_stocks_per_batch", 2))
+        self.stock_batch_max = int(kwargs.pop("max_stocks_per_batch", 6))
+        self.stock_batch_max = max(self.stock_batch_min, self.stock_batch_max)
         self._latest_snapshots: Dict[str, Dict[str, float]] = {}
 
     # override to ignore portfolio updates & fees
     def process_inbox(self):
-        new_symbols: List[str] = []
+        new_stocks: List[str] = []
         for m in self.inbox:
             if m.message_type == MessageType.MKT_DATA and isinstance(m.content, dict):
-                if "symbols" in m.content:
-                    for entry in m.content.get("symbols", []):
-                        sym = self._normalize_symbol(entry)
+                if "stocks" in m.content:
+                    for entry in m.content.get("stocks", []):
+                        sym = self._normalize_stock(entry)
                         if sym:
-                            new_symbols.append(sym)
+                            new_stocks.append(sym)
                 else:
-                    symbol = self._normalize_symbol(m.content.get("symbol"))
-                    if symbol:
+                    stock = self._normalize_stock(m.content.get("stock"))
+                    if stock:
                         snapshot = {
                             "best_bid": m.content.get("best_bid"),
                             "best_ask": m.content.get("best_ask"),
                             "mid": m.content.get("mid"),
                             "ts": m.content.get("ts"),
                         }
-                        self._latest_snapshots[symbol] = snapshot
+                        self._latest_snapshots[stock] = snapshot
             elif m.message_type == MessageType.ORACLE_RESPONSE_LOB and isinstance(m.content, dict):
-                symbol = self._normalize_symbol(m.content.get("symbol"))
+                stock = self._normalize_stock(m.content.get("stock"))
                 data = m.content.get("lob")
-                if symbol:
-                    reqs = self._orders_from_oracle_lob(symbol, data or {})
+                if stock:
+                    reqs = self._orders_from_oracle_lob(stock, data or {})
                     if reqs:
                         msg = new_message(
                             message_type=MessageType.SUBMIT_ORDER,
@@ -85,31 +85,31 @@ class BackgroundAgent(BaseAgent):
                         )
                         self.send(msg)
         self.inbox = []
-        if new_symbols:
-            merged = self.subscribed_symbols + new_symbols
+        if new_stocks:
+            merged = self.subscribed_stocks + new_stocks
             # Preserve order while removing duplicates
             seen = set()
-            self.subscribed_symbols = []
+            self.subscribed_stocks = []
             for sym in merged:
                 if sym not in seen:
-                    self.subscribed_symbols.append(sym)
+                    self.subscribed_stocks.append(sym)
                     seen.add(sym)
 
-    def _normalize_symbol(self, value) -> Optional[str]:
+    def _normalize_stock(self, value) -> Optional[str]:
         if isinstance(value, str):
             return value
         if isinstance(value, dict):
-            raw = value.get("symbol")
+            raw = value.get("stock")
             if raw:
                 return str(raw)
         if value is not None:
             return str(value)
         return None
 
-    def _request_top_of_book(self, symbols: List[str]) -> None:
-        if not symbols:
+    def _request_top_of_book(self, stocks: List[str]) -> None:
+        if not stocks:
             return
-        requests = [{"symbol": sym, "depth": 1} for sym in symbols]
+        requests = [{"stock": sym, "depth": 1} for sym in stocks]
         msg = new_message(
             message_type=MessageType.MKT_DATA,
             sender_id=self.id,
@@ -122,9 +122,9 @@ class BackgroundAgent(BaseAgent):
 
     def action(self):
         # subscribe if needed
-        if not self.subscribed_symbols:
+        if not self.subscribed_stocks:
             n = int(np.random.randint(3, 8))
-            request = {"type": "query_symbols", "n": n}
+            request = {"type": "query_stocks", "n": n}
             msg = new_message(
                 message_type=MessageType.MKT_DATA,
                 sender_id=self.id,
@@ -138,24 +138,24 @@ class BackgroundAgent(BaseAgent):
 
         # In calibration mode, always ping oracle for LOB and follow
         if getattr(self, "calibration_mode", False) and self.oracle_id:
-            sym = str(np.random.choice(self.subscribed_symbols))
+            sym = str(np.random.choice(self.subscribed_stocks))
             self.request_oracle(sym, kind="lob")
             return
 
-        # Otherwise, send richer batch of limit orders across multiple symbols
-        batch_lo = min(self.symbol_batch_min, len(self.subscribed_symbols))
-        batch_hi = min(self.symbol_batch_max, len(self.subscribed_symbols))
+        # Otherwise, send richer batch of limit orders across multiple stocks
+        batch_lo = min(self.stock_batch_min, len(self.subscribed_stocks))
+        batch_hi = min(self.stock_batch_max, len(self.subscribed_stocks))
         if batch_hi <= 0:
             return
         batch_sz = int(np.random.randint(batch_lo, batch_hi + 1))
-        selected = list(np.random.choice(self.subscribed_symbols, batch_sz, replace=False))
+        selected = list(np.random.choice(self.subscribed_stocks, batch_sz, replace=False))
 
-        # Request fresh top-of-book snapshots for selected symbols (async for next wakeup)
+        # Request fresh top-of-book snapshots for selected stocks (async for next wakeup)
         self._request_top_of_book(selected)
 
         reqs = []
-        for symbol in selected:
-            reqs.extend(self._generate_symbol_orders(symbol))
+        for stock in selected:
+            reqs.extend(self._generate_stock_orders(stock))
         msg = new_message(
             message_type=MessageType.SUBMIT_ORDER,
             sender_id=self.id,
@@ -167,7 +167,7 @@ class BackgroundAgent(BaseAgent):
         self.send(msg)
 
     # BG follows oracle response aggressively
-    def _orders_from_oracle_lob(self, symbol: str, data: dict):
+    def _orders_from_oracle_lob(self, stock: str, data: dict):
         reqs = []
         try:
             # try to read top-of-book
@@ -191,22 +191,22 @@ class BackgroundAgent(BaseAgent):
             if best_bid is not None:
                 qty = max(1, int(0.3 * max(1, best_bid_vol)))
                 reqs.append({
-                    "type": "limit_order", "symbol": symbol, "agent_id": self.id,
+                    "type": "limit_order", "stock": stock, "agent_id": self.id,
                     "timestamp": str(self.current_time), "side": "buy", "quantity": qty,
                     "price": best_bid
                 })
             if best_ask is not None:
                 qty = max(1, int(0.3 * max(1, best_ask_vol)))
                 reqs.append({
-                    "type": "limit_order", "symbol": symbol, "agent_id": self.id,
+                    "type": "limit_order", "stock": stock, "agent_id": self.id,
                     "timestamp": str(self.current_time), "side": "sell", "quantity": qty,
                     "price": best_ask
                 })
         except Exception:
             pass
         return reqs
-    def _generate_symbol_orders(self, symbol: str) -> List[Dict]:
-        snapshot = self._latest_snapshots.get(symbol, {})
+    def _generate_stock_orders(self, stock: str) -> List[Dict]:
+        snapshot = self._latest_snapshots.get(stock, {})
         raw_best_bid = snapshot.get("best_bid")
         raw_best_ask = snapshot.get("best_ask")
         raw_mid = snapshot.get("mid")
@@ -242,7 +242,7 @@ class BackgroundAgent(BaseAgent):
             mid = (float(best_bid) + float(best_ask)) / 2.0
 
         orders: List[Dict] = []
-        n_orders = int(np.random.randint(self.min_orders_per_symbol, self.max_orders_per_symbol + 1))
+        n_orders = int(np.random.randint(self.min_orders_per_stock, self.max_orders_per_stock + 1))
         buy_orders = n_orders // 2
         sell_orders = n_orders - buy_orders
         if need_buy_boost and buy_orders == 0:
@@ -293,7 +293,7 @@ class BackgroundAgent(BaseAgent):
                 price = round(price, 4)
             order = {
                 "type": order_type,
-                "symbol": symbol,
+                "stock": stock,
                 "agent_id": self.id,
                 "timestamp": str(self.current_time),
                 "side": side,

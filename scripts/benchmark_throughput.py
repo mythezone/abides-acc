@@ -28,7 +28,7 @@ from core.order import generate_random_order, Order
 
 
 def _make_exchange(
-    symbols: List[str], workers: int, exchange_type: str = "SZSE"
+    stocks: List[str], workers: int, exchange_type: str = "SZSE"
 ):
     params = {
         # Minimize logging overhead during benchmark
@@ -44,7 +44,7 @@ def _make_exchange(
     }
     exch = new_exchange(
         exchange_type,
-        symbols=symbols,
+        stocks=stocks,
         logger=None,  # completely disable logging inside exchange for this benchmark
         exchange_params=params,
         out_queue=None,
@@ -52,22 +52,22 @@ def _make_exchange(
     return exch
 
 
-def _direct_mode(exch, symbols: List[str], total_orders: int) -> int:
+def _direct_mode(exch, stocks: List[str], total_orders: int) -> int:
     now = pd.Timestamp.now()
     count = 0
-    # Round-robin symbols
+    # Round-robin stocks
     for i in range(total_orders):
-        sym = symbols[i % len(symbols)]
+        sym = stocks[i % len(stocks)]
         order: Order = generate_random_order(sym)
-        # Ensure symbol attribute is present (Exchange/LOB rely on it)
-        setattr(order, "_symbol", sym)
-        setattr(order, "symbol", sym)
+        # Ensure stock attribute is present (Exchange/LOB rely on it)
+        setattr(order, "_stock", sym)
+        setattr(order, "stock", sym)
         exch._process_order(now, order)  # noqa: SLF001 (intentional direct call for benchmark)
         count += 1
     return count
 
 
-def _submit_mode(exch, symbols: List[str], total_orders: int, batch_size: int) -> int:
+def _submit_mode(exch, stocks: List[str], total_orders: int, batch_size: int) -> int:
     now = pd.Timestamp.now()
     count = 0
     i = 0
@@ -75,11 +75,11 @@ def _submit_mode(exch, symbols: List[str], total_orders: int, batch_size: int) -
         n = min(batch_size, total_orders - i)
         reqs = []
         for j in range(n):
-            sym = symbols[(i + j) % len(symbols)]
+            sym = stocks[(i + j) % len(stocks)]
             o = generate_random_order(sym)
             d = {
                 "type": "limit_order" if hasattr(o, "price") else "market_order",
-                "symbol": sym,
+                "stock": sym,
                 "agent_id": getattr(o, "agent_id", "bench"),
                 "timestamp": getattr(o, "timestamp", str(now)),
                 "side": getattr(o, "side", "buy"),
@@ -110,12 +110,12 @@ def _submit_mode(exch, symbols: List[str], total_orders: int, batch_size: int) -
 def main():
     parser = argparse.ArgumentParser(description="Benchmark Exchange throughput")
     parser.add_argument("--orders", type=int, default=100_000, help="Total orders to process")
-    parser.add_argument("--symbols", type=int, default=1, help="Number of symbols")
+    parser.add_argument("--stocks", type=int, default=1, help="Number of stocks")
     parser.add_argument(
-        "--symbol-list",
+        "--stock-list",
         type=str,
         default="",
-        help="Comma-separated symbol list (overrides --symbols)",
+        help="Comma-separated stock list (overrides --stocks)",
     )
     parser.add_argument(
         "--mode",
@@ -137,10 +137,10 @@ def main():
     args = parser.parse_args()
 
     np.random.seed(args.seed)
-    if args.symbol_list:
-        syms = [s.strip() for s in args.symbol_list.split(",") if s.strip()]
+    if args.stock_list:
+        syms = [s.strip() for s in args.stock_list.split(",") if s.strip()]
     else:
-        syms = [f"SYM{i+1:02d}" for i in range(max(1, int(args.symbols)))]
+        syms = [f"SYM{i+1:02d}" for i in range(max(1, int(args.stocks)))]
 
     exch = _make_exchange(syms, workers=args.workers if args.mode == "submit" else 0, exchange_type=args.exchange)
 
@@ -158,7 +158,7 @@ def main():
         "workers": int(args.workers if args.mode == "submit" else 0),
         "orders": int(args.orders),
         "processed": int(processed),
-        "symbols": syms,
+        "stocks": syms,
         "duration_seconds": duration,
         "throughput_ops": float(processed / duration),
     }

@@ -35,10 +35,10 @@ class GPAgent(FundamentalTrackingAgent):
         u_0=0.5, # the very first element in the array u
         random_state=None,
         starting_cash=100000,
-        initial_symbols=None,
+        initial_stocks=None,
         **kwargs,
     ):
-        super().__init__(id, *args, initial_symbols=initial_symbols, **kwargs)
+        super().__init__(id, *args, initial_stocks=initial_stocks, **kwargs)
         self.h = h
         self.M_0 = M_0
         self.r = r
@@ -62,9 +62,9 @@ class GPAgent(FundamentalTrackingAgent):
         # the return rate
         self.R = 1 + self.r / self.K
 
-        self.selected_symbols = list(
+        self.selected_stocks = list(
             np.random.choice(
-                initial_symbols, int(np.random.randint(1, 3)), replace=False
+                initial_stocks, int(np.random.randint(1, 3)), replace=False
             )
         )
 
@@ -77,12 +77,12 @@ class GPAgent(FundamentalTrackingAgent):
         # auxiliary u array
         self.u = {}
 
-        for symbol in self.selected_symbols:
-            self.prices[symbol] = {}
-            self.dividends[symbol] = {}
-            self.expectations[symbol] = {}
-            self.variances[symbol] = {}
-            self.u[symbol] = {"1": u_0}
+        for stock in self.selected_stocks:
+            self.prices[stock] = {}
+            self.dividends[stock] = {}
+            self.expectations[stock] = {}
+            self.variances[stock] = {}
+            self.u[stock] = {"1": u_0}
 
         # record time step
         self.time_step = 1
@@ -106,15 +106,15 @@ class GPAgent(FundamentalTrackingAgent):
             return
 
         requests = []
-        for symbol in self.selected_symbols:
+        for stock in self.selected_stocks:
             # 1. get reservation price
             reservation_price = self.get_reservation_price(
-                t=self.time_step, symbol=symbol
+                t=self.time_step, stock=stock
             )
             # 2. get best bid and bst ask price
-            best_bid, best_ask = self.get_best_bid_ask(symbol)
+            best_bid, best_ask = self.get_best_bid_ask(stock)
             # 3. make trading decision accordingly
-            sigma_square_t = self.variances.get(symbol)[f"{self.time_step}"]
+            sigma_square_t = self.variances.get(stock)[f"{self.time_step}"]
             S = self._lambda_ * sigma_square_t * self.delta_h / (1 + self.r)
 
             if best_bid is not None and best_ask is not None:
@@ -122,7 +122,7 @@ class GPAgent(FundamentalTrackingAgent):
                     price = best_ask
                     order = {
                         "type": "market_order",
-                        "symbol": symbol,
+                        "stock": stock,
                         "agent_id": self.id,
                         "timestamp": str(self.current_time),
                         "side": "buy",
@@ -132,7 +132,7 @@ class GPAgent(FundamentalTrackingAgent):
                     price = best_bid
                     order = {
                         "type": "market_order",
-                        "symbol": symbol,
+                        "stock": stock,
                         "agent_id": self.id,
                         "timestamp": str(self.current_time),
                         "side": "sell",
@@ -145,7 +145,7 @@ class GPAgent(FundamentalTrackingAgent):
                         )
                         order = {
                             "type": "limit_order",
-                            "symbol": symbol,
+                            "stock": stock,
                             "agent_id": self.id,
                             "timestamp": str(self.current_time),
                             "side": "sell",
@@ -158,7 +158,7 @@ class GPAgent(FundamentalTrackingAgent):
                         )
                         order = {
                             "type": "limit_order",
-                            "symbol": symbol,
+                            "stock": stock,
                             "agent_id": self.id,
                             "timestamp": str(self.current_time),
                             "side": "buy",
@@ -169,7 +169,7 @@ class GPAgent(FundamentalTrackingAgent):
                 if reservation_price > best_ask:
                     order = {
                         "type": "market_order",
-                        "symbol": symbol,
+                        "stock": stock,
                         "agent_id": self.id,
                         "timestamp": str(self.current_time),
                         "side": "buy",
@@ -179,7 +179,7 @@ class GPAgent(FundamentalTrackingAgent):
                     price = np.random.uniform(reservation_price - S, reservation_price)
                     order = {
                         "type": "limit_order",
-                        "symbol": symbol,
+                        "stock": stock,
                         "agent_id": self.id,
                         "timestamp": str(self.current_time),
                         "side": "buy",
@@ -190,7 +190,7 @@ class GPAgent(FundamentalTrackingAgent):
                 if reservation_price < best_bid:
                     order = {
                         "type": "market_order",
-                        "symbol": symbol,
+                        "stock": stock,
                         "agent_id": self.id,
                         "timestamp": str(self.current_time),
                         "side": "sell",
@@ -200,7 +200,7 @@ class GPAgent(FundamentalTrackingAgent):
                     price = np.random.uniform(reservation_price, reservation_price + S)
                     order = {
                         "type": "limit_order",
-                        "symbol": symbol,
+                        "stock": stock,
                         "agent_id": self.id,
                         "timestamp": str(self.current_time),
                         "side": "buy",
@@ -213,7 +213,7 @@ class GPAgent(FundamentalTrackingAgent):
                     price = np.random.uniform(reservation_price - S, reservation_price)
                     order = {
                         "type": "limit_order",
-                        "symbol": symbol,
+                        "stock": stock,
                         "agent_id": self.id,
                         "timestamp": str(self.current_time),
                         "side": "buy",
@@ -224,7 +224,7 @@ class GPAgent(FundamentalTrackingAgent):
                     price = np.random.uniform(reservation_price, reservation_price + S)
                     order = {
                         "type": "limit_order",
-                        "symbol": symbol,
+                        "stock": stock,
                         "agent_id": self.id,
                         "timestamp": str(self.current_time),
                         "side": "sell",
@@ -234,8 +234,8 @@ class GPAgent(FundamentalTrackingAgent):
             requests.append(order)
 
         # update the data
-        self.update_prices(self.time_step, symbol=symbol)
-        self.update_dividends(self.time_step, symbol=symbol)
+        self.update_prices(self.time_step, stock=stock)
+        self.update_dividends(self.time_step, stock=stock)
 
         # submit the orders
         if requests:
@@ -252,52 +252,52 @@ class GPAgent(FundamentalTrackingAgent):
         # time-step increment
         self.time_step += 1
 
-    def get_reservation_price(self, t, symbol):
-        expectation = self.get_total_expectation(t, symbol=symbol)
-        variance = self.get_variance(t, symbol=symbol)
-        h = self.get_h(t, symbol=symbol)
+    def get_reservation_price(self, t, stock):
+        expectation = self.get_total_expectation(t, stock=stock)
+        variance = self.get_variance(t, stock=stock)
+        h = self.get_h(t, stock=stock)
         numerator = expectation - self._lambda_ * h * variance
         return numerator / self.R
 
-    def get_h(self, t, symbol):
-        expectation = self.get_total_expectation(t, symbol=symbol)
-        variance = self.get_variance(t, symbol=symbol)
-        P_t = self.prices.get(symbol)[f"{t}"]
+    def get_h(self, t, stock):
+        expectation = self.get_total_expectation(t, stock=stock)
+        variance = self.get_variance(t, stock=stock)
+        P_t = self.prices.get(stock)[f"{t}"]
         numerator = expectation - self.R * P_t
         denominator = self._lambda_ * variance
         return numerator / denominator
 
-    def get_total_expectation(self, t, symbol):
+    def get_total_expectation(self, t, stock):
         """Return the expectation of the sum of wealth and dividends at time-step t, i.e., E_{i,t}(P_{t+1}+D_{t+1})."""
-        if str(t) in self.expectations.get(symbol).keys():
-            return self.expectations.get(symbol)[f"{t}"]
+        if str(t) in self.expectations.get(stock).keys():
+            return self.expectations.get(stock)[f"{t}"]
 
         if t <= 1:
             raise ValueError(
                 "The time-step for expectation has to be larger than or euqal 2."
             )
 
-        f = self.generate_f(symbol=symbol)
+        f = self.generate_f(stock=stock)
         prev_term = (
-            self.prices.get(symbol)[f"{t-1}"] + self.dividends.get(symbol)[f"{t-1}"]
+            self.prices.get(stock)[f"{t-1}"] + self.dividends.get(stock)[f"{t-1}"]
         )
         if f >= 0.0:
             result = prev_term * (
                 1 + self.theta_0 * np.tanh(np.log(1 + f) / self.omega)
             )
-            self.expectations.get(symbol)[f"{t}"] = result
+            self.expectations.get(stock)[f"{t}"] = result
             return result
         else:
             result = prev_term * (
                 1 - self.theta_0 * np.tanh(np.log(-np.abs(-1 + f)) / self.omega)
             )
-            self.expectations.get(symbol)[f"{t}"] = result
+            self.expectations.get(stock)[f"{t}"] = result
             return result
 
-    def get_variance(self, t, symbol):
+    def get_variance(self, t, stock):
         """Return the variance at time-step t, i.e., sigma^2_{i,t} = V_{i,t}(R_{t+1})."""
-        if str(t) in self.variances.get(symbol).keys():
-            return self.variances.get(symbol)[f"{t}"]
+        if str(t) in self.variances.get(stock).keys():
+            return self.variances.get(stock)[f"{t}"]
 
         if t <= 1:
             raise ValueError(
@@ -305,47 +305,47 @@ class GPAgent(FundamentalTrackingAgent):
             )
 
         prev_sigma_square = self.variances[f"{t-1}"]
-        P_t = self.prices.get(symbol)[f"{t}"]
-        D_t = self.dividends.get(symbol)[f"{t}"]
+        P_t = self.prices.get(stock)[f"{t}"]
+        D_t = self.dividends.get(stock)[f"{t}"]
 
         if str(t - 1) in self.u.keys():
-            u_t_minus_one = self.u.get(symbol)[f"{t-1}"]
+            u_t_minus_one = self.u.get(stock)[f"{t-1}"]
         else:
-            u_t_minus_two = self.u.get(symbol)[f"{t-2}"]
+            u_t_minus_two = self.u.get(stock)[f"{t-2}"]
             u_t_minus_one = (1 - self.theta_1) * u_t_minus_two + self.theta_1 * (
                 P_t + D_t
             )
-            self.u.get(symbol)[str(t - 1)] = u_t_minus_one
+            self.u.get(stock)[str(t - 1)] = u_t_minus_one
 
         result = (
             (1 - self.theta_1 - self.theta_2) * prev_sigma_square
             + self.theta_1 * (P_t + D_t - u_t_minus_one)
             + self.theta_2
-            * (P_t + D_t - self.get_total_expectation(t - 1, symbol=symbol)) ** 2
+            * (P_t + D_t - self.get_total_expectation(t - 1, stock=stock)) ** 2
         )
 
-        self.variances.get(symbol)[f"{t}"] = result
+        self.variances.get(stock)[f"{t}"] = result
         return result
 
-    def get_best_bid_ask(self, symbol: str):
-        msg = self.build_top_of_book_query(symbols=[symbol])
+    def get_best_bid_ask(self, stock: str):
+        msg = self.build_top_of_book_query(stocks=[stock])
         self.send(msg)
         msg_in: Message = self.message_queue.get_raw()
         if msg_in.message_type == MessageType.QUERY_TOP_OF_BOOK:
             content = msg_in.content
             return content["best bid"], content["best ask"]
 
-    def update_prices(self, t, symbol):
+    def update_prices(self, t, stock):
         if self.price_to_update is not None:
-            self.prices.get(symbol)[str(t)] = self.price_to_update
+            self.prices.get(stock)[str(t)] = self.price_to_update
             self.price_to_update = None
         else:
             if t >= 2:
-                self.prices.get(symbol)[f"{t}"] = self.prices.get(symbol)[f"{t-1}"]
+                self.prices.get(stock)[f"{t}"] = self.prices.get(stock)[f"{t-1}"]
 
-    def update_dividends(self, t, symbol):
+    def update_dividends(self, t, stock):
         """Sample from normal distribution with mean=D_bar and variance=sigma_D_square."""
-        self.dividends.get(symbol)[str(t)] = np.random.normal(
+        self.dividends.get(stock)[str(t)] = np.random.normal(
             loc=self.D_bar, scale=self.sigma_D_square**0.5
         )
 
@@ -358,10 +358,10 @@ class GPAgent(FundamentalTrackingAgent):
                 self.price_to_update = msg.content.get("data")
 
     # methods specifically designed for GP
-    def generate_f(self, symbol):
+    def generate_f(self, stock):
         """Return f at the current time-step."""
         if self.ga_instance is None:
-            self.init_ga_instance(symbol=symbol)
+            self.init_ga_instance(stock=stock)
 
         # run the GP algorithm
         self.ga_instance.run()
@@ -369,9 +369,9 @@ class GPAgent(FundamentalTrackingAgent):
         # get the solution
         solution, _, _ = self.ga_instance.best_solution()
 
-        P_hist = [self.prices.get(symbol)[f"{self.time_step-i}"] for i in range(1, 6)]
+        P_hist = [self.prices.get(stock)[f"{self.time_step-i}"] for i in range(1, 6)]
         D_hist = [
-            self.dividends.get(symbol)[f"{self.time_step-i}"] for i in range(1, 6)
+            self.dividends.get(stock)[f"{self.time_step-i}"] for i in range(1, 6)
         ]
         R = self.R
         inputs = np.array(P_hist + D_hist + [R])
@@ -381,13 +381,13 @@ class GPAgent(FundamentalTrackingAgent):
         f = np.dot(inputs, solution)
         return f
 
-    def init_ga_instance(self, symbol):
+    def init_ga_instance(self, stock):
         def fitness_func(solution):
             P_hist = [
-                self.prices.get(symbol)[f"{self.time_step-i}"] for i in range(1, 6)
+                self.prices.get(stock)[f"{self.time_step-i}"] for i in range(1, 6)
             ]
             D_hist = [
-                self.dividends.get(symbol)[f"{self.time_step-i}"] for i in range(1, 6)
+                self.dividends.get(stock)[f"{self.time_step-i}"] for i in range(1, 6)
             ]
             R = self.R
             inputs = np.array(P_hist + D_hist + [R])
@@ -395,7 +395,7 @@ class GPAgent(FundamentalTrackingAgent):
             pred = np.dot(solution, inputs)
 
             # calculate the error
-            target = self.prices.get(symbol)[f"{self.time_step}"]
+            target = self.prices.get(stock)[f"{self.time_step}"]
             error = np.abs(pred - target)
 
             return np.divide(1, error)

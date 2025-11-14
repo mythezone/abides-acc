@@ -39,13 +39,13 @@ class HistoricalOrderReplayAgent(BaseAgent):
         id: str,
         *args,
         orders_csv: str,
-        symbol: str,
+        stock: str,
         start_time: Optional[str] = None,
         log_tick_after: bool = True,
         **kwargs,
     ):
         super().__init__(id, *args, **kwargs)
-        self.symbol = str(symbol)
+        self.stock = str(stock)
         self._log_tick_after = bool(log_tick_after)
         self._events: List[Union[_HistoricalOrder, _HistoricalCancel]] = []
         self._cursor = 0
@@ -200,7 +200,7 @@ class HistoricalOrderReplayAgent(BaseAgent):
     def _send_submit(self, order: _HistoricalOrder) -> None:
         req: dict = {
             "type": "market_order" if order.is_market else "limit_order",
-            "symbol": self.symbol,
+            "stock": self.stock,
             "agent_id": self.id,
             "timestamp": str(order.time),
             "side": order.side,
@@ -224,7 +224,7 @@ class HistoricalOrderReplayAgent(BaseAgent):
 
     def _send_cancel(self, cancel: _HistoricalCancel) -> None:
         req = {
-            "symbol": self.symbol,
+            "stock": self.stock,
             "order_id": cancel.order_id,
         }
         if cancel.quantity is not None:

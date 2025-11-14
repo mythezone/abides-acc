@@ -13,7 +13,7 @@ class CalibratingAgentSpec:
     min_order_qty: int = 1
     price_offset: float = 0.0  # optional price adjustment (ticks)
 
-    def create_order(self, symbol: str, side: str, price: float, quantity: int, timestamp: pd.Timestamp) -> Dict:
+    def create_order(self, stock: str, side: str, price: float, quantity: int, timestamp: pd.Timestamp) -> Dict:
         if quantity <= 0:
             raise ValueError("quantity must be positive")
         return {
@@ -23,7 +23,7 @@ class CalibratingAgentSpec:
             "side": side,
             "quantity": int(quantity),
             "price": round(float(price) + float(self.price_offset), 4),
-            "symbol": symbol,
+            "stock": stock,
             "_exempt_t1": True,
         }
 
@@ -97,33 +97,33 @@ class AgentGroup:
         agents: Sequence[CalibratingAgentSpec],
         *,
         max_levels: int = 10,
-        symbols: Optional[Sequence[str]] = None,
+        stocks: Optional[Sequence[str]] = None,
     ) -> None:
         self.exchange = exchange
         self.oracle = oracle
         self.agents = sorted(agents, key=lambda a: a.max_order_qty, reverse=True)
         self.max_levels = max_levels
-        self._symbol_filter = set(str(s) for s in symbols) if symbols else None
+        self._stock_filter = set(str(s) for s in stocks) if stocks else None
 
     def calibrate(self, current_time: pd.Timestamp) -> List[Dict]:
         orders: List[Dict] = []
-        if self._symbol_filter is not None:
-            symbols = [sym for sym in self._symbol_filter if sym in self.exchange.lob_dict]
+        if self._stock_filter is not None:
+            stocks = [sym for sym in self._stock_filter if sym in self.exchange.lob_dict]
         else:
-            symbols = list(self.exchange.lob_dict.keys())
-        for symbol in symbols:
-            if hasattr(self.oracle, "has_lob") and not self.oracle.has_lob(symbol):
+            stocks = list(self.exchange.lob_dict.keys())
+        for stock in stocks:
+            if hasattr(self.oracle, "has_lob") and not self.oracle.has_lob(stock):
                 continue
-            real_lob = self.oracle.get_lob(symbol, current_time)
+            real_lob = self.oracle.get_lob(stock, current_time)
             if real_lob is None:
                 continue
-            sim_lob = self._get_sim_lob(symbol)
+            sim_lob = self._get_sim_lob(stock)
             diffs = compute_lob_diff(real_lob, sim_lob, max_levels=self.max_levels)
-            orders.extend(self._allocate_orders(symbol, diffs, current_time))
+            orders.extend(self._allocate_orders(stock, diffs, current_time))
         return orders
 
-    def _get_sim_lob(self, symbol: str) -> Dict[str, List[Tuple[float, int]]]:
-        lob = self.exchange.lob_dict.get(symbol)
+    def _get_sim_lob(self, stock: str) -> Dict[str, List[Tuple[float, int]]]:
+        lob = self.exchange.lob_dict.get(stock)
         if lob is None:
             return {"buy": [], "sell": []}
         buy_levels = lob.snapshot_top_n(self.max_levels)["buy"]
@@ -132,7 +132,7 @@ class AgentGroup:
 
     def _allocate_orders(
         self,
-        symbol: str,
+        stock: str,
         diffs: List[Dict[str, object]],
         current_time: pd.Timestamp,
     ) -> List[Dict]:
@@ -148,12 +148,12 @@ class AgentGroup:
                 min_qty = int(agent.min_order_qty)
                 while remaining >= max_qty:
                     generated.append(
-                        agent.create_order(symbol, order_side, price, max_qty, current_time)
+                        agent.create_order(stock, order_side, price, max_qty, current_time)
                     )
                     remaining -= max_qty
                 if remaining >= min_qty:
                     generated.append(
-                        agent.create_order(symbol, order_side, price, remaining, current_time)
+                        agent.create_order(stock, order_side, price, remaining, current_time)
                     )
                     remaining = 0
                     break
@@ -161,6 +161,6 @@ class AgentGroup:
                 # fallback: last agent handles the residue regardless of min
                 agent = self.agents[-1]
                 generated.append(
-                    agent.create_order(symbol, order_side, price, remaining, current_time)
+                    agent.create_order(stock, order_side, price, remaining, current_time)
                 )
         return generated

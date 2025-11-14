@@ -28,15 +28,13 @@
       "type": "historical_order_replay",
       "params": {
         "orders_csv": "comparison/test_data/sz000001_RJJ.csv",
-        "symbol": "SZ000001",
+        "stock": "SZ000001",
         "start_time": "2019-01-02 09:30:00",
         "log_tick_after": true
       }
     }
   ],
-  "symbols": [
-    "SZ000001"
-  ],
+  "stocks": ["SZ000001"],
   "calibration": {
     "enabled": false,
     "output_dir": "comparison/order_match/Ours/raw_log_1s_unique"
