@@ -1,7 +1,4 @@
-import numpy as np
 import pandas as pd
-
-import time
 from pathlib import Path
 from typing import List, Dict, Optional
 from rich.progress import Progress
@@ -12,10 +9,7 @@ from core.agent import AGENTS
 from core.clock import KernelClock
 from core.exchange import new_exchange
 from core.logger import Logger
-from core.orderbook import LimitOrderBook
 from core.config import ConfigManager
-
-from gui.component.agent_panel import AgentPanel
 
 
 class Kernel:
@@ -107,7 +101,6 @@ class Kernel:
     def init_agent(
         self,
         agent_config: List,
-        agent_panel: Optional[AgentPanel] = None,
         progress: Optional[Progress] = None,
         task=None,
     ):
@@ -182,12 +175,6 @@ class Kernel:
                                 )
                 except Exception:
                     pass
-                if agent_panel:
-                    agent_panel.update_agent(
-                        {"agent_id": agent_instance.id, "status": "sleep"}
-                    )
-                    agent_panel.render()
-                    time.sleep(0.01)
 
         self._sync_agent_locations()
 
