@@ -723,6 +723,7 @@ class Exchange:
         if not getattr(order, "agent_id", None):
             order.agent_id = "CalibrationAgent"
         self._process_order(now, order)
+        
     def _log_trades(self, trades: List[dict], now: pd.Timestamp) -> None:
         if not self.trade_log_enabled or self._trade_log_writer is None:
             return
