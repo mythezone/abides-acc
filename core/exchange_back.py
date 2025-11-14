@@ -1,5 +1,5 @@
 from ast import Raise
-from core.lob import LimitOrderBook
+from core.orderbook import LimitOrderBook
 from core.message import MessageType, new_message, Message
 from core.ohlc import OHLCAggregator
 from core.order import Order, LimitOrder, MarketOrder

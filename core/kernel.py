@@ -12,7 +12,7 @@ from core.agent import AGENTS
 from core.clock import KernelClock
 from core.exchange import new_exchange
 from core.logger import Logger
-from core.lob import LimitOrderBook
+from core.orderbook import LimitOrderBook
 from core.config import ConfigManager
 
 from gui.component.agent_panel import AgentPanel

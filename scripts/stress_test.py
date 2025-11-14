@@ -114,7 +114,7 @@ def main():
     if not symbols:
         symbols = stress_cfg.get("symbols", [f"S{i:04d}" for i in range(10)])
         # Initialize LOBs so that snapshots work
-        from core.lob import LimitOrderBook
+        from core.orderbook import LimitOrderBook
 
         for s in symbols:
             kernel.exchange.lob_dict[s] = LimitOrderBook(s)

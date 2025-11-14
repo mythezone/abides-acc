@@ -1,6 +1,6 @@
 import pytest
 
-from core.lob import LimitOrderBook
+from core.orderbook import LimitOrderBook
 from core.order import LimitOrder, MarketOrder
 
 

@@ -45,7 +45,7 @@ def main():
             symbols = list(kernel.exchange.lob_dict.keys())
             if not symbols:
                 symbols = ["AAA", "BBB", "CCC", "DDD", "EEE"]
-                from core.lob import LimitOrderBook
+                from core.orderbook import LimitOrderBook
 
                 for s in symbols:
                     kernel.exchange.lob_dict[s] = LimitOrderBook(s)

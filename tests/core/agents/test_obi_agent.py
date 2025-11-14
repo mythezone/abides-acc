@@ -1,7 +1,7 @@
 import pandas as pd
 
 from core.kernel import Kernel
-from core.lob import LimitOrderBook
+from core.orderbook import LimitOrderBook
 from core.agent.obi import OrderBookImbalanceAgent
 from core.order import LimitOrder
 

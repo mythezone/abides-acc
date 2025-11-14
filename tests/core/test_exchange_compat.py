@@ -30,7 +30,7 @@ def _make_kernel():
     # seed some symbols
     for s in ["AAA", "BBB", "CCC"]:
         if s not in k.exchange.lob_dict:
-            from core.lob import LimitOrderBook
+            from core.orderbook import LimitOrderBook
 
             k.exchange.lob_dict[s] = LimitOrderBook(s)
     # register dummy receiver
