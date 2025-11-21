@@ -99,16 +99,8 @@ class MessageBox:
         if recive_delay is None:
             recive_delay = self.recive_delay
         adjusted_time = message.recive_time + pd.Timedelta(milliseconds=recive_delay)
-        adjusted_message = Message(
-            id=message.id,
-            message_type=message.message_type,
-            sender_id=message.sender_id,
-            recipient_id=message.recipient_id,
-            send_time=message.send_time,
-            recive_time=adjusted_time,
-            content=message.content,
-        )
-        self.messages.put(adjusted_message)
+        message.recive_time = adjusted_time
+        self.messages.put(message)
 
     def get(self) -> Optional[Message]:
         if not self.messages.empty():
@@ -152,16 +144,8 @@ class MessageQueue:
     def put(self, message: Message, recive_delay=0):
         adjusted_time = message.recive_time + pd.Timedelta(milliseconds=recive_delay)
         # Avoid copying content for performance; messages should be treated as immutable
-        adjusted_message = Message(
-            id=message.id,
-            message_type=message.message_type,
-            sender_id=message.sender_id,
-            recipient_id=message.recipient_id,
-            send_time=message.send_time,
-            recive_time=adjusted_time,
-            content=message.content,
-        )
-        self.mp_queue.put(adjusted_message)
+        message.recive_time = adjusted_time
+        self.mp_queue.put(message)
 
     def _segment_key(self, ts: pd.Timestamp) -> int:
         try:

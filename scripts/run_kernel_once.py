@@ -73,12 +73,19 @@ def main():
         )
     else:
         result = kernel.run(max_steps=args.max_steps)
-    elapsed = time.perf_counter() - start
+    sim_elapsed = time.perf_counter() - start
+    lob_write_elapsed = 0.0
+    logger = getattr(kernel, "logger", None)
+    if logger is not None:
+        flush_start = time.perf_counter()
+        logger.flush_lob_logs()
+        lob_write_elapsed = time.perf_counter() - flush_start
     processed = result.get("processed")
     end_time = result.get("end_time")
     steps = result.get("steps")
     print(
-        f"[run_kernel_once] Finished in {elapsed:.2f}s | processed={processed} steps={steps} end_time={end_time} | "
+        f"[run_kernel_once] Simulation {sim_elapsed:.2f}s | LOB write {lob_write_elapsed:.2f}s | "
+        f"processed={processed} steps={steps} end_time={end_time} | "
         f"kernel.total_processed={kernel.total_processed_messages}"
     )
     kernel.shutdown()

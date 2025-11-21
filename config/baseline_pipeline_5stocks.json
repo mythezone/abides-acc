@@ -1,12 +1,12 @@
 {
   "simulation": {
     "start_date": "2005-05-09 09:30:00",
-    "end_date": "2005-05-09 09:40:00",
+    "end_date": "2005-05-09 10:00:00",
     "exchange_type": "SZSE"
   },
   "kernel": {
     "name": "BaselinePipeline",
-    "log_dir": "log/baseline_pipeline",
+    "log_dir": "log/baseline_pipeline_5stocks",
     "disable_main_log": true,
     "lob_log_mode": "deferred",
     "async_query_workers": 10,
@@ -38,7 +38,7 @@
       }
     },
     {
-      "num": 2,
+      "num": 20,
       "type": "background",
       "params": {
         "wakeup_ms_range": [30, 80],
@@ -46,7 +46,7 @@
       }
     },
     {
-      "num": 2,
+      "num": 20,
       "type": "base",
       "params": {}
     }
@@ -59,11 +59,6 @@
     { "stock": "000002", "market_cap": 210000000000 },
     { "stock": "000004", "market_cap": 145000000000 },
     { "stock": "000006", "market_cap": 120000000000 },
-    { "stock": "000008", "market_cap": 80000000000 },
-    { "stock": "000009", "market_cap": 95000000000 },
-    { "stock": "000010", "market_cap": 150000000000 },
-    { "stock": "000011", "market_cap": 60000000000 },
-    { "stock": "000012", "market_cap": 50000000000 },
-    { "stock": "000016", "market_cap": 400000000000 }
+    { "stock": "000008", "market_cap": 80000000000 }
   ]
 }

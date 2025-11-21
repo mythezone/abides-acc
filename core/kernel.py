@@ -1,8 +1,11 @@
 import pandas as pd
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Set
 from rich.progress import Progress
 from types import SimpleNamespace
+from concurrent.futures import ThreadPoolExecutor
+import threading
+import time
 
 from core.message import MessageBox, MessageType, Message, MessageQueue, new_message
 from core.agent import AGENTS
@@ -12,16 +15,40 @@ from core.logger import Logger
 from core.config import ConfigManager
 
 
+ASYNC_QUERY_MESSAGE_TYPES: Set[MessageType] = {
+    MessageType.MKT_DATA,
+    MessageType.MKT_DATA_SUBSCRIPTION_REQUEST,
+    MessageType.MKT_DATA_SUBSCRIPTION_CANCELLATION,
+    MessageType.QUERY_LAST_TRADE,
+    MessageType.QUERY_SPREAD,
+    MessageType.QUERY_ORDER_STREAM,
+    MessageType.QUERY_TRANSACTED_VOLUME,
+    MessageType.QUERY_FUNDAMENTAL,
+    MessageType.QUERY_TOP_OF_BOOK,
+    MessageType.SELECT_STOCKS_REQUEST,
+}
+
+
 class Kernel:
     def __init__(self, config: Dict = {}):
         self.config = config
         self.agents = {}
         self.total_processed_messages: int = 0
+        self._pending_lock = threading.Lock()
+        self._pending_requests: Dict[str, int] = {}
+        self._blocked_wakeups: Dict[str, List[Message]] = {}
+        self._ready_agents: Set[str] = set()
+        self._async_executor: Optional[ThreadPoolExecutor] = None
+        try:
+            self._async_workers = int(self.config.get("async_query_workers", 2))
+        except Exception:
+            self._async_workers = 2
 
     def initialize(self):
         self.name = self.config["name"]
         self.message_queue = MessageQueue()
         self.in_box = MessageBox()
+        self._init_async_executor()
 
         self.clock = KernelClock(
             initial_time=self.config.get("start_date", "now"),
@@ -32,7 +59,8 @@ class Kernel:
         # Init logger early
         ts = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
         log_dir = self.config.get("log_dir", f"log/run_{ts}")
-        self.logger = Logger(log_dir)
+        lob_mode = self.config.get("lob_log_mode", "deferred")
+        self.logger = Logger(log_dir, lob_write_mode=lob_mode)
 
         # Optionally disable main message log to reduce IO
         if self.config.get("disable_main_log", False):
@@ -98,6 +126,123 @@ class Kernel:
                 self.calibration_context = None
         self.enforce_step_limit = bool(self.config.get("enforce_step_limit", False))
         self.simulation_end_time = self._compute_simulation_end_time()
+
+    def _init_async_executor(self):
+        workers = 0
+        try:
+            workers = int(self._async_workers)
+        except Exception:
+            workers = 0
+        if workers <= 0:
+            self._async_executor = None
+            return
+        self._async_executor = ThreadPoolExecutor(
+            max_workers=workers, thread_name_prefix="kernel-async"
+        )
+
+    def _shutdown_async_executor(self, wait: bool = True):
+        if self._async_executor is None:
+            return
+        try:
+            self._async_executor.shutdown(wait=wait)
+        except Exception:
+            pass
+        self._async_executor = None
+
+    def _is_async_exchange_message(self, message: Message) -> bool:
+        return (
+            message.recipient_id == "Exchange"
+            and message.message_type in ASYNC_QUERY_MESSAGE_TYPES
+        )
+
+    def _handle_exchange_responses(self, responses):
+        if not responses:
+            return
+        for rsp in responses:
+            try:
+                self.logger.kernel_message_log(rsp, stage="SEND")
+            except Exception:
+                pass
+            self.message_queue.put(rsp)
+
+    def _submit_async_exchange(self, message: Message):
+        if self._async_executor is None:
+            responses = self.exchange.handle_message(message)
+            self._handle_exchange_responses(responses)
+            return
+
+        sender = message.sender_id if message.sender_id in self.agents else None
+        if sender:
+            self._increment_pending(sender)
+
+        def _task():
+            try:
+                responses = self.exchange.handle_message(message)
+            except Exception:
+                responses = []
+            if responses:
+                for rsp in responses:
+                    try:
+                        self.logger.kernel_message_log(rsp, stage="SEND")
+                    except Exception:
+                        pass
+                    self.message_queue.put(rsp)
+            if sender:
+                self._complete_pending(sender)
+
+        self._async_executor.submit(_task)
+
+    def _increment_pending(self, agent_id: str):
+        with self._pending_lock:
+            self._pending_requests[agent_id] = self._pending_requests.get(agent_id, 0) + 1
+
+    def _complete_pending(self, agent_id: str):
+        with self._pending_lock:
+            current = self._pending_requests.get(agent_id, 0) - 1
+            if current > 0:
+                self._pending_requests[agent_id] = current
+                return
+            self._pending_requests.pop(agent_id, None)
+            if agent_id in self._blocked_wakeups:
+                self._ready_agents.add(agent_id)
+
+    def _delay_wakeup(self, agent_id: str, message: Message):
+        with self._pending_lock:
+            queue = self._blocked_wakeups.setdefault(agent_id, [])
+            queue.append(message)
+
+    def _release_ready_agents(self):
+        payloads = []
+        with self._pending_lock:
+            ready = list(self._ready_agents)
+            self._ready_agents.clear()
+            release_time = (
+                self.clock.now()
+                if hasattr(self, "clock") and self.clock is not None
+                else pd.Timestamp.now()
+            )
+            for agent_id in ready:
+                queued = self._blocked_wakeups.pop(agent_id, [])
+                if not queued:
+                    continue
+                payloads.append((release_time, queued))
+        for release_time, queue in payloads:
+            for wake_msg in queue:
+                if wake_msg.recive_time < release_time:
+                    wake_msg.recive_time = release_time
+                self.in_box.put(wake_msg)
+
+    def _has_pending_async_work(self) -> bool:
+        with self._pending_lock:
+            return bool(
+                self._pending_requests
+                or self._blocked_wakeups
+                or self._ready_agents
+            )
+
+    def _should_delay_wakeup(self, agent_id: str) -> bool:
+        with self._pending_lock:
+            return self._pending_requests.get(agent_id, 0) > 0
 
     def init_agent(
         self,
@@ -218,9 +363,18 @@ class Kernel:
                 break
 
         # Process messages from inbox in receive_time order
-        while (not self.in_box.empty()) and steps < max_steps:
+        while steps < max_steps:
+            self._release_ready_agents()
+            while True:
+                try:
+                    self.in_box.put(self.message_queue.get_nowait_raw())
+                except Exception:
+                    break
             msg = self.in_box.get()
             if msg is None:
+                if self._has_pending_async_work():
+                    time.sleep(0.001)
+                    continue
                 # Nothing to process
                 break
             # Advance simulation time & skip market breaks if necessary
@@ -240,6 +394,9 @@ class Kernel:
                 agent = self.agents[rid]
                 # Skip PROC log to reduce duplication
                 if msg.message_type == MessageType.WAKEUP:
+                    if self._should_delay_wakeup(agent.id):
+                        self._delay_wakeup(agent.id, msg)
+                        continue
                     agent.wakeup(last_time)
                 else:
                     agent.receive(msg)
@@ -251,10 +408,11 @@ class Kernel:
                         break
             elif rid == "Exchange":
                 # Skip PROC log to reduce duplication
-                responses = self.exchange.handle_message(msg)
-                for rsp in responses:
-                    self.logger.kernel_message_log(rsp, stage="SEND")
-                    self.message_queue.put(rsp)
+                if self._is_async_exchange_message(msg):
+                    self._submit_async_exchange(msg)
+                else:
+                    responses = self.exchange.handle_message(msg)
+                    self._handle_exchange_responses(responses)
                 # also drain any async responses emitted by exchange workers
                 while True:
                     try:
@@ -393,6 +551,7 @@ class Kernel:
                     pass
                 else:
                     break
+            self._release_ready_agents()
             # Drain inter-process queue into local box (non-blocking)
             while True:
                 try:
@@ -403,6 +562,9 @@ class Kernel:
             # Pop next event by time
             msg = self.in_box.get()
             if msg is None:
+                if self._has_pending_async_work():
+                    time.sleep(0.001)
+                    continue
                 break
             # Apply trading session skip if needed
             self.clock.simulate_time = msg.recive_time
@@ -431,16 +593,19 @@ class Kernel:
                 agent = self.agents[rid]
                 # Skip PROC log to reduce duplication
                 if msg.message_type == MessageType.WAKEUP:
+                    if self._should_delay_wakeup(agent.id):
+                        self._delay_wakeup(agent.id, msg)
+                        continue
                     agent.wakeup(current_time)
                 else:
                     agent.receive(msg)
             elif rid == "Exchange":
                 # Skip PROC log to reduce duplication; exchange may log internally
-                responses = self.exchange.handle_message(msg)
-                for rsp in responses:
-                    # Log send
-                    self.logger.kernel_message_log(rsp, stage="SEND")
-                    self.message_queue.put(rsp)
+                if self._is_async_exchange_message(msg):
+                    self._submit_async_exchange(msg)
+                else:
+                    responses = self.exchange.handle_message(msg)
+                    self._handle_exchange_responses(responses)
                 # Drain any additional messages emitted synchronously by Exchange
                 while True:
                     try:
@@ -471,6 +636,10 @@ class Kernel:
             # Ensure exchange workers are stopped so process can exit cleanly
             try:
                 self.exchange.shutdown(wait=True)
+            except Exception:
+                pass
+            try:
+                self._shutdown_async_executor(wait=True)
             except Exception:
                 pass
         self.total_processed_messages += processed
@@ -556,6 +725,11 @@ class Kernel:
 
         stocks_raw = getattr(cm, "stocks", [])
         log_dir_override = getattr(kcfg, "log_dir", None)
+        try:
+            async_workers = int(getattr(kcfg, "async_query_workers", 2))
+        except Exception:
+            async_workers = 2
+        lob_mode = getattr(kcfg, "lob_log_mode", "deferred")
         cfg = {
             "name": kname,
             "start_date": _normalize_start(start_date),
@@ -568,6 +742,8 @@ class Kernel:
             "end_date": str(end_date) if end_date is not None else None,
             "enforce_step_limit": bool(getattr(kcfg, "enforce_step_limit", False)),
             "disable_main_log": disable_main_log,
+            "async_query_workers": async_workers,
+            "lob_log_mode": lob_mode,
         }
         # Optional calibration settings embedded in config
         try:
@@ -632,9 +808,11 @@ class Kernel:
         try:
             if hasattr(self, "exchange") and self.exchange is not None:
                 self.exchange.shutdown(wait=True)
+            self._shutdown_async_executor(wait=True)
         finally:
             try:
                 if hasattr(self, "logger") and self.logger is not None:
+                    self.logger.flush_lob_logs()
                     self.logger.save_log_to_file()
             except Exception:
                 pass

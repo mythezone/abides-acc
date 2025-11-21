@@ -1,5 +1,6 @@
 import logging
 import threading
+from collections import defaultdict
 
 from joblib import Memory
 from core.base import Singleton
@@ -7,7 +8,7 @@ import pandas as pd
 from core.message import Message
 from io import StringIO
 import os
-from typing import Union
+from typing import Union, Dict, List
 import json
 
 
@@ -67,13 +68,18 @@ class Logger(metaclass=Singleton):
     同步 Logger 类，所有记录会通过同步日志写入文件。
     """
 
-    def __init__(self, log_folder: str = "./log", level: int = 5):
+    def __init__(self, log_folder: str = "./log", level: int = 5, lob_write_mode: str = "deferred"):
         self.log_folder = log_folder
         os.makedirs(self.log_folder, exist_ok=True)
         self.log_file = os.path.join(self.log_folder, "log.csv")
         self._file_lock = threading.Lock()
         self.disable_main_log = False
         self.level = level
+        mode = (lob_write_mode or "deferred").lower()
+        if mode not in ("deferred", "immediate"):
+            mode = "deferred"
+        self._lob_write_mode = mode
+        self._lob_buffers: Dict[str, List[str]] = defaultdict(list)
 
         with open(self.log_file, "w") as file:
             file.write("time,stage,type,sender,recipient,content\n")
@@ -236,10 +242,16 @@ class Logger(metaclass=Singleton):
         _, lob_path = self._ensure_stock_paths(stock_name)
         header = self.format_lob_header(level=level)
         timestamp = self.iso_time_format(kernel_time)
+        entry = f"{timestamp},{lob}\n"
+        if self._lob_write_mode == "deferred":
+            with self._file_lock:
+                self._ensure_lob_header(lob_path, header)
+                self._lob_buffers[stock_name].append(entry)
+            return
         with self._file_lock:
             self._ensure_lob_header(lob_path, header)
             with open(lob_path, "a") as f:
-                f.write(f"{timestamp},{lob}\n")
+                f.write(entry)
 
     def preopen_log(
         self,
@@ -279,6 +291,21 @@ class Logger(metaclass=Singleton):
                     if isinstance(h, MemoryHandler):
                         file.write(h.get_logs())
                         h.clear_logs()
+    def flush_lob_logs(self):
+        """Flush buffered LOB logs to disk when using deferred mode."""
+        if self._lob_write_mode != "deferred":
+            return
+        pending: Dict[str, List[str]] = {}
+        with self._file_lock:
+            for stock, entries in self._lob_buffers.items():
+                if not entries:
+                    continue
+                pending[stock] = entries[:]
+                self._lob_buffers[stock].clear()
+        for stock, entries in pending.items():
+            _, lob_path = self._ensure_stock_paths(stock)
+            with open(lob_path, "a") as f:
+                f.writelines(entries)
 
     def _ensure_agent_path(self, agent_id: str) -> str:
         adir = os.path.join(self.log_folder, "agents")
