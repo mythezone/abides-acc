@@ -1,17 +1,18 @@
 {
   "simulation": {
     "start_date": "2005-05-09 09:30:00",
-    "end_date": "2005-05-09 10:30:00",
+    "end_date": "2005-05-09 10:00:00",
     "exchange_type": "SZSE"
   },
   "kernel": {
     "name": "BaselinePipeline",
-    "log_dir": "log/baseline_pipeline_1",
+    "log_dir": "log/baseline_pipeline_3",
+    "disable_main_log": true,
     "exchange_params": {
       "ohlc_freq": "3s",
       "lob_log_freq": "3s",
       "lob_log_level": 10,
-      "workers": 5,
+      "workers": 10,
       "fee_rate": 0.0003,
       "t_plus_one": true,
       "price_limit_pct": 0.1,
@@ -28,7 +29,7 @@
   },
   "agents": [
     {
-      "num": 2,
+      "num": 20,
       "type": "zero_intelligence",
       "params": {
         "wakeup_ms_range": [50, 120],

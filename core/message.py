@@ -4,9 +4,10 @@ import pandas as pd
 from functools import total_ordering
 from dataclasses import dataclass, field
 from queue import PriorityQueue
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List, Tuple
 from uuid import uuid4
 from queue import Empty
+import heapq
 
 
 def worker_put_message(queue, msg, delay):
@@ -127,8 +128,26 @@ class MessageBox:
 
 
 class MessageQueue:
-    def __init__(self):
+    def __init__(self, segment_ms: int = 1000):
+        # Underlying multiprocessing queue for cross-process and cross-thread safety
         self.mp_queue = Queue()
+        # Segment size in milliseconds for bucketing by adjusted recive_time
+        try:
+            segment_ms_int = int(segment_ms)
+        except Exception:
+            segment_ms_int = 1000
+        if segment_ms_int <= 0:
+            segment_ms_int = 1000
+        self._segment_ms: int = segment_ms_int
+        self._segment_ns: int = self._segment_ms * 1_000_000  # pandas Timestamp.value is ns
+        # Per-segment heaps keyed by (time_ns, seq, message)
+        self._segments: Dict[int, List[Tuple[int, int, Message]]] = {}
+        # Min-heap of active segment keys
+        self._segment_keys: List[int] = []
+        # Global sequence counter to ensure a stable ordering
+        self._seq: int = 0
+        # Cached total size for fast emptiness checks
+        self._size: int = 0
 
     def put(self, message: Message, recive_delay=0):
         adjusted_time = message.recive_time + pd.Timedelta(milliseconds=recive_delay)
@@ -144,15 +163,80 @@ class MessageQueue:
         )
         self.mp_queue.put(adjusted_message)
 
+    def _segment_key(self, ts: pd.Timestamp) -> int:
+        try:
+            ns = int(ts.value)
+        except Exception:
+            # Fallback: treat invalid timestamps as 0
+            ns = 0
+        return ns // self._segment_ns if self._segment_ns > 0 else 0
+
+    def _insert_segmented(self, msg: Message) -> None:
+        key = self._segment_key(msg.recive_time)
+        heap = self._segments.get(key)
+        if heap is None:
+            heap = []
+            self._segments[key] = heap
+            heapq.heappush(self._segment_keys, key)
+        self._seq += 1
+        try:
+            time_ns = int(msg.recive_time.value)
+        except Exception:
+            time_ns = 0
+        heapq.heappush(heap, (time_ns, self._seq, msg))
+        self._size += 1
+
+    def _drain_mp_queue_nonblocking(self) -> None:
+        while True:
+            try:
+                msg = self.mp_queue.get_nowait()
+            except Empty:
+                break
+            self._insert_segmented(msg)
+
+    def _pop_earliest(self) -> Optional[Message]:
+        while self._segment_keys:
+            key = self._segment_keys[0]
+            heap = self._segments.get(key)
+            if not heap:
+                heapq.heappop(self._segment_keys)
+                self._segments.pop(key, None)
+                continue
+            _, _, msg = heapq.heappop(heap)
+            self._size -= 1
+            if not heap:
+                heapq.heappop(self._segment_keys)
+                self._segments.pop(key, None)
+            return msg
+        return None
+
     def get_raw(self):
-        # Directly retrieve from raw multiprocessing queue
-        return self.mp_queue.get()
+        # Drain any messages from the underlying multiprocessing queue,
+        # then return the globally earliest by recive_time.
+        self._drain_mp_queue_nonblocking()
+        msg = self._pop_earliest()
+        if msg is not None:
+            return msg
+        # If we have nothing buffered locally, block on the underlying queue
+        base_msg = self.mp_queue.get()
+        self._insert_segmented(base_msg)
+        # Drain any additional messages that might have arrived concurrently
+        self._drain_mp_queue_nonblocking()
+        msg = self._pop_earliest()
+        if msg is None:
+            return base_msg
+        return msg
 
     def empty_raw(self):
-        return self.mp_queue.empty()
+        self._drain_mp_queue_nonblocking()
+        return self._size == 0
 
     def get_nowait_raw(self):
-        return self.mp_queue.get_nowait()
+        self._drain_mp_queue_nonblocking()
+        msg = self._pop_earliest()
+        if msg is None:
+            raise Empty
+        return msg
 
 
 def new_message(

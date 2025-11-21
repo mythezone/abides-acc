@@ -486,6 +486,7 @@ class Kernel:
         exchange_type = getattr(sim, "exchange_type", "SZSE")
         kcfg = getattr(cm, "kernel", SimpleNamespace())
         kname = getattr(kcfg, "name", "sim")
+        disable_main_log = bool(getattr(kcfg, "disable_main_log", True))
         # Build trading days range
         try:
             start_dt = pd.to_datetime(start_date).date()
@@ -566,6 +567,7 @@ class Kernel:
             "stocks": stocks_raw,
             "end_date": str(end_date) if end_date is not None else None,
             "enforce_step_limit": bool(getattr(kcfg, "enforce_step_limit", False)),
+            "disable_main_log": disable_main_log,
         }
         # Optional calibration settings embedded in config
         try:
