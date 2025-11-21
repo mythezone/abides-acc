@@ -17,7 +17,7 @@ class WeightSnapshot:
     uniform: Dict[str, float] = field(default_factory=dict)
 
 
-class SymbolSelectionManager:
+class StockSelectionManager:
     """Maintains stock sampling distributions and schedules periodic refresh."""
 
     def __init__(self, exchange, update_interval: str = "60s") -> None:
@@ -73,7 +73,7 @@ class SymbolSelectionManager:
     def schedule_update(self, when: pd.Timestamp) -> None:
         self._next_update = when
         msg = new_message(
-            message_type=MessageType.SYMBOL_SELECTOR_UPDATE,
+            message_type=MessageType.STOCK_SELECTOR_UPDATE,
             sender_id="Exchange",
             recipient_id="Exchange",
             send_time=when,

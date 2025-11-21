@@ -1,16 +1,13 @@
 from typing import List
-
 import pandas as pd
 
 from core.message import MessageType, new_message
-
-from .manager import register_handler
-
+from core.exchange.handler.manager import register_handler
 
 @register_handler(
     MessageType.MKT_DATA,
     MessageType.QUERY_LAST_TRADE,
-    MessageType.QUERY_SPERAD,
+    MessageType.QUERY_SPREAD,
     MessageType.QUERY_ORDER_STREAM,
     MessageType.QUERY_TRANSACTED_VOLUME,
     MessageType.QUERY_FUNDAMENTAL,

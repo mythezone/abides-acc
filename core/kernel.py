@@ -25,6 +25,7 @@ class Kernel:
 
         self.clock = KernelClock(
             initial_time=self.config.get("start_date", "now"),
+            end_time=self.config.get("end_date", "now"),
             trading_days=self.config.get("trading_days", []),
             exchange=self.config.get("exchange_type", "SZSE"),
         )
@@ -47,7 +48,7 @@ class Kernel:
             exchange_params=ex_params,
             out_queue=self.message_queue,
         )
-        self.simulation_end_time = None
+        self.simulation_end_time = self.clock.simulation_end_time
         self._end_event_scheduled = False
         # Oracle agent in calibration mode
         calib = self.config.get("calibration", {})
@@ -374,7 +375,7 @@ class Kernel:
             self.logger.kernel_message_log(wake, stage="SEND")
             self.message_queue.put(wake)
             # Also seed directly into local inbox to avoid Queue semantics issues in tests
-            self.in_box.put(wake)
+            # self.in_box.put(wake)
 
         steps = 0
         processed = 0
@@ -584,16 +585,16 @@ class Kernel:
         # Initialize exchange stock universe if provided
         try:
             stocks = getattr(cm, "stocks", [])
-            for sym in stocks:
-                if isinstance(sym, dict):
-                    sym_name = sym.get("stock")
+            for stock in stocks:
+                if isinstance(stock, dict):
+                    stock_name = stock.get("stock")
                 else:
-                    sym_name = sym
-                if not sym_name:
+                    stock_name = stock
+                if not stock_name:
                     continue
-                sym_name = str(sym_name)
+                stock_name = str(stock_name)
                 try:
-                    kernel.exchange._ensure_lob(sym_name)
+                    kernel.exchange._ensure_lob(stock_name)
                 except Exception:
                     pass
         except Exception:

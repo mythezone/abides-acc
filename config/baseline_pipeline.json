@@ -11,7 +11,7 @@
       "ohlc_freq": "3s",
       "lob_log_freq": "3s",
       "lob_log_level": 10,
-      "workers": 0,
+      "workers": 5,
       "fee_rate": 0.0003,
       "t_plus_one": true,
       "price_limit_pct": 0.1,
@@ -28,7 +28,7 @@
   },
   "agents": [
     {
-      "num": 20,
+      "num": 2,
       "type": "zero_intelligence",
       "params": {
         "wakeup_ms_range": [50, 120],
@@ -36,7 +36,7 @@
       }
     },
     {
-      "num": 20,
+      "num": 2,
       "type": "background",
       "params": {
         "wakeup_ms_range": [30, 80],
@@ -44,7 +44,7 @@
       }
     },
     {
-      "num": 40,
+      "num": 4,
       "type": "base",
       "params": {}
     }

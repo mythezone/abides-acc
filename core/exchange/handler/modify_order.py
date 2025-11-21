@@ -1,11 +1,12 @@
-from core.message import MessageType, new_message
+from core.message import MessageType, new_message, Message
 from core.order import LimitOrder, MarketOrder, Order
 
 from .manager import register_handler
+from typing import TYPE_CHECKING
 
 
 @register_handler(MessageType.MODIFY_ORDER)
-def handle(exchange, message, now):
+def handle(exchange, message: Message, now):
     responses = []
     for req in message.content.get("requests", []):
         stock_val = req.get("stock")

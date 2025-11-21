@@ -11,11 +11,11 @@ class ZeroIntelligenceAgent(BaseAgent):
         super().__init__(id, *args, message_queue=message_queue, **kwargs)
         self.subscribed_stocks: List[str] = []
         if initial_stocks:
-            for sym in initial_stocks:
-                if isinstance(sym, str):
-                    self.subscribed_stocks.append(sym)
-                elif isinstance(sym, dict):
-                    val = sym.get("stock")
+            for stock in initial_stocks:
+                if isinstance(stock, str):
+                    self.subscribed_stocks.append(stock)
+                elif isinstance(stock, dict):
+                    val = stock.get("stock")
                     if val:
                         self.subscribed_stocks.append(str(val))
 

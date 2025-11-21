@@ -177,7 +177,7 @@ class BaseAgent:
                         self.portfolio.cash -= fees
                 except Exception:
                     pass
-            elif m.message_type == MessageType.SELECT_SYMBOLS_RESPONSE and isinstance(m.content, dict):
+            elif m.message_type == MessageType.SELECT_STOCKS_RESPONSE and isinstance(m.content, dict):
                 self._latest_stock_response = m.content
             else:
                 self.handle_inbox_message(m)

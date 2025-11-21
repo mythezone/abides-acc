@@ -12,16 +12,13 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
-
 import argparse
 import json
-import os
 import shutil
 import time
 from typing import Optional
 
 from core.kernel import Kernel
-
 
 def _resolve_log_dir(config_path: Path) -> Optional[Path]:
     try:

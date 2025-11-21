@@ -1,27 +1,22 @@
-from core.orderbook import LimitOrderBook
-from core.message import MessageType, new_message, Message
-from core.ohlc import OHLCAggregator
-from core.order import Order, LimitOrder, MarketOrder
 import pandas as pd
 import numpy as np
 import random
 import csv
 from pathlib import Path
-
-
 import threading
 from queue import Queue
+
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Dict, Tuple, Iterable, List
 from core.preopen_book import PreopenOrderBook
 from core.logger import Logger
+from core.orderbook import LimitOrderBook
+from core.message import MessageType, new_message, Message
+from core.ohlc import OHLCAggregator
+from core.order import Order, LimitOrder, MarketOrder
 from util.util import random_china_location, network_latency_ms
 from core.selector import StockSelectionManager
-from .handler.manager import HandlerManager
-from . import handler as _exchange_handlers  # noqa: F401
-from core.selector import StockSelectionManager
-from .handler.manager import HandlerManager
-from . import handler as _exchange_handlers  # noqa: F401
+from core.exchange.handler.manager import HandlerManager
 
 
 class Exchange:
@@ -57,8 +52,8 @@ class Exchange:
         self.lob_dict = {
             stock_name: LimitOrderBook(stock_name) for stock_name in self.stocks
         }
-        for sym in self.stocks:
-            self._ensure_market_cap(sym)
+        for stck in self.stocks:
+            self._ensure_market_cap(stck)
         self.logger = logger
         self.ohlc_freq = ohlc_freq
         self.ohlc_by_stock: dict[str, OHLCAggregator] = {}
@@ -82,7 +77,7 @@ class Exchange:
         # Per-day buy/sell counters for T+1 enforcement (legacy metrics)
         self._day_buys: Dict[Tuple[str, str], int] = {}  # (agent,stock)->qty
         self._day_sells: Dict[Tuple[str, str], int] = {}
-        self._stock_volume: Dict[str, int] = {str(sym): 0 for sym in self.stocks}
+        self._stock_volume: Dict[str, int] = {str(stock): 0 for stock in self.stocks}
         self.selector = StockSelectionManager(self, kwargs.pop("selector_update_freq", "60s"))
         self.handler_manager = HandlerManager()
 
@@ -537,7 +532,7 @@ class Exchange:
             except Exception:
                 depth_val = 5
             for sym in pool:
-                lob = self._get_lob(sym)
+                lob: LimitOrderBook = self._get_lob(sym)
                 if lob is None:
                     weights.append((sym, 0.0))
                     continue

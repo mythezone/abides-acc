@@ -19,9 +19,10 @@ EXCHANGE_SESSIONS = {
 
 
 class KernelClock:
-    def __init__(self, initial_time: str = "now", trading_days=None, exchange="SZSE"):
+    def __init__(self, initial_time: str = "now", end_time: str  = "now",trading_days=None, exchange="SZSE"):
         self.real_start_time = pd.Timestamp.now()
         self.initial_time = initial_time
+        self.end_time = end_time 
         self.exchange = exchange
         self.sessions = EXCHANGE_SESSIONS[exchange]
         self.trading_days = [
@@ -36,6 +37,14 @@ class KernelClock:
                 self.simulate_time = pd.Timestamp(initial_time)
             except Exception:
                 self.simulate_time = pd.Timestamp.now()
+
+        if end_time == "now":
+            self.simulation_end_time = self.real_start_time
+        else:
+            try:
+                self.simulation_end_time = pd.Timestamp(end_time)
+            except Exception:
+                self.simulation_end_time = pd.Timestamp.now()
 
     def now(self):
         return self.simulate_time

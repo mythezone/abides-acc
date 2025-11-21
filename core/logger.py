@@ -8,6 +8,7 @@ from core.message import Message
 from io import StringIO
 import os
 from typing import Union
+import json
 
 
 class MemoryHandler(logging.Handler):
@@ -209,7 +210,7 @@ class Logger(metaclass=Singleton):
         if stage not in self.kernel_allowed_stages:
             return
         try:
-            import json
+            
 
             msg = json.dumps(message.content, ensure_ascii=False, separators=(",", ":"))
         except Exception:
