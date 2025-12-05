@@ -1,7 +1,7 @@
 import pandas as pd
 from core.kernel import Kernel
 from core.message import new_message, MessageType
-from core.lob import LimitOrderBook
+from core.orderbook import LimitOrderBook
 
 
 class DummyAgent:
