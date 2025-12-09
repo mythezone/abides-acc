@@ -1,7 +1,7 @@
 {
   "simulation": {
     "start_date": "2005-05-09 09:30:00",
-    "end_date": "2005-05-09 09:40:00",
+    "end_date": "2005-05-09 10:30:00",
     "exchange_type": "SZSE"
   },
   "kernel": {
